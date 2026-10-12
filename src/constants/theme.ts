@@ -1,65 +1,58 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Brand tokens taken from thedivinetarotonline.com
+ * (background #0B0B0F, gold/coral gradients, purple meta theme colour,
+ *  Cinzel + Playfair Display + Inter fonts).
  */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  bg: '#0B0B0F',
+  bgElevated: '#15131D',
+  card: '#1B1826',
+  cardBorder: 'rgba(244, 197, 66, 0.22)',
+  text: '#EAEAF0',
+  textMuted: '#A9A6B8',
+  textDim: '#6F6B80',
+  gold: '#F4C542',
+  goldBright: '#FFD700',
+  goldSoft: '#FFE4A8',
+  coral: '#FF4D4D',
+  purple: '#6D28D9',
+  purpleDeep: '#2A1454',
+  success: '#4ADE80',
+  danger: '#F87171',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+/** Gradients used on the website's buttons and highlights */
+export const Gradients = {
+  primary: ['#FF4D4D', '#F4C542', '#FFE4A8'] as const,
+  gold: ['#FACC15', '#F97316'] as const,
+  night: ['#0B0B0F', '#1A1030', '#0B0B0F'] as const,
+  cardBack: ['#2A1454', '#4C1D95', '#2A1454'] as const,
+  purpleGlow: ['rgba(109,40,217,0.45)', 'rgba(11,11,15,0)'] as const,
+};
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+/** Font family names registered in src/app/_layout.tsx */
+export const Fonts = {
+  display: 'Cinzel_700Bold',
+  displayRegular: 'Cinzel_400Regular',
+  serif: 'PlayfairDisplay_600SemiBold',
+  serifItalic: 'PlayfairDisplay_400Regular_Italic',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemi: 'Inter_600SemiBold',
+} as const;
 
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const Radius = {
+  sm: 8,
+  md: 14,
+  lg: 20,
+  pill: 999,
+} as const;

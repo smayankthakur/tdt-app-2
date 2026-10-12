@@ -1,56 +1,56 @@
-# Welcome to your Expo app 👋
+# The Divine Tarot — mobile app (Android + iOS)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/), built with **Expo SDK 57 / React Native 0.86**. One codebase produces both the Android and the iOS app.
 
-## Get started
+## What's inside
 
-1. Install dependencies
+| Tab | What it does |
+|---|---|
+| **Home** | Hero, Card of the Day preview, how it works, quick links |
+| **Reading** | Free 3-card reading: pick a topic (Life / Love / Career / Decision), ask a question, shuffle, pick 3 of 21 face-down cards, flip to reveal, share. Saved automatically. |
+| **Daily Card** | One card per day per user, with an optional daily reminder notification (on-device, no server) |
+| **Courses** | The 5 courses from learn.thedivinetarotonline.com (catalogue only, see payments note) |
+| **More** | My Readings (history), Card Library (all 78 cards), Personal Reading, Ask Ginni, Kundli Milan, socials, support, privacy |
 
-   ```bash
-   npm install
-   ```
+There's no login and no backend. Everything the user saves stays on their phone, and card artwork loads from the website (`/card_img/<Card Name>.png`).
 
-2. Start the app
+## Where to change things
 
-   ```bash
-   npx expo start
-   ```
+| Change | File |
+|---|---|
+| Website links, payment switches (`StorePolicy`) | `src/constants/config.ts` |
+| Colours & fonts | `src/constants/theme.ts` |
+| Card meanings (78 cards) | `src/data/cards.ts` |
+| Courses | `src/data/courses.ts` |
+| App name, bundle ID / package name, icons | `app.json`, `assets/images/` |
+| Build & submit profiles | `eas.json` |
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it on your computer
 
 ```bash
-npm run reset-project
+npm install
+npx expo start          # press "a" for an Android emulator, or scan the QR code
+npx expo start --web    # quick look in the browser
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Checks before every build
 
-### Other setup steps
+```bash
+npm run typecheck
+npm run lint
+npx expo-doctor
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Build & publish (summary)
 
-## Learn more
+```bash
+npm install -g eas-cli
+eas login
+eas init                                   # links the project to your Expo account
+eas build --profile preview --platform android    # installable .apk for testing
+eas build --profile production --platform all     # store builds (.aab + .ipa)
+eas submit --platform android              # upload to Google Play (internal track)
+eas submit --platform ios                  # upload to App Store Connect / TestFlight
+```
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The full step-by-step launch guide (accounts, store listings, review, payments rules) has been shared separately.
