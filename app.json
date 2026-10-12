@@ -10,7 +10,7 @@
     "backgroundColor": "#0B0B0F",
     "ios": {
       "bundleIdentifier": "com.thedivinetarotonline.app",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
       }
