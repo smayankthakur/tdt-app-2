@@ -5,14 +5,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "thedivinetarot",
+    "scheme": "divinetarot",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0B0B0F",
+    "backgroundColor": "#0B0710",
     "ios": {
       "bundleIdentifier": "com.thedivinetarotonline.app",
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Choose a profile photo for your Divine Tarot profile.",
+        "NSLocationWhenInUseUsageDescription": "Only if you allow it in Privacy settings: your approximate city is used to improve the app."
       }
     },
     "android": {
@@ -24,13 +29,15 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.CAMERA"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -45,7 +52,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0B0F",
+          "backgroundColor": "#0B0710",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }
@@ -54,10 +61,29 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#F4C542",
+          "color": "#E9C46A",
           "defaultChannel": "daily-card"
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a profile photo for your Divine Tarot profile.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Only if you allow it in Privacy settings: your approximate city is used to improve the app.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
+      ],
+      "expo-apple-authentication",
+      "expo-localization",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

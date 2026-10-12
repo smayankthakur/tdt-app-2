@@ -1,5 +1,5 @@
 import { DECK } from '@/data/cards';
-import { Storage, type DailyDraw } from '@/lib/storage';
+import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
 
 /** Local date as YYYY-MM-DD */
 export function todayKey(d: Date = new Date()): string {
@@ -8,8 +8,14 @@ export function todayKey(d: Date = new Date()): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-/** Small deterministic hash so the same user + date always gives the same card */
-function hash(str: string): number {
+function dayDiff(a: string, b: string): number {
+  const pa = Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10));
+  const pb = Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10));
+  return Math.round((pb - pa) / 86_400_000);
+}
+
+/** Small deterministic hash so the same input always gives the same number */
+export function hash(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
@@ -18,7 +24,7 @@ function hash(str: string): number {
   return h >>> 0;
 }
 
-/** Returns today's card for this user (creates it if needed). */
+/** Today's card for this user (deterministic per install + date). */
 export async function getTodaysDraw(): Promise<DailyDraw> {
   const date = todayKey();
   const saved = await Storage.getDaily();
@@ -30,9 +36,37 @@ export async function getTodaysDraw(): Promise<DailyDraw> {
   return draw;
 }
 
-export async function markDailyRevealed(): Promise<DailyDraw> {
-  const draw = await getTodaysDraw();
-  const updated = { ...draw, revealed: true };
-  await Storage.setDaily(updated);
-  return updated;
+/** Current streak (resets if a day was missed). */
+export async function getStreak(): Promise<Streak> {
+  const s = await Storage.getStreak();
+  if (!s.lastDate) return s;
+  const gap = dayDiff(s.lastDate, todayKey());
+  return gap > 1 ? { count: 0, lastDate: s.lastDate } : s;
+}
+
+/** Reveal today's card and bump the 🔥 streak. */
+export async function revealToday(): Promise<{ draw: DailyDraw; streak: Streak }> {
+  const draw = { ...(await getTodaysDraw()), revealed: true };
+  await Storage.setDaily(draw);
+  const today = todayKey();
+  const s = await Storage.getStreak();
+  let streak: Streak;
+  if (s.lastDate === today) streak = s;
+  else if (s.lastDate && dayDiff(s.lastDate, today) === 1) streak = { count: s.count + 1, lastDate: today };
+  else streak = { count: 1, lastDate: today };
+  await Storage.setStreak(streak);
+  return { draw, streak };
+}
+
+/** "Cards Ka Message": three cards shared by everyone for the current ISO week. */
+export function weeklyTrio(d: Date = new Date()): string[] {
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const week = Math.floor((d.getTime() - jan1.getTime()) / (7 * 86_400_000));
+  const ids: string[] = [];
+  let i = 0;
+  while (ids.length < 3) {
+    const c = DECK[hash(`week:${d.getFullYear()}:${week}:${i++}`) % DECK.length];
+    if (!ids.includes(c.id)) ids.push(c.id);
+  }
+  return ids;
 }

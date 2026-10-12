@@ -1,81 +1,87 @@
-import * as Notifications from 'expo-notifications';
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { Platform } from 'react-native';
 
 /**
- * Local (on-device) notifications only — no push server needed.
- * Used for the "Card of the Day" reminder.
+ * Local (on-device) daily reminders in Hinglish — no push server needed.
+ * expo-notifications is loaded defensively so a missing module never crashes the app.
  */
+ 
+type Any = any;
+let N: Any = null;
+if (Platform.OS !== 'web') {
+  try {
+    N = require('expo-notifications');
+    N.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch {
+    N = null;
+  }
+}
 
 const CHANNEL_ID = 'daily-card';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
-
 async function ensureChannel() {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+  if (N && Platform.OS === 'android') {
+    await N.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Card of the Day',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      lightColor: '#F4C542',
+      importance: N.AndroidImportance.DEFAULT,
+      lightColor: '#E9C46A',
     });
   }
 }
 
-/** Asks for permission (only if not already granted). Returns true if allowed. */
+export const notificationsAvailable = !!N;
+
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (!N) return false;
   await ensureChannel();
-  const current = await Notifications.getPermissionsAsync();
+  const current = await N.getPermissionsAsync();
   if (current.granted) return true;
-  const asked = await Notifications.requestPermissionsAsync({
-    ios: { allowAlert: true, allowBadge: false, allowSound: true },
-  });
-  return asked.granted;
+  const asked = await N.requestPermissionsAsync({ ios: { allowAlert: true, allowBadge: false, allowSound: true } });
+  return !!asked.granted;
 }
 
 const MESSAGES = [
   'Aaj ka card tumhara wait kar raha hai ✨',
   'Universe ka aaj ka message ready hai 🌙',
   'Ek minute nikaalo — apna Card of the Day dekho 🔮',
-  'Aaj tumhare liye kya likha hai? Card reveal karo ✨',
+  'Streak mat todna! Aaj ka card reveal karo 🔥',
+  'Ginni ke paas aaj tumhare liye kuch khaas hai ✨',
 ];
 
-/** Schedules (or re-schedules) the daily reminder. */
 export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (!N) return;
   await ensureChannel();
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  const body = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-  await Notifications.scheduleNotificationAsync({
+  await N.cancelAllScheduledNotificationsAsync();
+  await N.scheduleNotificationAsync({
     content: {
       title: 'The Divine Tarot',
-      body,
-      data: { url: '/daily' },
+      body: MESSAGES[Math.floor(Math.random() * MESSAGES.length)],
+      data: { url: '/' },
     },
     trigger:
       Platform.OS === 'ios'
-        ? {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            hour,
-            minute,
-            repeats: true,
-          }
-        : {
-            type: Notifications.SchedulableTriggerInputTypes.DAILY,
-            hour,
-            minute,
-            channelId: CHANNEL_ID,
-          },
+        ? { type: N.SchedulableTriggerInputTypes.CALENDAR, hour, minute, repeats: true }
+        : { type: N.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
   });
 }
 
 export async function cancelDailyReminder(): Promise<void> {
-  if (Platform.OS === 'web') return;
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  if (N) await N.cancelAllScheduledNotificationsAsync();
+}
+
+/** Subscribe to notification taps; returns an unsubscribe function. */
+export function onNotificationTap(cb: (url: string) => void): () => void {
+  if (!N) return () => {};
+  const sub = N.addNotificationResponseReceivedListener((r: Any) => {
+    const url = r?.notification?.request?.content?.data?.url;
+    if (typeof url === 'string') cb(url);
+  });
+  return () => sub.remove();
 }

@@ -2,24 +2,29 @@ import { Cinzel_400Regular, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { PlayfairDisplay_400Regular_Italic, PlayfairDisplay_600SemiBold } from '@expo-google-fonts/playfair-display';
 import { useFonts } from 'expo-font';
-import * as Notifications from 'expo-notifications';
 import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
+import { IntroSplash } from '@/components/intro-splash';
+import { Starfield } from '@/components/starfield';
 import { Colors, Fonts } from '@/constants/theme';
-import '@/lib/notifications';
+import { loadSavedLanguage } from '@/i18n';
+import { onNotificationTap } from '@/lib/notifications';
+import { CheckoutHost } from '@/lib/payments/checkout';
+import { SessionProvider } from '@/lib/session';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const theme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
     primary: Colors.gold,
-    background: Colors.bg,
+    // transparent so the shared animated starfield shows behind the tabs
+    background: 'transparent',
     card: Colors.bg,
     text: Colors.text,
     border: 'rgba(255,255,255,0.06)',
@@ -27,6 +32,7 @@ const theme = {
 };
 
 export default function RootLayout() {
+  const [langReady, setLangReady] = useState(false);
   const [loaded, error] = useFonts({
     Cinzel_400Regular,
     Cinzel_700Bold,
@@ -38,39 +44,54 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync();
-  }, [loaded, error]);
-
-  // Tapping the daily reminder opens the Card of the Day tab
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url;
-      if (typeof url === 'string') router.navigate(url as '/daily');
-    });
-    return () => sub.remove();
+    loadSavedLanguage().finally(() => setLangReady(true));
   }, []);
 
-  if (!loaded && !error) return null;
+  const ready = (loaded || !!error) && langReady;
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  // Subscribe only once the Stack is mounted: navigating earlier (a tap that cold-starts the app
+  // while fonts load) throws "Attempted to navigate before mounting the Root Layout".
+  useEffect(() => {
+    if (!ready) return;
+    return onNotificationTap((url) => {
+      try {
+        router.navigate(url as '/');
+      } catch {
+        // ignore
+      }
+    });
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
-    <ThemeProvider value={theme}>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: Colors.bg },
-          headerTintColor: Colors.gold,
-          headerTitleStyle: { fontFamily: Fonts.display, color: Colors.text },
-          headerShadowVisible: false,
-          headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: Colors.bg },
-        }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="card/[id]" options={{ title: '' }} />
-        <Stack.Screen name="course/[id]" options={{ title: '' }} />
-        <Stack.Screen name="history" options={{ title: 'My Readings' }} />
-        <Stack.Screen name="deck" options={{ title: 'Card Library' }} />
-      </Stack>
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider value={theme}>
+        <StatusBar style="light" />
+        <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+          <Starfield />
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: Colors.bg },
+              headerTintColor: Colors.gold,
+              headerTitleStyle: { fontFamily: Fonts.display, color: Colors.text },
+              headerShadowVisible: false,
+              headerBackButtonDisplayMode: 'minimal',
+              // pushed screens are opaque (see Screen/Backdrop); the tabs stay transparent
+              contentStyle: { backgroundColor: 'transparent' },
+            }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="card/[id]" options={{ title: '' }} />
+            <Stack.Screen name="history" options={{ title: '' }} />
+            <Stack.Screen name="deck" options={{ title: '' }} />
+          </Stack>
+          <IntroSplash />
+          <CheckoutHost />
+        </View>
+      </ThemeProvider>
+    </SessionProvider>
   );
 }

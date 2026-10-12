@@ -5,10 +5,13 @@ import { CardFront } from '@/components/tarot-card';
 import { Body, Card, Eyebrow, Screen } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
+import { useLang } from '@/i18n';
+import { kbText } from '@/lib/ginni/kb';
 
 export default function CardDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { width } = useWindowDimensions();
+  const { t, lang } = useLang();
   const card = id ? getCard(id) : undefined;
 
   if (!card) {
@@ -20,6 +23,16 @@ export default function CardDetail() {
   }
 
   const group = card.arcana === 'major' ? 'Major Arcana' : `Minor Arcana · ${card.suit}`;
+  const sections: { title: string; field: Parameters<typeof kbText>[1] }[] = [
+    { title: '💞 Love', field: 'love' },
+    { title: '💼 Career', field: 'career' },
+    { title: '💰 Money', field: 'money' },
+    { title: '🌿 Wellbeing', field: 'wellbeing' },
+    { title: '👨‍👩‍👧 Family', field: 'family' },
+    { title: '🕉️ Spiritual', field: 'spiritual' },
+    { title: `✨ ${t('reading.advice')}`, field: 'advice' },
+    { title: `⏳ ${t('reading.timing')}`, field: 'timing' },
+  ];
 
   return (
     <Screen edges={[]}>
@@ -30,20 +43,13 @@ export default function CardDetail() {
       <Eyebrow>{group}</Eyebrow>
       <Text style={styles.name}>{card.name}</Text>
       <Text style={styles.keywords}>{card.keywords.join(' · ')}</Text>
-      <Text style={styles.message}>{card.message}</Text>
-
-      <Card>
-        <Text style={styles.h}>Meaning</Text>
-        <Body>{card.meaning}</Body>
-      </Card>
-      <Card>
-        <Text style={styles.h}>💞 Love</Text>
-        <Body>{card.love}</Body>
-      </Card>
-      <Card>
-        <Text style={styles.h}>💼 Career & money</Text>
-        <Body>{card.career}</Body>
-      </Card>
+      <Text style={styles.message}>{kbText(card.id, 'message', lang)}</Text>
+      {sections.map((s) => (
+        <Card key={s.field}>
+          <Text style={styles.h}>{s.title}</Text>
+          <Body>{kbText(card.id, s.field, lang)}</Body>
+        </Card>
+      ))}
     </Screen>
   );
 }

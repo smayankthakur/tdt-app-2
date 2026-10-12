@@ -1,26 +1,61 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** Everything the app saves lives on the user's phone only (no server, no account). */
+/** On-device storage. Cloud copies (Firestore) are handled in lib/firebase/db.ts. */
 const KEYS = {
-  history: 'tdt.history.v1',
+  history: 'tdt.history.v2',
   daily: 'tdt.daily.v1',
+  streak: 'tdt.streak.v1',
   reminder: 'tdt.reminder.v1',
   seed: 'tdt.seed.v1',
+  quota: 'tdt.quota.v1',
+  entitlements: 'tdt.entitlements.v1',
+  privacy: 'tdt.privacy.v1',
+  profile: 'tdt.profile.v1',
+  kundliForm: 'tdt.kundli.v1',
+  introSeen: 'tdt.intro.v1',
 } as const;
 
 export type SavedReading = {
   id: string;
   createdAt: number;
   question: string;
-  topic: string;
+  intentId: string;
+  lang: string;
   cardIds: string[];
+  positions: string[];
 };
 
 export type DailyDraw = { date: string; cardId: string; revealed: boolean };
-
+export type Streak = { count: number; lastDate: string };
 export type ReminderSettings = { enabled: boolean; hour: number; minute: number };
+export type Quota = { date: string; used: number };
+/** productId → expiry timestamp (ms) */
+export type Entitlements = Record<string, number>;
+export type PrivacySettings = { analytics: boolean; location: boolean };
 
-async function readJSON<T>(key: string, fallback: T): Promise<T> {
+export type Profile = {
+  name: string;
+  gender: '' | 'male' | 'female' | 'other';
+  birthplace: string;
+  dob: string; // YYYY-MM-DD
+  tob: string; // HH:mm
+  marital: '' | 'single' | 'married' | 'divorced' | 'widowed';
+  occupation: string;
+  photo: string; // data URI (small JPEG) or remote URL
+};
+
+export const EMPTY_PROFILE: Profile = {
+  name: '',
+  gender: '',
+  birthplace: '',
+  dob: '',
+  tob: '',
+  marital: '',
+  occupation: '',
+  photo: '',
+};
+
+export async function readJSON<T>(key: string, fallback: T): Promise<T> {
   try {
     const raw = await AsyncStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
@@ -29,42 +64,62 @@ async function readJSON<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
-async function writeJSON(key: string, value: unknown): Promise<void> {
+export async function writeJSON(key: string, value: unknown): Promise<void> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage failures are non-fatal for this app.
+    // Non-fatal
   }
 }
 
 export const Storage = {
+  KEYS,
   async getHistory(): Promise<SavedReading[]> {
     return readJSON<SavedReading[]>(KEYS.history, []);
   },
+  async setHistory(list: SavedReading[]): Promise<void> {
+    await writeJSON(KEYS.history, list.slice(0, 200));
+  },
   async addReading(r: SavedReading): Promise<void> {
     const list = await Storage.getHistory();
-    await writeJSON(KEYS.history, [r, ...list].slice(0, 100));
+    await Storage.setHistory([r, ...list.filter((x) => x.id !== r.id)]);
   },
   async deleteReading(id: string): Promise<void> {
     const list = await Storage.getHistory();
-    await writeJSON(KEYS.history, list.filter((r) => r.id !== id));
+    await Storage.setHistory(list.filter((r) => r.id !== id));
   },
   async clearHistory(): Promise<void> {
     await writeJSON(KEYS.history, []);
   },
 
-  async getDaily(): Promise<DailyDraw | null> {
-    return readJSON<DailyDraw | null>(KEYS.daily, null);
-  },
-  async setDaily(d: DailyDraw): Promise<void> {
-    await writeJSON(KEYS.daily, d);
-  },
+  getDaily: () => readJSON<DailyDraw | null>(KEYS.daily, null),
+  setDaily: (d: DailyDraw) => writeJSON(KEYS.daily, d),
+  getStreak: () => readJSON<Streak>(KEYS.streak, { count: 0, lastDate: '' }),
+  setStreak: (s: Streak) => writeJSON(KEYS.streak, s),
 
-  async getReminder(): Promise<ReminderSettings> {
-    return readJSON<ReminderSettings>(KEYS.reminder, { enabled: false, hour: 8, minute: 0 });
-  },
-  async setReminder(s: ReminderSettings): Promise<void> {
-    await writeJSON(KEYS.reminder, s);
+  getReminder: () => readJSON<ReminderSettings>(KEYS.reminder, { enabled: false, hour: 8, minute: 0 }),
+  setReminder: (s: ReminderSettings) => writeJSON(KEYS.reminder, s),
+
+  getQuota: () => readJSON<Quota>(KEYS.quota, { date: '', used: 0 }),
+  setQuota: (q: Quota) => writeJSON(KEYS.quota, q),
+
+  getEntitlements: () => readJSON<Entitlements>(KEYS.entitlements, {}),
+  setEntitlements: (e: Entitlements) => writeJSON(KEYS.entitlements, e),
+
+  getPrivacy: () => readJSON<PrivacySettings>(KEYS.privacy, { analytics: true, location: false }),
+  setPrivacy: (p: PrivacySettings) => writeJSON(KEYS.privacy, p),
+
+  getProfile: () => readJSON<Profile>(KEYS.profile, EMPTY_PROFILE),
+  setProfile: (p: Profile) => writeJSON(KEYS.profile, p),
+
+  getIntroSeen: () => readJSON<boolean>(KEYS.introSeen, false),
+  setIntroSeen: () => writeJSON(KEYS.introSeen, true),
+
+  /** Removes the signed-in person's data from this phone (sign-out / account deletion). */
+  async clearUserData(): Promise<void> {
+    await writeJSON(KEYS.history, []);
+    await writeJSON(KEYS.profile, EMPTY_PROFILE);
+    await writeJSON(KEYS.entitlements, {});
   },
 
   /** A random number fixed per install, so each user gets their own daily card. */

@@ -1,0 +1,4 @@
+{
+  "cleanUrls": true,
+  "rewrites": [{ "source": "/card/:id", "destination": "/card/[id]" }]
+}

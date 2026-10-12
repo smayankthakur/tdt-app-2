@@ -1,0 +1,520 @@
+[
+  {
+    "id": "ace-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Your heart is opening again. New love, joy or deep emotional healing is flowing towards you — let yourself receive it without holding back.",
+      "love": "A new love or a deeper, more tender bond is blossoming. If you are single, your heart is ready; if committed, affection feels fresh again.",
+      "career": "Work that you truly love is calling you. Creative projects and roles that touch your heart bring real fulfilment now.",
+      "money": "Money matters feel lighter when you act from contentment rather than fear. Spending on what nourishes you and others brings a sense of gratitude.",
+      "wellbeing": "Your emotional cup is filling up. Allow yourself moments of joy, music, prayer or tears — whatever helps your feelings flow freely.",
+      "family": "Warmth and kindness flow through your home. A heartfelt gesture or a few simple loving words can bring everyone closer.",
+      "spiritual": "Divine love is pouring into you. Your intuition and compassion are opening — trust the soft feelings that guide you.",
+      "advice": "Today, say one loving, honest thing to someone you care about — and say one to yourself in the mirror too.",
+      "timing": "A fresh emotional beginning is unfolding now; you will feel its sweetness within the coming weeks."
+    },
+    "hi": {
+      "message": "आपका दिल फिर से खुल रहा है। नया प्रेम, खुशी या गहरा भावनात्मक सुकून आपकी ओर बह रहा है — इसे खुले मन से स्वीकार कीजिए।",
+      "love": "एक नया प्रेम या पहले से ज़्यादा गहरा, कोमल रिश्ता खिल रहा है। अगर आप अकेले हैं तो दिल तैयार है; अगर रिश्ते में हैं तो प्यार फिर से ताज़ा लगेगा।",
+      "career": "जिस काम से आपको सच में प्यार है, वह आपको बुला रहा है। दिल को छूने वाले रचनात्मक काम अभी आपको सच्ची संतुष्टि देंगे।",
+      "money": "जब आप डर की जगह संतोष से फैसले लेते हैं तो धन के मामले हल्के लगते हैं। जो आपको और दूसरों को सुख दे, उस पर खर्च करने से मन में कृतज्ञता आएगी।",
+      "wellbeing": "आपका भावनात्मक प्याला भर रहा है। खुद को खुशी, संगीत, प्रार्थना या आँसुओं के पल दीजिए — जिससे भी भावनाएँ खुलकर बह सकें।",
+      "family": "आपके घर में अपनापन और स्नेह बह रहा है। एक सच्चा, प्यार भरा इशारा या कुछ मीठे शब्द सबको और करीब ला सकते हैं।",
+      "spiritual": "दिव्य प्रेम आपके भीतर उतर रहा है। आपका अंतर्ज्ञान और करुणा खुल रहे हैं — उन कोमल भावनाओं पर भरोसा कीजिए जो आपको राह दिखाती हैं।",
+      "advice": "आज किसी अपने से एक प्यार भरी, सच्ची बात कहिए — और एक बात आईने में खुद से भी कहिए।",
+      "timing": "एक नई भावनात्मक शुरुआत अभी हो रही है; आने वाले कुछ हफ़्तों में आप इसकी मिठास महसूस करेंगे।"
+    },
+    "hinglish": {
+      "message": "Dil khul raha hai — naya pyaar, khushi aur sukoon tumhari taraf aa raha hai. Isse bina hichkichaye apne andar aane do.",
+      "love": "Ek naya pyaar ya aur gehra, soft rishta khil raha hai. Single ho toh dil ready hai; relationship mein ho toh pyaar phir se fresh lagega.",
+      "career": "Jo kaam tumhe sach mein pasand hai, woh tumhe bula raha hai. Dil se jude creative kaam abhi asli satisfaction denge.",
+      "money": "Darr ki jagah santosh se decision loge toh paison ka mamla halka lagega. Jo tumhe aur apno ko khushi de, us par kharch karke gratitude feel hoga.",
+      "wellbeing": "Tumhara emotional cup bhar raha hai. Khud ko khushi, music, prayer ya aansuon ke pal do — jisse bhi feelings khul ke beh sakein.",
+      "family": "Ghar mein apnapan aur warmth beh rahi hai. Ek chhota sa pyaar bhara gesture ya meethe shabd sabko aur kareeb le aayenge.",
+      "spiritual": "Divine love tumhare andar utar raha hai. Tumhari intuition aur compassion khul rahe hain — un soft feelings par bharosa rakho.",
+      "advice": "Aaj kisi apne ko ek pyaari, sacchi baat bolo — aur ek baat mirror mein khud ko bhi bolo.",
+      "timing": "Nayi emotional shuruaat abhi ho rahi hai — agle kuch hafton mein iski mithaas mehsoos hogi."
+    }
+  },
+  {
+    "id": "two-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "A beautiful, mutual connection is forming. Two hearts are meeting as equals, with respect and care flowing both ways.",
+      "love": "Mutual love and a balanced partnership are highlighted. Feelings are returned, and a sincere commitment or reconciliation is possible.",
+      "career": "A strong partnership or collaboration supports your growth. Working closely with the right person makes the journey easier and more joyful.",
+      "money": "Shared financial decisions go better when both people are heard. Fairness and openness in joint matters build lasting trust.",
+      "wellbeing": "You feel calmer when you are truly understood. Lean on one trusted person and let that connection soothe your heart.",
+      "family": "Bonds of trust grow stronger. A misunderstanding with someone close can soften when both of you meet halfway.",
+      "spiritual": "This card reminds you that love is sacred. Seeing the divine in another person helps you see it in yourself too.",
+      "advice": "Reach out to one person who matters and tell them sincerely what they mean to you.",
+      "timing": "Things develop steadily over the next few weeks as both sides move towards each other."
+    },
+    "hi": {
+      "message": "एक खूबसूरत, दोनों तरफ़ से जुड़ा रिश्ता बन रहा है। दो दिल बराबरी पर मिल रहे हैं, जहाँ सम्मान और परवाह दोनों ओर से है।",
+      "love": "आपसी प्रेम और संतुलित साथ के योग हैं। भावनाओं का जवाब मिल रहा है, और सच्चा वादा या मेल-मिलाप संभव है।",
+      "career": "एक मज़बूत साझेदारी या सहयोग आपकी तरक्की में मदद करेगा। सही व्यक्ति के साथ मिलकर काम करने से सफ़र आसान और खुशनुमा होगा।",
+      "money": "साझा आर्थिक फैसले तब बेहतर होते हैं जब दोनों की बात सुनी जाए। मिलकर किए कामों में ईमानदारी और पारदर्शिता लंबा भरोसा बनाती है।",
+      "wellbeing": "जब कोई आपको सच में समझता है तो मन शांत होता है। किसी एक भरोसेमंद व्यक्ति का सहारा लीजिए और इस जुड़ाव से दिल को सुकून दीजिए।",
+      "family": "भरोसे के रिश्ते और मज़बूत हो रहे हैं। किसी करीबी के साथ गलतफ़हमी दूर हो सकती है, जब दोनों आधा-आधा कदम बढ़ाएँ।",
+      "spiritual": "यह कार्ड याद दिलाता है कि प्रेम पवित्र है। दूसरे में ईश्वर को देखना आपको अपने भीतर भी ईश्वर को देखने में मदद करता है।",
+      "advice": "किसी एक खास व्यक्ति से संपर्क कीजिए और दिल से बताइए कि वे आपके लिए क्या मायने रखते हैं।",
+      "timing": "अगले कुछ हफ़्तों में बातें धीरे-धीरे आगे बढ़ेंगी, जब दोनों तरफ़ से कदम उठेंगे।"
+    },
+    "hinglish": {
+      "message": "Ek khoobsurat connection ban raha hai — dono taraf se. Do dil barabari se mil rahe hain, respect aur care dono side se hai.",
+      "love": "Mutual pyaar aur balanced partnership dikh rahi hai. Feelings ka jawab mil raha hai — sachcha commitment ya patch-up bhi possible hai.",
+      "career": "Ek strong partnership ya collaboration tumhari growth mein help karegi. Sahi insaan ke saath kaam karne se safar aasaan aur mazedaar hoga.",
+      "money": "Joint financial decisions tab achhe hote hain jab dono ki baat suni jaaye. Fairness aur openness se lamba trust banega.",
+      "wellbeing": "Jab koi tumhe sach mein samajhta hai toh mann shaant hota hai. Ek bharosemand insaan ka saath lo aur dil ko sukoon do.",
+      "family": "Trust wale rishte aur mazboot ho rahe hain. Kisi kareebi ke saath misunderstanding door ho sakti hai agar dono aadha-aadha kadam badhao.",
+      "spiritual": "Yeh card yaad dilata hai ki pyaar pavitra hai. Doosre mein bhagwan ko dekhoge toh apne andar bhi dikhega.",
+      "advice": "Aaj kisi ek khaas insaan ko dil se batao ki woh tumhare liye kitna matter karte hain.",
+      "timing": "Agle kuch hafton mein cheezein dheere dheere aage badhengi, jab dono taraf se kadam uthenge."
+    }
+  },
+  {
+    "id": "three-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Celebrate with your people. Joy multiplies when it is shared, and this is a season to laugh, gather and feel supported.",
+      "love": "Love feels light, fun and social right now. Celebrations, outings with friends or a happy occasion bring hearts closer.",
+      "career": "Teamwork shines and there may be good news to share. Celebrate small wins with colleagues — group effort lifts everyone.",
+      "money": "Shared plans and group efforts can bring gains. Enjoy the celebrations, but keep spending on festivities within a comfortable limit.",
+      "wellbeing": "Friendship is medicine for your soul right now. Time with people who make you laugh will recharge your energy.",
+      "family": "Happy gatherings, festivals or reunions are highlighted. Old friends and relatives bring warmth, laughter and good memories.",
+      "spiritual": "Community nourishes your spirit. Satsang, group prayer or simply sharing gratitude with others lifts you higher.",
+      "advice": "Call or meet a friend today just to share something good — no agenda, only joy.",
+      "timing": "Good news and celebrations arrive soon — within days to a few weeks."
+    },
+    "hi": {
+      "message": "अपनों के साथ खुशियाँ मनाइए। बाँटने से खुशी कई गुना बढ़ती है — यह समय हँसने, मिलने-जुलने और साथ महसूस करने का है।",
+      "love": "प्रेम अभी हल्का, मज़ेदार और खुशनुमा है। उत्सव, दोस्तों के साथ घूमना या कोई शुभ मौका दिलों को करीब लाएगा।",
+      "career": "टीम के साथ काम चमक रहा है और कोई अच्छी खबर बाँटने को मिल सकती है। सहकर्मियों के साथ छोटी जीत का भी जश्न मनाइए।",
+      "money": "मिलकर बनाई योजनाओं और सामूहिक प्रयासों से लाभ हो सकता है। उत्सवों का आनंद लीजिए, पर खर्च को आरामदायक सीमा में रखिए।",
+      "wellbeing": "दोस्ती अभी आपकी आत्मा के लिए मरहम है। जिन लोगों के साथ आप खुलकर हँसते हैं, उनके साथ समय बिताने से ऊर्जा लौटेगी।",
+      "family": "खुशी के मिलन, त्योहार या पुनर्मिलन के योग हैं। पुराने दोस्त और रिश्तेदार अपनापन, हँसी और मीठी यादें लाएँगे।",
+      "spiritual": "सत्संग और अपनों का साथ आपकी आत्मा को पोषण देता है। सामूहिक प्रार्थना या दूसरों के साथ आभार बाँटना आपको ऊँचा उठाएगा।",
+      "advice": "आज किसी दोस्त को फ़ोन कीजिए या मिलिए, सिर्फ़ कोई अच्छी बात बाँटने के लिए — बिना किसी मकसद के, बस खुशी के लिए।",
+      "timing": "अच्छी खबर और जश्न जल्द आने वाले हैं — कुछ दिनों से लेकर कुछ हफ़्तों के भीतर।"
+    },
+    "hinglish": {
+      "message": "Apno ke saath khushi manao — baantne se khushi double hoti hai. Yeh time hasne, milne-julne aur support feel karne ka hai.",
+      "love": "Pyaar abhi light, fun aur social hai. Celebrations, doston ke saath outing ya koi khushi ka mauka dilon ko kareeb layega.",
+      "career": "Teamwork chamak raha hai aur koi good news share karne ko mil sakti hai. Colleagues ke saath chhoti jeet bhi celebrate karo.",
+      "money": "Group efforts aur shared plans se fayda ho sakta hai. Celebrations enjoy karo, bas kharcha comfortable limit mein rakho.",
+      "wellbeing": "Dosti abhi tumhari rooh ki dawa hai. Jin logon ke saath khul ke hanste ho, unke saath time bitao — energy wapas aayegi.",
+      "family": "Khushi ke get-togethers, tyohaar ya reunion ke chances hain. Purane dost aur rishtedaar warmth, hasi aur meethi yaadein le kar aayenge.",
+      "spiritual": "Satsang aur community tumhari spirit ko nourish karti hai. Group prayer ya sabke saath gratitude baantna tumhe upar uthayega.",
+      "advice": "Aaj kisi dost ko call karo ya milo, bas kuch achha share karne ke liye — koi agenda nahi, sirf khushi.",
+      "timing": "Good news aur celebrations jaldi aa rahe hain — kuch dinon se kuch hafton ke andar."
+    }
+  },
+  {
+    "id": "four-of-cups",
+    "yes_no": "maybe",
+    "en": {
+      "message": "You may be so focused on what feels missing that you are overlooking what is being offered. Look up — something good is right beside you.",
+      "love": "There may be some emotional distance or boredom. Notice the care being offered to you, and gently share what you truly need.",
+      "career": "Feeling bored or stuck is a signal, not a dead end. A new opportunity may already be beside you — stay open to unexpected offers.",
+      "money": "Instead of dwelling on what you lack, take stock of what you already have. A small opportunity you are ignoring may deserve a second look.",
+      "wellbeing": "If you feel flat or low on motivation, be gentle with yourself. Rest, fresh air and talking to someone you trust can lift the heaviness.",
+      "family": "Someone around you may be reaching out while you feel withdrawn. Let them in — their care can lighten your mood.",
+      "spiritual": "Quiet reflection is valuable, but do not close the door to grace. Gratitude for small blessings reopens the flow.",
+      "advice": "Write down three things you are grateful for today, then say yes to one small invitation you would usually ignore.",
+      "timing": "Things feel slow for now; movement returns once you accept what is being offered, usually within a few weeks."
+    },
+    "hi": {
+      "message": "शायद आप उस पर इतना ध्यान दे रहे हैं जो कमी लग रही है कि जो मिल रहा है उसे नहीं देख पा रहे। नज़र उठाइए — कुछ अच्छा आपके बिल्कुल पास है।",
+      "love": "रिश्ते में थोड़ी भावनात्मक दूरी या ऊब हो सकती है। जो प्रेम आपको दिया जा रहा है उसे पहचानिए, और प्यार से बताइए कि आपको सच में क्या चाहिए।",
+      "career": "ऊब या ठहराव महसूस होना एक संकेत है, अंत नहीं। कोई नया अवसर शायद आपके पास ही है — अनपेक्षित प्रस्तावों के लिए मन खुला रखिए।",
+      "money": "जो नहीं है उस पर सोचने की बजाय, जो पहले से है उसका हिसाब लीजिए। जिस छोटे अवसर को आप अनदेखा कर रहे हैं, उस पर दोबारा नज़र डालना ठीक रहेगा।",
+      "wellbeing": "अगर मन उदास लगे या प्रेरणा कम हो, तो खुद के साथ नरमी बरतिए। आराम, ताज़ी हवा और किसी भरोसेमंद से बात करना भारीपन हल्का करेगा।",
+      "family": "आपके आस-पास कोई आप तक पहुँचने की कोशिश कर रहा है, जबकि आप खुद में सिमटे हैं। उन्हें पास आने दीजिए — उनकी परवाह मन हल्का करेगी।",
+      "spiritual": "शांत चिंतन अच्छा है, पर कृपा के दरवाज़े बंद मत कीजिए। छोटी-छोटी कृपाओं के लिए आभार फिर से प्रवाह खोल देता है।",
+      "advice": "आज तीन चीज़ें लिखिए जिनके लिए आप आभारी हैं, फिर किसी एक छोटे निमंत्रण को 'हाँ' कहिए जिसे आप आमतौर पर टाल देते।",
+      "timing": "अभी चीज़ें धीमी लगेंगी; जब आप मिल रही चीज़ों को स्वीकारेंगे, तो आमतौर पर कुछ हफ़्तों में हलचल लौट आएगी।"
+    },
+    "hinglish": {
+      "message": "Jo missing hai uspe itna focus hai ki jo mil raha hai woh dikh hi nahi raha. Nazar uthao — kuch achha bilkul paas hai.",
+      "love": "Thodi emotional doori ya boredom ho sakti hai. Jo care tumhe mil rahi hai use notice karo, aur pyaar se batao ki tumhe sach mein kya chahiye.",
+      "career": "Bore ya stuck feel karna ek signal hai, dead end nahi. Naya mauka shayad bagal mein hi hai — unexpected offers ke liye open raho.",
+      "money": "Jo nahi hai uspe sochne ki jagah, jo already hai uska hisaab lo. Jis chhote mauke ko ignore kar rahe ho, use ek baar phir dekho.",
+      "wellbeing": "Agar mann flat ya low lag raha hai toh khud pe narmi rakho. Aaraam, fresh hawa aur kisi apne se baat — bhaaripan halka hoga.",
+      "family": "Koi apna tumhare paas aane ki koshish kar raha hai jab tum khud mein simte ho. Unhe aane do — unki care mood halka karegi.",
+      "spiritual": "Shaant reflection achha hai, par blessings ka darwaza band mat karo. Chhoti cheezon ke liye gratitude flow wapas khol deta hai.",
+      "advice": "Aaj teen cheezein likho jinke liye grateful ho, phir ek chhote invitation ko haan bolo jo normally ignore kar dete.",
+      "timing": "Abhi cheezein slow lagengi; jo mil raha hai use accept karoge toh kuch hafton mein movement wapas aayegi."
+    }
+  },
+  {
+    "id": "five-of-cups",
+    "yes_no": "no",
+    "en": {
+      "message": "It is okay to grieve what did not work out. But not everything is lost — turn around gently and see what still remains for you.",
+      "love": "A disappointment in love may still ache. Give your heart time to heal; what remains, or what comes next, can be more honest and kind.",
+      "career": "A setback at work or in studies feels heavy, but it carries a lesson. Learn from it, then turn towards the options still open to you.",
+      "money": "A loss or missed chance may be on your mind. Focus on what you still have and plan carefully from here, without blaming yourself.",
+      "wellbeing": "Sadness needs space, not judgement. Rest, cry if you need to, and lean on someone caring — you do not have to carry this alone.",
+      "family": "Old hurts or regrets with someone close may surface. A gentle, honest talk can begin the healing, even if things are not fully fixed yet.",
+      "spiritual": "Grief is also a teacher. When you are ready, offer your sorrow to the divine and ask to see the blessing that still stands beside you.",
+      "advice": "Today, write down what you lost and then list two things that are still with you — let both be true.",
+      "timing": "Healing takes its own time; give yourself a few weeks to a full season before expecting things to feel lighter."
+    },
+    "hi": {
+      "message": "जो नहीं हो सका उसका दुख होना ठीक है। लेकिन सब कुछ नहीं खोया — धीरे से मुड़कर देखिए कि आपके पास अभी भी क्या बचा है।",
+      "love": "प्रेम में मिली निराशा अभी भी दुख दे सकती है। दिल को भरने का समय दीजिए; जो बचा है या जो आगे आएगा, वह और सच्चा और कोमल हो सकता है।",
+      "career": "काम या पढ़ाई में आई रुकावट भारी लग रही है, पर उसमें एक सीख छिपी है। उससे सीखिए और फिर उन रास्तों की ओर मुड़िए जो अभी भी खुले हैं।",
+      "money": "कोई नुकसान या छूटा मौका मन में हो सकता है। जो आपके पास है उस पर ध्यान दीजिए और खुद को दोष दिए बिना सोच-समझकर आगे की योजना बनाइए।",
+      "wellbeing": "उदासी को जगह चाहिए, आलोचना नहीं। आराम कीजिए, ज़रूरत हो तो रो लीजिए, और किसी अपने का सहारा लीजिए — यह बोझ आपको अकेले नहीं उठाना है।",
+      "family": "किसी करीबी के साथ पुराने घाव या पछतावे उभर सकते हैं। एक नरम, सच्ची बातचीत मन भरने की शुरुआत कर सकती है, भले सब तुरंत ठीक न हो।",
+      "spiritual": "दुख भी एक शिक्षक है। जब आप तैयार हों, अपना दुख ईश्वर को अर्पित कीजिए और उस आशीर्वाद को देखने की प्रार्थना कीजिए जो अब भी आपके साथ है।",
+      "advice": "आज लिखिए कि आपने क्या खोया, फिर दो ऐसी चीज़ें लिखिए जो अब भी आपके पास हैं — दोनों सच को स्वीकार कीजिए।",
+      "timing": "मन को भरने का अपना समय होता है; हल्का महसूस होने के लिए खुद को कुछ हफ़्तों से लेकर पूरा एक मौसम दीजिए।"
+    },
+    "hinglish": {
+      "message": "Jo gaya uska dukh theek hai — par sab kuch khatam nahi hua. Dheere se mud ke dekho, abhi bhi bahut kuch tumhare paas hai.",
+      "love": "Pyaar mein mila disappointment abhi bhi dukh de sakta hai. Dil ko heal hone ka time do — jo bacha hai ya jo aayega, woh zyada sachcha hoga.",
+      "career": "Kaam ya padhai mein setback bhaari lag raha hai, par usme ek seekh hai. Seekho, aur phir un raaston ki taraf dekho jo abhi bhi khule hain.",
+      "money": "Koi loss ya chhoota mauka dimaag mein ho sakta hai. Jo paas hai uspe dhyan do aur khud ko blame kiye bina soch-samajh ke aage plan karo.",
+      "wellbeing": "Udaasi ko jagah chahiye, judgement nahi. Aaraam karo, rona aaye toh ro lo, aur kisi apne ka sahara lo — yeh bojh akele nahi uthana.",
+      "family": "Kisi kareebi ke saath purane hurt ya regrets ubhar sakte hain. Ek soft, honest baat healing shuru kar sakti hai, chahe sab turant theek na ho.",
+      "spiritual": "Dukh bhi ek teacher hai. Jab ready ho, apna dukh bhagwan ko saunp do aur woh blessing dekhne ki prarthana karo jo abhi bhi saath hai.",
+      "advice": "Aaj likho ki kya khoya, phir do cheezein likho jo abhi bhi tumhare paas hain — dono sach ko accept karo.",
+      "timing": "Healing apna time leti hai — halka feel hone ke liye khud ko kuch hafton se le kar ek poora season do."
+    }
+  },
+  {
+    "id": "six-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Sweet memories are speaking to you. An old friend, a familiar place or a simple childhood joy brings comfort and lightness back.",
+      "love": "A past connection may return, or love feels innocent and tender again. Small, sweet gestures matter more than grand ones now.",
+      "career": "Return to what you once loved doing. An old skill, contact or idea from the past can open a gentle new door.",
+      "money": "Help or support may come from family or familiar people. Simple, sensible choices rooted in past experience serve you well.",
+      "wellbeing": "Comforting memories soothe your heart. Revisit a song, a place or a hobby that once made you feel safe and happy.",
+      "family": "Childhood bonds, siblings and old friends come into focus. Reconnecting with someone from your past brings warmth and healing.",
+      "spiritual": "Your inner child holds wisdom. Simple faith, innocence and wonder bring you closer to the divine than any complicated effort.",
+      "advice": "Message an old friend or family member today and share a happy memory you both have.",
+      "timing": "Familiar faces or old matters resurface soon, often within days or a few weeks."
+    },
+    "hi": {
+      "message": "मीठी यादें आपसे कुछ कह रही हैं। कोई पुराना दोस्त, जानी-पहचानी जगह या बचपन की कोई सादी खुशी फिर से सुकून और हल्कापन लौटा रही है।",
+      "love": "कोई पुराना रिश्ता लौट सकता है, या प्रेम फिर से मासूम और कोमल लगेगा। अभी बड़े वादों से ज़्यादा छोटे, मीठे इशारे मायने रखते हैं।",
+      "career": "उस काम की ओर लौटिए जो कभी आपको बहुत पसंद था। अतीत का कोई हुनर, संपर्क या विचार एक नया रास्ता खोल सकता है।",
+      "money": "परिवार या जाने-पहचाने लोगों से मदद या सहारा मिल सकता है। पुराने अनुभव पर आधारित सादे, समझदारी भरे फैसले आपके काम आएँगे।",
+      "wellbeing": "सुकून देने वाली यादें दिल को शांत करती हैं। कोई गाना, जगह या शौक फिर से अपनाइए जिससे कभी आपको सुरक्षा और खुशी मिलती थी।",
+      "family": "बचपन के रिश्ते, भाई-बहन और पुराने दोस्त ध्यान में आ रहे हैं। अतीत के किसी अपने से फिर जुड़ना अपनापन और सुकून लाएगा।",
+      "spiritual": "आपके भीतर का बच्चा बहुत समझदार है। सादी आस्था, मासूमियत और विस्मय आपको किसी भी जटिल प्रयास से ज़्यादा ईश्वर के करीब ले जाते हैं।",
+      "advice": "आज किसी पुराने दोस्त या परिवार के सदस्य को संदेश भेजिए और कोई ऐसी खुशनुमा याद बाँटिए जो आप दोनों की है।",
+      "timing": "जाने-पहचाने चेहरे या पुरानी बातें जल्द लौटेंगी, अक्सर कुछ दिनों या कुछ हफ़्तों में।"
+    },
+    "hinglish": {
+      "message": "Purani yaadein kuch keh rahi hain — dil halka karo. Koi purana dost, jaani-pehchaani jagah ya bachpan ki chhoti khushi sukoon wapas la rahi hai.",
+      "love": "Koi purana connection wapas aa sakta hai, ya pyaar phir se masoom aur soft lagega. Abhi bade waadon se zyada chhote, meethe gestures matter karte hain.",
+      "career": "Jo kaam kabhi bahut pasand tha, uski taraf wapas jao. Past ka koi skill, contact ya idea naya darwaza khol sakta hai.",
+      "money": "Family ya jaane-pehchaane logon se madad mil sakti hai. Purane experience se liye simple, samajhdaar decisions kaam aayenge.",
+      "wellbeing": "Achhi yaadein dil ko shaant karti hain. Koi gaana, jagah ya hobby phir se try karo jisse kabhi safe aur khush feel hota tha.",
+      "family": "Bachpan ke rishte, bhai-behen aur purane dost focus mein hain. Past ke kisi apne se phir judna warmth aur healing layega.",
+      "spiritual": "Tumhare andar ka bachcha bahut samajhdaar hai. Simple faith, masoomiyat aur wonder tumhe kisi bhi complicated koshish se zyada bhagwan ke kareeb le jaate hain.",
+      "advice": "Aaj kisi purane dost ya family member ko message karo aur ek khushi wali yaad share karo jo tum dono ki hai.",
+      "timing": "Jaane-pehchaane chehre ya purani baatein jaldi wapas aayengi — aksar kuch dinon ya hafton mein."
+    }
+  },
+  {
+    "id": "seven-of-cups",
+    "yes_no": "maybe",
+    "en": {
+      "message": "Many dreams and options are swirling around you. Imagination is a gift, but now it is time to get real about what you truly want.",
+      "love": "Be careful not to fall for a fantasy instead of the real person. Look clearly at actions, not only at words and dreams.",
+      "career": "Too many options can scatter your energy. Shortlist your choices, check the facts and commit to the one that truly fits.",
+      "money": "Tempting offers may look shinier than they are. Pause, research calmly and avoid decisions based on wishful thinking.",
+      "wellbeing": "An overloaded mind can feel foggy. Simplify your day, limit screen time and give your thoughts a quiet place to settle.",
+      "family": "Different people may be pulling you in different directions with their expectations. Listen kindly, then decide what feels right for you.",
+      "spiritual": "Your inner vision is rich. Meditation helps you separate true intuition from passing wishes and illusions.",
+      "advice": "List your top three options on paper today and cross out the one that is mostly fantasy.",
+      "timing": "Clarity comes once you choose; until then things may drift — give it a few weeks of honest sorting."
+    },
+    "hi": {
+      "message": "आपके चारों ओर कई सपने और विकल्प घूम रहे हैं। कल्पना एक वरदान है, पर अब यह साफ़ करने का समय है कि आप सच में क्या चाहते हैं।",
+      "love": "ध्यान रखिए कि असली व्यक्ति की जगह किसी कल्पना के मोह में न पड़ें। सिर्फ़ बातों और सपनों को नहीं, व्यवहार को भी साफ़ नज़र से देखिए।",
+      "career": "बहुत सारे विकल्प आपकी ऊर्जा बिखेर सकते हैं। अपने विकल्प छाँटिए, तथ्य जाँचिए और उसी पर टिकिए जो सच में आपके लिए सही है।",
+      "money": "लुभावने प्रस्ताव जितने चमकदार दिखते हैं, ज़रूरी नहीं उतने ही हों। रुकिए, शांति से जानकारी लीजिए और सिर्फ़ उम्मीद के भरोसे फैसले मत कीजिए।",
+      "wellbeing": "विचारों से भरा मन धुंधला महसूस कर सकता है। अपना दिन सरल बनाइए, स्क्रीन का समय कम कीजिए और विचारों को शांत होने की जगह दीजिए।",
+      "family": "अलग-अलग लोग अपनी अपेक्षाओं से आपको अलग दिशाओं में खींच सकते हैं। सबकी बात प्यार से सुनिए, फिर तय कीजिए कि आपके लिए क्या सही है।",
+      "spiritual": "आपकी भीतरी दृष्टि बहुत समृद्ध है। ध्यान आपको सच्चे अंतर्ज्ञान और क्षणिक इच्छाओं व भ्रमों के बीच फ़र्क करने में मदद करेगा।",
+      "advice": "आज कागज़ पर अपने तीन मुख्य विकल्प लिखिए और उसे काट दीजिए जो ज़्यादातर कल्पना पर टिका है।",
+      "timing": "जब आप चुनेंगे तभी स्पष्टता आएगी; तब तक बातें भटक सकती हैं — ईमानदारी से छाँटने के लिए कुछ हफ़्ते दीजिए।"
+    },
+    "hinglish": {
+      "message": "Bahut saare sapne aur options ghoom rahe hain. Imagination ek gift hai, par ab real hone ka time hai — sach mein kya chahiye, woh choose karo.",
+      "love": "Dhyan rakhna, asli insaan ki jagah kisi fantasy mein mat phas jaana. Sirf baaton aur sapno ko nahi, actions ko bhi saaf nazar se dekho.",
+      "career": "Zyada options energy bikhaar dete hain. Choices shortlist karo, facts check karo aur usi pe commit karo jo sach mein fit ho.",
+      "money": "Lubhaane wale offers jitne chamakdaar dikhte hain, utne hote nahi. Ruko, aaram se research karo aur sirf ummeed ke bharose decision mat lo.",
+      "wellbeing": "Overloaded mind dhundhla lagta hai. Din simple rakho, screen time kam karo aur thoughts ko shaant hone ki jagah do.",
+      "family": "Alag-alag log apni expectations se tumhe alag directions mein kheench sakte hain. Sabki pyaar se suno, phir decide karo tumhare liye kya sahi hai.",
+      "spiritual": "Tumhari inner vision bahut rich hai. Meditation se asli intuition aur pal bhar ki wishes ya illusions ka fark samajh aayega.",
+      "advice": "Aaj paper pe apne top teen options likho aur jo zyada fantasy hai use kaat do.",
+      "timing": "Clarity tab aayegi jab choose karoge; tab tak cheezein idhar-udhar ho sakti hain — imaandaari se sort karne ke liye kuch hafte do."
+    }
+  },
+  {
+    "id": "eight-of-cups",
+    "yes_no": "no",
+    "en": {
+      "message": "You are ready to walk away from what no longer fulfils your heart. Leaving is not failure — it is choosing deeper meaning.",
+      "love": "If a connection feels empty despite your efforts, it is okay to step back. Your heart deserves love that truly nourishes it.",
+      "career": "You may be outgrowing a role, course or routine. Seeking work with more meaning is brave — plan your next step thoughtfully.",
+      "money": "Letting go of something that drains you may feel uncertain at first. Move steadily and plan practically as you search for something better.",
+      "wellbeing": "Emotional tiredness is asking for a change of scene. Quiet time, a walk or a short break can help you hear what your heart needs.",
+      "family": "You may need some space from expectations that do not reflect who you are now. Explain kindly — the right people will understand.",
+      "spiritual": "This is a soul journey. Like a seeker walking towards the mountains, you are leaving the surface to find something truer within.",
+      "advice": "Today, name one thing that drains you and take one small, practical step away from it.",
+      "timing": "This transition unfolds slowly; give it a full season to settle into its new direction."
+    },
+    "hi": {
+      "message": "आप उस चीज़ से आगे बढ़ने के लिए तैयार हैं जो अब आपके दिल को संतोष नहीं देती। छोड़ना हार नहीं है — यह गहरे अर्थ को चुनना है।",
+      "love": "अगर आपकी कोशिशों के बावजूद कोई रिश्ता खाली लगे, तो थोड़ा पीछे हटना ठीक है। आपका दिल ऐसे प्रेम का हकदार है जो उसे सच में पोषण दे।",
+      "career": "शायद आप किसी पद, पढ़ाई या दिनचर्या से आगे बढ़ चुके हैं। ज़्यादा अर्थपूर्ण काम की तलाश साहस है — अगला कदम सोच-समझकर उठाइए।",
+      "money": "जो आपको थकाता है उसे छोड़ना शुरुआत में अनिश्चित लग सकता है। बेहतर की तलाश में धीरे-धीरे और व्यावहारिक योजना के साथ चलिए।",
+      "wellbeing": "भावनात्मक थकान माहौल बदलने की माँग कर रही है। शांत समय, थोड़ी सैर या छोटा सा विराम आपको दिल की ज़रूरत सुनने में मदद करेगा।",
+      "family": "शायद आपको उन अपेक्षाओं से थोड़ी दूरी चाहिए जो आज के आप से मेल नहीं खातीं। प्यार से समझाइए — सही लोग ज़रूर समझेंगे।",
+      "spiritual": "यह आत्मा की यात्रा है। पहाड़ों की ओर चलते किसी साधक की तरह, आप सतह छोड़कर अपने भीतर कुछ ज़्यादा सच्चा खोजने निकले हैं।",
+      "advice": "आज एक ऐसी चीज़ का नाम लीजिए जो आपकी ऊर्जा खींचती है, और उससे दूर जाने का एक छोटा, व्यावहारिक कदम उठाइए।",
+      "timing": "यह बदलाव धीरे-धीरे होगा; नई दिशा में स्थिर होने के लिए इसे पूरा एक मौसम दीजिए।"
+    },
+    "hinglish": {
+      "message": "Jo dil ko satisfy nahi karta, usse aage badhna theek hai. Chhodna haar nahi hai — yeh gehre meaning ko choose karna hai.",
+      "love": "Agar koshishon ke baad bhi rishta khaali lage, toh thoda peeche hatna theek hai. Tumhara dil aise pyaar ka haqdaar hai jo use sach mein bhare.",
+      "career": "Shayad tum kisi role, course ya routine se aage nikal chuke ho. Zyada meaningful kaam dhoondhna himmat hai — agla step soch-samajh ke lo.",
+      "money": "Jo cheez drain karti hai use chhodna pehle uncertain lag sakta hai. Behtar ki talaash mein dheere aur practical planning ke saath chalo.",
+      "wellbeing": "Emotional thakaan scene change maang rahi hai. Shaant time, ek walk ya chhota break tumhe dil ki zaroorat sunne mein help karega.",
+      "family": "Shayad tumhe un expectations se thodi doori chahiye jo aaj ke tum se match nahi karti. Pyaar se samjhao — sahi log samjhenge.",
+      "spiritual": "Yeh rooh ka safar hai. Pahadon ki taraf jaate kisi saadhak ki tarah, tum surface chhod ke andar kuch zyada sachcha dhoondhne nikle ho.",
+      "advice": "Aaj ek cheez ka naam lo jo tumhari energy kheenchti hai, aur usse door jaane ka ek chhota, practical kadam uthao.",
+      "timing": "Yeh transition dheere hoga — nayi direction mein settle hone ke liye ek poora season do."
+    }
+  },
+  {
+    "id": "nine-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "This is your wish card! Satisfaction and emotional fulfilment are on their way — allow yourself to feel deeply content.",
+      "love": "Happiness in love and getting what your heart wants are strongly indicated. Enjoy the warmth and express your gratitude openly.",
+      "career": "Satisfaction and well-deserved rewards come for your efforts. Recognition or a hoped-for result brings a proud, happy feeling.",
+      "money": "Comfort and a sense of having enough are highlighted. Enjoy your blessings with gratitude, while staying sensible about future plans.",
+      "wellbeing": "Contentment fills your heart. Savour this good phase — treat yourself to something that brings you simple pleasure.",
+      "family": "Joyful moments with loved ones bring a sense of pride and comfort. Your happiness is lifting the people around you too.",
+      "spiritual": "Gratitude multiplies blessings. Thank the universe for what has already come, and keep your wishes pure and heartfelt.",
+      "advice": "Make one sincere wish today, write it down, and thank the divine as if it is already on its way.",
+      "timing": "Wishes begin to take shape soon — often within weeks, as long as your intention stays clear."
+    },
+    "hi": {
+      "message": "यह आपका मनोकामना कार्ड है! संतोष और भावनात्मक पूर्णता आपकी ओर आ रही है — खुद को दिल से प्रसन्न महसूस करने दीजिए।",
+      "love": "प्रेम में खुशी और दिल की इच्छा पूरी होने के प्रबल संकेत हैं। इस अपनेपन का आनंद लीजिए और खुलकर आभार जताइए।",
+      "career": "आपकी मेहनत का संतोषजनक और योग्य फल मिलेगा। सम्मान या मनचाहा परिणाम आपको गर्व और खुशी का अहसास देगा।",
+      "money": "सुख-सुविधा और 'पर्याप्त है' की भावना के योग हैं। अपनी कृपाओं का आभार के साथ आनंद लीजिए, और भविष्य की योजनाओं में समझदारी बनाए रखिए।",
+      "wellbeing": "संतोष आपके दिल को भर रहा है। इस अच्छे दौर का स्वाद लीजिए — खुद को कोई ऐसी छोटी खुशी दीजिए जो आपको आनंद दे।",
+      "family": "अपनों के साथ खुशी के पल गर्व और सुकून देंगे। आपकी खुशी आपके आस-पास के लोगों का मन भी खिला रही है।",
+      "spiritual": "आभार से आशीर्वाद कई गुना बढ़ते हैं। जो मिल चुका है उसके लिए ब्रह्मांड को धन्यवाद दीजिए, और अपनी इच्छाओं को पवित्र और सच्चा रखिए।",
+      "advice": "आज दिल से एक इच्छा कीजिए, उसे लिखिए, और ईश्वर को ऐसे धन्यवाद दीजिए जैसे वह पूरी होने की राह पर है।",
+      "timing": "इच्छाएँ जल्द आकार लेने लगेंगी — अक्सर कुछ हफ़्तों में, बशर्ते आपका इरादा साफ़ रहे।"
+    },
+    "hinglish": {
+      "message": "Yeh tumhara wish card hai! Satisfaction aur dil ki khushi tumhari taraf aa rahi hai — khud ko dil se content feel karne do.",
+      "love": "Pyaar mein khushi aur dil ki chahat poori hone ke strong signs hain. Is warmth ko enjoy karo aur khul ke gratitude dikhao.",
+      "career": "Mehnat ka satisfying aur deserved reward milega. Recognition ya jo result chahte the, woh proud aur khush feel karayega.",
+      "money": "Comfort aur 'kaafi hai' wali feeling dikh rahi hai. Blessings ko gratitude ke saath enjoy karo, bas future plans mein samajhdaari rakho.",
+      "wellbeing": "Santosh dil ko bhar raha hai. Is achhe phase ko jee bhar ke jiyo — khud ko koi chhoti si treat do jo khushi de.",
+      "family": "Apno ke saath khushi ke pal pride aur sukoon denge. Tumhari khushi aas-paas ke logon ka mood bhi achha kar rahi hai.",
+      "spiritual": "Gratitude se blessings multiply hoti hain. Jo mil chuka hai uske liye universe ko thank you bolo, aur wishes ko saaf aur dil se rakho.",
+      "advice": "Aaj dil se ek wish karo, use likho, aur bhagwan ko aise thank you bolo jaise woh raaste mein hai.",
+      "timing": "Wishes jaldi shape lena shuru karengi — aksar kuch hafton mein, bas intention clear rakho."
+    }
+  },
+  {
+    "id": "ten-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Lasting happiness and emotional fulfilment with loved ones are around you. Peace is settling into both your home and your heart.",
+      "love": "A happy, lasting union and shared dreams are highlighted. Relationships move towards commitment, harmony and family blessings.",
+      "career": "Work-life balance and contentment come into view. Success feels sweeter when it supports the people and the life you love.",
+      "money": "Stability that supports your family's comfort is indicated. Plan together with loved ones so that everyone feels secure and included.",
+      "wellbeing": "Your heart feels safe and at peace. Let yourself fully receive the love around you — this is a deeply restoring phase.",
+      "family": "Family harmony, reunions and joyful gatherings are blessed. Old tensions soften and togetherness becomes the priority.",
+      "spiritual": "You are being shown what true abundance is — love, peace and belonging. Gratitude for your loved ones is your prayer now.",
+      "advice": "Plan a simple shared meal or some time together with family today, and put the phones away for it.",
+      "timing": "This happiness grows steadily and lasts; you will feel it deepening over the coming months."
+    },
+    "hi": {
+      "message": "अपनों के साथ स्थायी खुशी और भावनात्मक पूर्णता आपके आस-पास है। आपके घर और दिल, दोनों में सुकून बस रहा है।",
+      "love": "एक खुशहाल, लंबे समय तक चलने वाले रिश्ते और साझा सपनों के योग हैं। रिश्ते वादे, सामंजस्य और परिवार के आशीर्वाद की ओर बढ़ रहे हैं।",
+      "career": "काम और जीवन में संतुलन व संतोष नज़र आ रहा है। सफलता तब और मीठी लगती है जब वह उन लोगों और उस जीवन को सहारा दे जिन्हें आप प्यार करते हैं।",
+      "money": "ऐसी स्थिरता के संकेत हैं जो आपके परिवार की सुख-सुविधा में सहायक हो। अपनों के साथ मिलकर योजना बनाइए ताकि सब सुरक्षित और शामिल महसूस करें।",
+      "wellbeing": "आपका दिल सुरक्षित और शांत महसूस कर रहा है। अपने आस-पास के प्रेम को पूरी तरह स्वीकार कीजिए — यह गहराई से ताज़गी देने वाला दौर है।",
+      "family": "परिवार में सामंजस्य, मिलन और खुशी के आयोजनों का आशीर्वाद है। पुराने तनाव नरम होंगे और साथ रहना सबसे ज़रूरी बनेगा।",
+      "spiritual": "आपको दिखाया जा रहा है कि सच्ची समृद्धि क्या है — प्रेम, शांति और अपनापन। अपनों के लिए आभार ही अभी आपकी प्रार्थना है।",
+      "advice": "आज परिवार के साथ एक सादा भोजन या साथ बिताने का समय तय कीजिए, और उस दौरान फ़ोन दूर रखिए।",
+      "timing": "यह खुशी धीरे-धीरे बढ़ेगी और टिकेगी; आने वाले महीनों में आप इसे और गहरा होता महसूस करेंगे।"
+    },
+    "hinglish": {
+      "message": "Ghar aur dil dono mein sukoon aa raha hai. Apno ke saath lambi khushi aur emotional fulfilment tumhare aas-paas hai.",
+      "love": "Ek khush, lamba chalne wala rishta aur shared sapne dikh rahe hain. Rishte commitment, harmony aur family ke ashirwad ki taraf badh rahe hain.",
+      "career": "Work-life balance aur santosh nazar aa raha hai. Success tab aur meethi lagti hai jab woh tumhare apno aur pasand ki life ko support kare.",
+      "money": "Aisi stability dikh rahi hai jo family ke comfort ko support kare. Apno ke saath milke plan karo taaki sab secure aur included feel karein.",
+      "wellbeing": "Dil safe aur shaant feel kar raha hai. Aas-paas ke pyaar ko poori tarah accept karo — yeh bahut healing wala phase hai.",
+      "family": "Family mein harmony, reunions aur khushi ke get-togethers ka ashirwad hai. Purane tension naram honge aur saath rehna priority banega.",
+      "spiritual": "Tumhe dikhaya ja raha hai ki asli abundance kya hai — pyaar, shanti aur apnapan. Apno ke liye gratitude hi abhi tumhari prarthana hai.",
+      "advice": "Aaj family ke saath ek simple khana ya saath baithne ka time plan karo — aur us waqt phone side mein rakh do.",
+      "timing": "Yeh khushi dheere dheere badhegi aur tikegi — aane wale mahino mein aur gehri feel hogi."
+    }
+  },
+  {
+    "id": "page-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "A gentle message of love or a creative surprise is coming. Keep your heart open and playful — sweetness is finding its way to you.",
+      "love": "A sweet, romantic message, a new crush or a tender gesture may arrive. Respond with sincerity and let feelings unfold naturally.",
+      "career": "A creative idea is worth exploring. Trust your imagination and share it — even an unusual idea can open a door.",
+      "money": "Small, pleasant surprises are possible. Stay curious about new ways to earn through creativity, while keeping expectations grounded.",
+      "wellbeing": "Your sensitive heart needs gentle care. Art, music, journaling or simple play can lift your mood beautifully.",
+      "family": "A younger person or a playful family member brings joy and a fresh perspective. Kind words at home go a long way.",
+      "spiritual": "Your intuition speaks through dreams, signs and soft feelings. Pay attention to small synchronicities — they carry messages.",
+      "advice": "Do one small creative thing today — draw, sing or write a note — just for the joy of it.",
+      "timing": "A sweet message or sign may come within days to a couple of weeks."
+    },
+    "hi": {
+      "message": "प्रेम का एक कोमल संदेश या कोई सुखद रचनात्मक आश्चर्य आने वाला है। दिल को खुला और हल्का रखिए — मिठास आपकी ओर अपना रास्ता बना रही है।",
+      "love": "कोई मीठा, प्रेम भरा संदेश, नया आकर्षण या कोमल इशारा मिल सकता है। सच्चाई से जवाब दीजिए और भावनाओं को सहज रूप से खिलने दीजिए।",
+      "career": "एक रचनात्मक विचार पर काम करना सार्थक होगा। अपनी कल्पना पर भरोसा कीजिए और उसे साझा कीजिए — कोई अनोखा विचार भी नया रास्ता खोल सकता है।",
+      "money": "छोटे, सुखद आश्चर्य संभव हैं। रचनात्मकता से कमाने के नए तरीकों के बारे में उत्सुक रहिए, पर अपेक्षाएँ यथार्थवादी रखिए।",
+      "wellbeing": "आपके संवेदनशील दिल को कोमल देखभाल चाहिए। कला, संगीत, डायरी लिखना या थोड़ा खेलना आपका मन सुंदर ढंग से हल्का कर सकता है।",
+      "family": "परिवार का कोई छोटा सदस्य या हँसमुख व्यक्ति खुशी और नया नज़रिया लाएगा। घर में कहे गए मीठे बोल बहुत असर करेंगे।",
+      "spiritual": "आपका अंतर्ज्ञान सपनों, संकेतों और कोमल भावनाओं के ज़रिए बोल रहा है। छोटे-छोटे संयोगों पर ध्यान दीजिए — उनमें संदेश छिपे हैं।",
+      "advice": "आज सिर्फ़ खुशी के लिए एक छोटा सा रचनात्मक काम कीजिए — चित्र बनाइए, गुनगुनाइए या कोई प्यारा सा नोट लिखिए।",
+      "timing": "कोई मीठा संदेश या संकेत कुछ दिनों से लेकर दो-एक हफ़्तों में आ सकता है।"
+    },
+    "hinglish": {
+      "message": "Ek pyaara sa message aane wala hai — pyaar ka ya koi creative surprise. Dil ko open aur playful rakho, mithaas tumhari taraf aa rahi hai.",
+      "love": "Koi sweet, romantic message, naya crush ya pyaara sa gesture mil sakta hai. Sachchai se jawab do aur feelings ko naturally khilne do.",
+      "career": "Ek creative idea explore karne layak hai. Apni imagination pe bharosa rakho aur share karo — unusual idea bhi darwaza khol sakta hai.",
+      "money": "Chhote, pyaare surprises possible hain. Creativity se kamane ke naye tareekon ke baare mein curious raho, bas expectations realistic rakho.",
+      "wellbeing": "Tumhare sensitive dil ko soft care chahiye. Art, music, journaling ya thoda khelna mood ko khoobsurati se halka karega.",
+      "family": "Ghar ka koi chhota member ya masti-mazaak wala insaan khushi aur naya nazariya layega. Ghar mein meethe bol bahut kaam karenge.",
+      "spiritual": "Tumhari intuition sapno, signs aur soft feelings se baat kar rahi hai. Chhote coincidences pe dhyan do — unme messages chhupe hain.",
+      "advice": "Aaj sirf khushi ke liye ek chhota creative kaam karo — drawing, gaana ya ek pyaara sa note.",
+      "timing": "Koi meetha message ya sign kuch dinon se le kar do hafton mein aa sakta hai."
+    }
+  },
+  {
+    "id": "knight-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "A romantic or heartfelt offer is arriving. Follow your heart — but keep your eyes open and check that words match actions.",
+      "love": "A romantic proposal, a charming admirer or a heartfelt gesture is likely. Enjoy the romance while letting trust build at a steady pace.",
+      "career": "An attractive offer or creative opportunity may come your way. It looks promising — read the details carefully before saying yes.",
+      "money": "An appealing offer may appear. Let your heart feel excited, but let your head check the terms and practicality calmly.",
+      "wellbeing": "Your emotions are flowing and inspired. Channel them into something creative, and balance dreaminess with a good daily routine.",
+      "family": "Someone may bring an invitation, good news or a peace offering. Receive it graciously and respond with warmth.",
+      "spiritual": "You are being called to follow your heart's quest. Let devotion and beauty guide you, grounded by honesty with yourself.",
+      "advice": "If an offer or message comes today, reply kindly — and ask one clear question before deciding.",
+      "timing": "An offer or message arrives soon, often within a few weeks; let things develop without rushing."
+    },
+    "hi": {
+      "message": "एक प्रेम भरा या दिल से जुड़ा प्रस्ताव आ रहा है। दिल की सुनिए — पर आँखें खुली रखिए और देखिए कि बातें और व्यवहार मेल खाते हैं।",
+      "love": "प्रेम प्रस्ताव, कोई आकर्षक प्रशंसक या दिल को छूने वाला इशारा मिलने की संभावना है। प्रेम का आनंद लीजिए, पर भरोसे को धीरे-धीरे बनने दीजिए।",
+      "career": "एक आकर्षक प्रस्ताव या रचनात्मक अवसर आपकी ओर आ सकता है। यह आशाजनक लगता है — 'हाँ' कहने से पहले सारी बातें ध्यान से पढ़िए।",
+      "money": "कोई लुभावना प्रस्ताव सामने आ सकता है। दिल को उत्साहित होने दीजिए, पर दिमाग से शर्तें और व्यावहारिकता शांति से जाँचिए।",
+      "wellbeing": "आपकी भावनाएँ बह रही हैं और प्रेरित हैं। उन्हें किसी रचनात्मक काम में लगाइए, और सपनों में खोए मन को अच्छी दिनचर्या से संतुलित रखिए।",
+      "family": "कोई निमंत्रण, अच्छी खबर या सुलह का प्रस्ताव ला सकता है। उसे विनम्रता से स्वीकारिए और अपनेपन से जवाब दीजिए।",
+      "spiritual": "आपको अपने दिल की खोज पर चलने के लिए बुलाया जा रहा है। भक्ति और सुंदरता को मार्गदर्शक बनाइए, और खुद के प्रति ईमानदार रहिए।",
+      "advice": "अगर आज कोई प्रस्ताव या संदेश आए तो प्यार से जवाब दीजिए — और फैसला लेने से पहले एक साफ़ सवाल ज़रूर पूछिए।",
+      "timing": "कोई प्रस्ताव या संदेश जल्द आएगा, अक्सर कुछ हफ़्तों में; बिना जल्दबाज़ी के बातों को आगे बढ़ने दीजिए।"
+    },
+    "hinglish": {
+      "message": "Dil ki baat aa rahi hai — koi romantic ya heartfelt offer raaste mein hai. Dil ki suno, par aankhein khuli rakho ki baatein aur actions match karein.",
+      "love": "Romantic proposal, koi charming admirer ya dil chhoo lene wala gesture mil sakta hai. Romance enjoy karo, par trust ko dheere dheere banne do.",
+      "career": "Ek attractive offer ya creative mauka aa sakta hai. Promising lagta hai — haan bolne se pehle details dhyan se padho.",
+      "money": "Koi lubhaane wala offer aa sakta hai. Dil ko excited hone do, par dimaag se terms aur practicality aaram se check karo.",
+      "wellbeing": "Tumhari feelings beh rahi hain aur inspired hain. Unhe kisi creative kaam mein lagao, aur dreaminess ko achhi daily routine se balance karo.",
+      "family": "Koi invitation, good news ya sulah ka haath le kar aa sakta hai. Use pyaar se accept karo aur warmth ke saath jawab do.",
+      "spiritual": "Tumhe apne dil ki talaash pe chalne ka bulawa hai. Bhakti aur sundarta ko guide banao, aur khud ke saath honest raho.",
+      "advice": "Aaj koi offer ya message aaye toh pyaar se reply karo — aur decide karne se pehle ek clear sawaal zaroor poochho.",
+      "timing": "Offer ya message jaldi aayega, aksar kuch hafton mein — bina jaldbaazi ke cheezon ko badhne do."
+    }
+  },
+  {
+    "id": "queen-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Lead with empathy and trust your emotional intelligence. Your big heart is a gift — just remember to care for yourself too.",
+      "love": "Deep care and emotional understanding bless your relationships. Listen with your heart, and let your partner care for you in return.",
+      "career": "Empathy and intuition guide your work beautifully. Roles involving care, counselling, teaching or creativity suit you now.",
+      "money": "Trust your gut about money, but pair it with practical checks. Avoid lending or giving beyond what you can comfortably manage.",
+      "wellbeing": "You may be absorbing others' emotions. Set gentle boundaries, rest near water or nature, and refill your own cup first.",
+      "family": "You are the emotional anchor for many. Your calm presence heals, but let others support you as well.",
+      "spiritual": "Your intuition is strong and pure. Meditation, prayer or quiet time by water helps you hear the divine voice within.",
+      "advice": "Today, do one kind thing for yourself with the same love you usually give to others.",
+      "timing": "Things unfold gently as feelings deepen; trust a natural pace over the next few weeks."
+    },
+    "hi": {
+      "message": "सहानुभूति से आगे बढ़िए और अपनी भावनात्मक समझ पर भरोसा कीजिए। आपका बड़ा दिल एक वरदान है — बस अपना भी ख़्याल रखना याद रखिए।",
+      "love": "गहरी परवाह और भावनात्मक समझ आपके रिश्तों को आशीर्वाद दे रही है। दिल से सुनिए, और अपने साथी को भी आपकी परवाह करने दीजिए।",
+      "career": "सहानुभूति और अंतर्ज्ञान आपके काम को सुंदर दिशा दे रहे हैं। देखभाल, परामर्श, शिक्षण या रचनात्मकता से जुड़े काम अभी आपके लिए अनुकूल हैं।",
+      "money": "धन के मामलों में अपने मन की आवाज़ पर भरोसा कीजिए, पर व्यावहारिक जाँच भी कीजिए। अपनी क्षमता से ज़्यादा उधार या दान देने से बचिए।",
+      "wellbeing": "शायद आप दूसरों की भावनाएँ अपने भीतर समेट रहे हैं। कोमल सीमाएँ बनाइए, पानी या प्रकृति के पास आराम कीजिए, और पहले अपना प्याला भरिए।",
+      "family": "आप कई लोगों का भावनात्मक सहारा हैं। आपकी शांत उपस्थिति घाव भरती है, पर दूसरों को भी आपका सहारा बनने दीजिए।",
+      "spiritual": "आपका अंतर्ज्ञान प्रबल और निर्मल है। ध्यान, प्रार्थना या पानी के पास शांत समय आपको भीतर की दिव्य आवाज़ सुनने में मदद करेगा।",
+      "advice": "आज अपने लिए एक प्यारा सा काम उसी प्रेम से कीजिए जिससे आप आमतौर पर दूसरों के लिए करते हैं।",
+      "timing": "भावनाएँ गहरी होने के साथ बातें धीरे-धीरे खुलेंगी; अगले कुछ हफ़्तों में स्वाभाविक गति पर भरोसा रखिए।"
+    },
+    "hinglish": {
+      "message": "Tumhara dil bahut bada hai — par khud ka bhi khayal rakho. Empathy se lead karo aur apni emotional samajh pe bharosa rakho.",
+      "love": "Gehri care aur emotional understanding tumhare rishton ko bless kar rahi hai. Dil se suno, aur partner ko bhi tumhari care karne do.",
+      "career": "Empathy aur intuition tumhare kaam ko khoobsurat direction de rahe hain. Caring, counselling, teaching ya creative roles abhi tumhe suit karte hain.",
+      "money": "Paison mein gut feeling pe bharosa rakho, par practical check bhi karo. Apni capacity se zyada udhaar ya daan dene se bacho.",
+      "wellbeing": "Shayad tum doosron ki feelings apne andar le rahe ho. Soft boundaries banao, paani ya nature ke paas aaraam karo, aur pehle apna cup bharo.",
+      "family": "Tum bahut logon ka emotional sahara ho. Tumhari shaant presence heal karti hai, par doosron ko bhi tumhara sahara banne do.",
+      "spiritual": "Tumhari intuition strong aur pure hai. Meditation, prayer ya paani ke paas shaant time andar ki divine awaaz sunne mein help karega.",
+      "advice": "Aaj khud ke liye ek pyaara sa kaam usi pyaar se karo jisse tum normally doosron ke liye karte ho.",
+      "timing": "Feelings gehri hone ke saath cheezein dheere dheere khulengi — agle kuch hafton mein natural pace pe bharosa rakho."
+    }
+  },
+  {
+    "id": "king-of-cups",
+    "yes_no": "yes",
+    "en": {
+      "message": "Stay calm and kind. Emotional maturity is your superpower now — you can hold steady even when the waters around you move.",
+      "love": "A mature, supportive and caring partner or bond is indicated. Calm, respectful communication deepens trust and commitment.",
+      "career": "Calm leadership under pressure earns respect. Guide others with patience, and balance compassion with clear decisions.",
+      "money": "A steady, unhurried approach to money serves you best. Seek advice from someone experienced and avoid emotional decisions.",
+      "wellbeing": "You feel more balanced when you neither suppress feelings nor get swept away by them. Breathe slowly and respond rather than react.",
+      "family": "You may be the calm, wise voice your family needs. Listen fully, speak gently, and your guidance will be valued.",
+      "spiritual": "True mastery is a peaceful heart. Daily stillness, prayer or pranayama helps you stay centred in every situation.",
+      "advice": "Before responding to anything that upsets you today, pause for three slow breaths and then answer with kindness.",
+      "timing": "Expect steady progress over a season; patience and calm handling help the situation settle well."
+    },
+    "hi": {
+      "message": "शांत और दयालु बने रहिए। भावनात्मक परिपक्वता अभी आपकी सबसे बड़ी शक्ति है — आस-पास हलचल हो तब भी आप स्थिर रह सकते हैं।",
+      "love": "एक परिपक्व, सहयोगी और परवाह करने वाले साथी या रिश्ते के संकेत हैं। शांत और सम्मानजनक बातचीत भरोसे और वादे को गहरा करेगी।",
+      "career": "दबाव में भी शांत नेतृत्व सम्मान दिलाएगा। धैर्य से दूसरों का मार्गदर्शन कीजिए, और करुणा को स्पष्ट फैसलों के साथ संतुलित रखिए।",
+      "money": "धन के मामलों में स्थिर और बिना जल्दबाज़ी वाला तरीका सबसे अच्छा रहेगा। किसी अनुभवी व्यक्ति की सलाह लीजिए और भावनाओं में बहकर फैसले मत कीजिए।",
+      "wellbeing": "जब आप भावनाओं को न दबाते हैं, न उनमें बहते हैं, तब आप ज़्यादा संतुलित महसूस करते हैं। धीरे साँस लीजिए और तुरंत प्रतिक्रिया की जगह सोचकर जवाब दीजिए।",
+      "family": "शायद आप वह शांत, समझदार आवाज़ हैं जिसकी आपके परिवार को ज़रूरत है। पूरी बात सुनिए, नरमी से बोलिए — आपकी सलाह की कद्र होगी।",
+      "spiritual": "सच्ची महारत शांत हृदय में है। रोज़ का थोड़ा मौन, प्रार्थना या प्राणायाम आपको हर हाल में केंद्रित रहने में मदद करेगा।",
+      "advice": "आज किसी भी परेशान करने वाली बात का जवाब देने से पहले तीन धीमी साँसें लीजिए, फिर दयालुता से उत्तर दीजिए।",
+      "timing": "एक मौसम भर में स्थिर प्रगति की उम्मीद रखिए; धैर्य और शांत व्यवहार से हालात अच्छे से सँभलेंगे।"
+    },
+    "hinglish": {
+      "message": "Shaant reh kar handle karo — yahi tumhari taakat hai. Emotional maturity abhi tumhari superpower hai, aas-paas hulchal ho tab bhi tum steady reh sakte ho.",
+      "love": "Ek mature, supportive aur caring partner ya rishta dikh raha hai. Shaant aur respectful baatcheet trust aur commitment ko gehra karegi.",
+      "career": "Pressure mein bhi calm leadership respect dilayegi. Patience se doosron ko guide karo, aur compassion ko clear decisions ke saath balance karo.",
+      "money": "Paison mein steady, bina jaldbaazi wala approach best rahega. Kisi experienced insaan ki salah lo aur emotions mein beh ke decision mat lo.",
+      "wellbeing": "Jab feelings ko na dabaoge, na unme bahoge, tab zyada balanced feel karoge. Dheere saans lo aur react karne ki jagah soch ke respond karo.",
+      "family": "Shayad tum woh shaant, samajhdaar awaaz ho jiski family ko zaroorat hai. Poori baat suno, naram bolo — tumhari salah ki kadar hogi.",
+      "spiritual": "Asli mastery ek shaant dil hai. Roz ka thoda maun, prayer ya pranayam tumhe har haal mein centred rakhega.",
+      "advice": "Aaj kisi bhi pareshaan karne wali baat ka jawab dene se pehle teen dheemi saans lo, phir pyaar se jawab do.",
+      "timing": "Ek season mein steady progress hogi — patience aur calm handling se haalaat achhe se sambhalenge."
+    }
+  }
+]

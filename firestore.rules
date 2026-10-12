@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// ⚠️ the-divine-tarot-2-project is shared with the admin panel.
+// MERGE the "match" blocks below into the project's existing rules in the
+// Firebase console — do not replace the admin panel's rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each user can read and write only their own profile and readings
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /readings/{readingId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Purchases: readable by the owner, written ONLY by the Apps Script backend
+    // (server access with Google credentials bypasses these rules).
+    match /entitlements/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Testimonials are managed in the admin panel and shown in the app
+    match /testimonials/{id} {
+      allow read: if true;
+    }
+  }
+}

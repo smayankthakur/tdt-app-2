@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -24,8 +24,9 @@ export default function DeckScreen() {
   }, [filter]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       <Backdrop />
+      <Stack.Screen options={{ title: 'Card Library' }} />
       <FlatList
         key={cols}
         data={cards}
