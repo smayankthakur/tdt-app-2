@@ -87,6 +87,7 @@ export default function RootLayout() {
             <Stack.Screen name="card/[id]" options={{ title: '' }} />
             <Stack.Screen name="history" options={{ title: '' }} />
             <Stack.Screen name="deck" options={{ title: '' }} />
+            <Stack.Screen name="web" options={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }} />
           </Stack>
           <IntroSplash />
           <CheckoutHost />

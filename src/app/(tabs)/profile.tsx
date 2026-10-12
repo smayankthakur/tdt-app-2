@@ -290,10 +290,10 @@ export default function ProfileScreen() {
       <Group>
         <ListRow icon="time-outline" label={t('profile.myReadings')} onPress={() => router.push('/history')} />
         <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />
-        <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => openInApp(Links.personalReading)} external />
-        <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => openInApp(Links.support)} external />
-        <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => openInApp(Links.privacy)} external />
-        <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => openInApp(Links.about)} external />
+        <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => openInApp(Links.personalReading, t('profile.personal'))} />
+        <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => openInApp(Links.support, t('profile.support'))} />
+        <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => openInApp(Links.privacy, t('profile.policy'))} />
+        <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => openInApp(Links.about, t('profile.about'))} />
       </Group>
 
       {user && (

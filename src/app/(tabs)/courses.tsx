@@ -88,7 +88,13 @@ export default function CoursesScreen() {
                 {StorePolicy.courseEnrolLinks && (
                   <>
                     <Text style={styles.modalPrice}>{formatINR(open.price)}</Text>
-                    <Button label={t('courses.enrol')} icon="open-outline" onPress={() => openInApp(open.enrolUrl)} />
+                    <Button label={t('courses.enrol')} icon="open-outline" onPress={() => {
+                        const target = open.enrolUrl;
+                        const title = open.title;
+                        setOpen(null);
+                        // let the course sheet close, then show the payment page in the app
+                        setTimeout(() => openInApp(target, title), 350);
+                      }} />
                   </>
                 )}
               </ScrollView>

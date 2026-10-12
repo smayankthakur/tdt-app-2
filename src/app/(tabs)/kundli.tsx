@@ -160,7 +160,7 @@ export default function KundliScreen() {
           <Body muted style={{ fontSize: 12.5, lineHeight: 19 }}>
             {t('kundli.disclaimer')}
           </Body>
-          <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => openInApp(Links.personalReading)} />
+          <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => openInApp(Links.personalReading, t('profile.personal'))} />
         </Animated.View>
       )}
     </Screen>

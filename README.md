@@ -16,6 +16,7 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 - Without login the app runs in **guest mode**; everything is saved on the phone.
 - With login (Firebase), the profile, saved readings and purchases follow the user to other devices.
 - Payments use **Razorpay**; a small **Google Apps Script** backend checks each payment and logs it in a Google Sheet.
+- **Everything opens inside the app.** Website pages, Personal Reading booking, Razorpay payment pages, course enrol links, Kundli, support and social profiles all open on the app's own browser screen (`src/app/web.tsx`). Only UPI apps, phone calls, email and WhatsApp hand over to the phone.
 - Card pictures load from `https://thedivinetarotonline.com/card_img/<Card Name>.png` — **do not rename those files on the website.**
 
 ## Setup guides — do them in this order
@@ -44,6 +45,7 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 | Screens | `src/app/` (`(tabs)/` = the five tabs) |
 | Kundli maths | `src/lib/kundli/` |
 | Payment flow | `src/lib/payments/` |
+| In-app browser (all outside pages) | `src/app/web.tsx`, `src/lib/links.ts` |
 | Login and cloud data | `src/lib/firebase/` |
 | App name, bundle ID / package, icons, permissions | `app.json`, `assets/images/` |
 | Firebase native set-up (added only when the Firebase files exist) | `app.config.ts` |

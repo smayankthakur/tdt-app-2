@@ -1,26 +1,24 @@
-import * as WebBrowser from 'expo-web-browser';
+import { router } from 'expo-router';
 import { Linking, Platform } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { isWebUrl } from '@/lib/url';
 
-/** Opens a website page inside the app (Safari View Controller / Chrome Custom Tab). */
-export async function openInApp(url: string): Promise<void> {
+/**
+ * Opens ANY page inside the app, on the app's own browser screen (src/app/web.tsx):
+ * website pages, booking, Razorpay payment links, Kundli, support, social profiles.
+ * Only non-web links (UPI apps, phone calls, email, WhatsApp) go to the phone.
+ */
+export function openInApp(url: string, title = ''): void {
   if (Platform.OS === 'web') {
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener');
     return;
   }
-  try {
-    await WebBrowser.openBrowserAsync(url, {
-      toolbarColor: Colors.bg,
-      controlsColor: Colors.gold,
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-    });
-  } catch {
-    await Linking.openURL(url);
+  if (!isWebUrl(url)) {
+    Linking.openURL(url).catch(() => {});
+    return;
   }
+  router.push({ pathname: '/web', params: { url, title } });
 }
 
-/** Opens a link in the phone's own app (Instagram, YouTube, browser). */
-export async function openExternal(url: string): Promise<void> {
-  await Linking.openURL(url);
-}
+/** Kept for older call sites — also stays inside the app now. */
+export const openExternal = openInApp;

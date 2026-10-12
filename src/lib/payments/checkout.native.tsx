@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
 import type { CheckoutOptions, CheckoutResult } from '@/lib/payments/types';
+import { intentToUrl } from '@/lib/url';
 
 /**
  * Razorpay Standard Checkout inside a WebView (native). Uses only the PUBLIC Key ID.
@@ -45,14 +46,6 @@ function html(options: CheckoutOptions) {
     rzp.open();
   } catch (e) { send({ type: 'failed', message: String(e) }); }
 </script></body></html>`;
-}
-
-/** Android "intent://pay?…#Intent;scheme=upi;…;end" → "upi://pay?…" so the UPI app opens. */
-function intentToUrl(url: string): string {
-  if (!url.startsWith('intent://')) return url;
-  const scheme = /[#;]scheme=([^;]+)/.exec(url)?.[1];
-  const body = url.slice('intent://'.length).split('#Intent')[0];
-  return scheme ? `${scheme}://${body}` : url;
 }
 
 /** Mount once near the root of the app. */

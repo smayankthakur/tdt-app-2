@@ -15,7 +15,7 @@ import { useLang } from '@/i18n';
 import { getStreak, getTodaysDraw, revealToday, weeklyTrio } from '@/lib/daily';
 import { loadTestimonials, type Testimonial } from '@/lib/firebase/db';
 import { kbText } from '@/lib/ginni/kb';
-import { openExternal, openInApp } from '@/lib/links';
+import { openInApp } from '@/lib/links';
 import type { DailyDraw, Streak } from '@/lib/storage';
 
 export default function HomeScreen() {
@@ -59,7 +59,7 @@ export default function HomeScreen() {
     { icon: 'sunny', label: t('home.featDaily'), onPress: reveal },
     { icon: 'planet', label: t('home.featKundli'), onPress: () => router.navigate('/kundli') },
     { icon: 'school', label: t('home.featCourses'), onPress: () => router.navigate('/courses') },
-    ...(StorePolicy.personalReadingLink ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => openInApp(Links.personalReading) }] : []),
+    ...(StorePolicy.personalReadingLink ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => openInApp(Links.personalReading, t('home.featPersonal')) }] : []),
     { icon: 'library', label: t('home.featLibrary'), onPress: () => router.push('/deck') },
   ];
 
@@ -179,13 +179,13 @@ export default function HomeScreen() {
         </Card>
 
         <View style={styles.socials}>
-          <Pressable accessibilityLabel="Instagram" onPress={() => openExternal(Links.instagram)} hitSlop={10}>
+          <Pressable accessibilityLabel="Instagram" onPress={() => openInApp(Links.instagram, 'Instagram')} hitSlop={10}>
             <Ionicons name="logo-instagram" size={24} color={Colors.textMuted} />
           </Pressable>
-          <Pressable accessibilityLabel="YouTube" onPress={() => openExternal(Links.youtube)} hitSlop={10}>
+          <Pressable accessibilityLabel="YouTube" onPress={() => openInApp(Links.youtube, 'YouTube')} hitSlop={10}>
             <Ionicons name="logo-youtube" size={24} color={Colors.textMuted} />
           </Pressable>
-          <Pressable accessibilityLabel="Facebook" onPress={() => openExternal(Links.facebook)} hitSlop={10}>
+          <Pressable accessibilityLabel="Facebook" onPress={() => openInApp(Links.facebook, 'Facebook')} hitSlop={10}>
             <Ionicons name="logo-facebook" size={24} color={Colors.textMuted} />
           </Pressable>
         </View>
