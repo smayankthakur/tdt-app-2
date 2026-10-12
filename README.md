@@ -29,9 +29,17 @@ There's no login and no backend. Everything the user saves stays on their phone,
 
 ```bash
 npm install
-npx expo start          # press "a" for an Android emulator, or scan the QR code
 npx expo start --web    # quick look in the browser
 ```
+
+Expo Go from the stores may not support SDK 57 yet. To test on a real phone, use a **development build** once:
+
+```bash
+eas build --profile development --platform android   # install the APK it gives you on your phone
+npx expo start                                        # then open the dev app and scan the QR code
+```
+
+Code changes appear on the phone instantly. You only rebuild after adding a new native library.
 
 ## Checks before every build
 
