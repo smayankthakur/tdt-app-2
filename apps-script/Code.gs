@@ -5,6 +5,8 @@
  *   1. createOrder    → creates a Razorpay Order (amount decided HERE, not by the app)
  *   2. verifyPayment  → checks Razorpay's signature with the Key SECRET, then unlocks the
  *                       product in Firestore (entitlements/{uid}) and logs it to the "Payments" sheet
+ *      checkOrder     → for payments that ended on a bank page or in a UPI app: asks Razorpay
+ *                       directly whether the order was paid, then unlocks the same way
  *   3. logSession     → appends an anonymous, consent-based usage row to the "Sessions" sheet
  *
  * Setup (see docs/SETUP-APPS-SCRIPT.md):
@@ -33,6 +35,8 @@ function doPost(e) {
         return json(createOrder(body));
       case 'verifyPayment':
         return json(verifyPayment(body));
+      case 'checkOrder':
+        return json(checkOrder(body));
       case 'logSession':
         return json(logSession(body));
       default:
@@ -107,20 +111,48 @@ function verifyPayment(body) {
   var expected = hmacHex(body.razorpay_order_id + '|' + body.razorpay_payment_id, prop('RAZORPAY_KEY_SECRET'));
   if (expected !== body.razorpay_signature) throw new Error('bad-signature');
 
-  // The order must belong to this product and this user (set when we created it)
-  var order = razorpay('get', '/orders/' + body.razorpay_order_id);
+  var order = checkedOrder(body.razorpay_order_id, body);
+  return unlock(order, body.razorpay_payment_id, String(body.uid || ''), body.productId);
+}
+
+/** The order must belong to this product and this user (set when we created it). */
+function checkedOrder(orderId, body) {
+  var product = PRODUCTS[body.productId];
+  if (!/^order_[A-Za-z0-9]+$/.test(String(orderId))) throw new Error('bad-order-id');
+  var order = razorpay('get', '/orders/' + orderId);
   if (!order.notes || order.notes.productId !== body.productId) throw new Error('order-product-mismatch');
   if (Number(order.amount) !== product.amount || order.currency !== 'INR') throw new Error('order-amount-mismatch');
-  var uid = String(body.uid || '');
-  if (order.notes.uid !== (uid || 'guest')) throw new Error('order-user-mismatch');
+  if (order.notes.uid !== (String(body.uid || '') || 'guest')) throw new Error('order-user-mismatch');
+  return order;
+}
 
+/**
+ * No signature here: the answer comes straight from Razorpay with the Key Secret, so it can't be faked.
+ * Someone could only ever unlock an order that really was paid, for the user it was created for.
+ */
+function checkOrder(body) {
+  var product = PRODUCTS[body.productId];
+  if (!product) throw new Error('unknown-product');
+  if (body.uid && !/^[A-Za-z0-9_-]{1,128}$/.test(String(body.uid))) throw new Error('bad-uid');
+  var order = checkedOrder(body.orderId, body);
+  var list = razorpay('get', '/orders/' + order.id + '/payments');
+  var paid = (list.items || []).filter(function (p) {
+    return p.status === 'captured' && Number(p.amount) === product.amount;
+  })[0];
+  if (!paid) return { ok: true, paid: false };
+  var r = unlock(order, paid.id, String(body.uid || ''), body.productId);
+  return { ok: true, paid: true, expiresAt: r.expiresAt };
+}
+
+function unlock(order, paymentId, uid, productId) {
+  var product = PRODUCTS[productId];
   // One order = one unlock. Without this, re-sending the same (valid) signed payload
   // would extend the entitlement by product.days on every call.
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     var payments = sheet('Payments', PAYMENTS_HEADER);
-    var seen = payments.getRange('E:E').createTextFinder(body.razorpay_order_id).matchEntireCell(true).findNext();
+    var seen = payments.getRange('E:E').createTextFinder(order.id).matchEntireCell(true).findNext();
     if (seen) {
       var prev = payments.getRange(seen.getRow(), 7).getValue();
       return { ok: true, expiresAt: prev instanceof Date ? prev.getTime() : Number(prev) || 0 };
@@ -128,20 +160,12 @@ function verifyPayment(body) {
 
     var expiresAt = Date.now() + product.days * 86400000;
     if (uid) {
-      var current = readEntitlement(uid, body.productId);
+      var current = readEntitlement(uid, productId);
       expiresAt = Math.max(Date.now(), current) + product.days * 86400000;
-      writeEntitlement(uid, body.productId, expiresAt);
+      writeEntitlement(uid, productId, expiresAt);
     }
 
-    payments.appendRow([
-      new Date(),
-      uid || 'guest',
-      body.productId,
-      product.amount / 100,
-      body.razorpay_order_id,
-      body.razorpay_payment_id,
-      new Date(expiresAt),
-    ]);
+    payments.appendRow([new Date(), uid || 'guest', productId, product.amount / 100, order.id, paymentId, new Date(expiresAt)]);
     SpreadsheetApp.flush();
     return { ok: true, expiresAt: expiresAt };
   } finally {

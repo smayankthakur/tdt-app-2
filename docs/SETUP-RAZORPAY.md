@@ -82,6 +82,13 @@ stay hidden until `EXPO_PUBLIC_APPS_SCRIPT_URL` is set — real payments are alw
    - [ ] Razorpay Dashboard (Test Mode) → **Transactions → Payments** shows the payment as **Captured**.
    - [ ] Firebase → Firestore → `entitlements` → a document with the user's ID exists.
 5. Also test **cancelling** the payment screen — nothing should unlock.
+6. Test **Netbanking** (test mode shows a fake bank page with Success / Failure buttons) and a **card that asks for OTP**.
+   These pages open inside the same payment screen. After **Success**, the screen closes by itself and the plan unlocks
+   (the app asks Apps Script → `checkOrder` → Razorpay whether the order is paid).
+
+The app's payment screen tells Razorpay to come back to `https://thedivinetarotonline.com/?tdt_payment_return=1`
+after a bank or OTP page. The app catches that address — nobody actually lands on the website. If Razorpay ever shows
+"callback URL not allowed", add **thedivinetarotonline.com** under **Account & Settings → Website and app details**.
 
 If a payment shows **Authorized** but not **Captured**, go to **Account & Settings → Payment capture** and set it to **Automatic**.
 
@@ -109,7 +116,8 @@ Apps Script (or the reverse) makes every payment fail.
 
 ## "I paid but it is not unlocked"
 
-This can happen if the internet drops just after payment.
+The app checks the order with Razorpay itself after a bank page, and once more when the user closes the payment
+screen (for example after paying in a UPI app). So this is rare — mostly when the internet drops right after payment.
 
 1. Ask the user for the phone/email they signed in with and the Razorpay payment ID (in their Razorpay SMS/email).
 2. In Razorpay Dashboard, confirm the payment is **Captured**.

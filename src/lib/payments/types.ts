@@ -20,4 +20,6 @@ export type CheckoutSuccess = {
 export type CheckoutResult =
   | { status: 'success'; data: CheckoutSuccess }
   | { status: 'cancelled' }
+  /** Bank / card-OTP page finished and returned (redirect flow): ask the server whether the order is paid. */
+  | { status: 'returned' }
   | { status: 'failed'; message?: string };

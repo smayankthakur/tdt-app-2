@@ -296,6 +296,14 @@ export default function ProfileScreen() {
         <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => openInApp(Links.about, t('profile.about'))} />
       </Group>
 
+      {/* Every site of the business, opened inside the app */}
+      <Group title={t('profile.websites')}>
+        <ListRow icon="globe-outline" label={t('profile.siteHome')} sub="thedivinetarotonline.com" onPress={() => openInApp(Links.website, 'The Divine Tarot')} />
+        <ListRow icon="chatbubbles-outline" label={t('profile.siteGinni')} sub="reading.thedivinetarotonline.com" onPress={() => openInApp(Links.ginniWeb, t('profile.siteGinni'))} />
+        <ListRow icon="school-outline" label={t('profile.siteCourses')} sub="learn.thedivinetarotonline.com" onPress={() => openInApp(Links.courses, t('profile.siteCourses'))} />
+        <ListRow icon="heart-outline" label={t('profile.siteKundli')} sub="thedivinetarotonline.com/kundli-milan" onPress={() => openInApp(Links.kundliMilanWeb, t('profile.siteKundli'))} />
+      </Group>
+
       {user && (
         <Group>
           <ListRow icon="log-out-outline" label={t('common.signOut')} onPress={() => signOut()} />

@@ -106,6 +106,12 @@ the three actions listed at the top and checks every payment with Razorpay.
 
 ---
 
+## Updating to the latest `Code.gs` (adds `checkOrder`)
+
+The October 2026 app version uses a new action, **`checkOrder`**, for payments that finish on a bank page or in a UPI app.
+If you set up Apps Script before that, paste the new `apps-script/Code.gs` over the old code and follow the steps just below
+(**New version**, same URL). Until you do, those payments still go through at Razorpay but only unlock after a manual check.
+
 ## Changing the code later (keep the same URL)
 
 1. Paste the new code in the editor → **Save**.

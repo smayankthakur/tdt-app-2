@@ -1,16 +1,23 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Fonts } from '@/constants/theme';
 import type { CheckoutOptions, CheckoutResult } from '@/lib/payments/types';
-import { intentToUrl } from '@/lib/url';
+import { routeLink } from '@/lib/url';
 
 /**
  * Razorpay Standard Checkout inside a WebView (native). Uses only the PUBLIC Key ID.
- * UPI app links (upi://, intent://, tez://, phonepe:// …) are handed to the phone so the UPI app opens.
+ * The whole payment stays inside the app:
+ *  - cards / UPI ID / wallets finish in the checkout itself (handler)
+ *  - net-banking and card OTP pages can't open as pop-ups in a web view, so window.open returns null;
+ *    Razorpay then shows the bank page in this same view and, when done, POSTs to PAYMENT_RETURN_URL.
+ *    We catch that address, close the sheet, and the server confirms the order with Razorpay.
+ *  - UPI app links (upi://, intent://, tez://, phonepe:// …) open the UPI app, which returns here.
  */
+export const PAYMENT_RETURN_URL = 'https://thedivinetarotonline.com/?tdt_payment_return=1';
+const isReturn = (url: string) => url.includes('tdt_payment_return=1');
 type Pending = { options: CheckoutOptions; resolve: (r: CheckoutResult) => void };
 let listener: ((p: Pending | null) => void) | null = null;
 
@@ -33,12 +40,13 @@ try {
 
 function html(options: CheckoutOptions) {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<script>window.open = function () { return null; };</script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script></head>
 <body style="margin:0;background:#0B0710">
 <script>
   function send(o){ window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
   try {
-    var options = ${JSON.stringify(options).replace(/</g, '\\u003c')};
+    var options = ${JSON.stringify(options.order_id ? { ...options, callback_url: PAYMENT_RETURN_URL } : options).replace(/</g, '\\u003c')};
     options.handler = function (r) { send({ type: 'success', data: r }); };
     options.modal = { ondismiss: function () { send({ type: 'dismiss' }); }, escape: false };
     var rzp = new Razorpay(options);
@@ -59,9 +67,20 @@ export function CheckoutHost() {
     };
   }, []);
 
+  const done = useRef(false);
+  useEffect(() => {
+    done.current = false;
+  }, [pending]);
+
   const finish = (r: CheckoutResult) => {
+    if (done.current) return;
+    done.current = true;
     pending?.resolve(r);
     setPending(null);
+  };
+
+  const watchReturn = (url?: string) => {
+    if (url && isReturn(url)) finish({ status: 'returned' });
   };
 
   return (
@@ -83,11 +102,19 @@ export function CheckoutHost() {
             startInLoadingState
             renderLoading={() => <ActivityIndicator color={Colors.gold} style={{ marginTop: 40 }} />}
             onShouldStartLoadWithRequest={(req: { url: string }) => {
-              const url = req.url;
-              if (url.startsWith('http') || url.startsWith('about:') || url.startsWith('data:')) return true;
-              Linking.openURL(intentToUrl(url)).catch(() => {});
+              if (isReturn(req.url)) {
+                finish({ status: 'returned' });
+                return false;
+              }
+              const route = routeLink(req.url);
+              if (route.kind === 'web') return route.url === req.url;
+              // UPI apps, tel:, mailto: … (Google sign-in never appears inside checkout)
+              Linking.openURL(route.url).catch(() => {});
               return false;
             }}
+            // the return is a form POST, which Android never shows to onShouldStartLoadWithRequest
+            onLoadStart={(e: { nativeEvent: { url: string } }) => watchReturn(e.nativeEvent.url)}
+            onNavigationStateChange={(s: { url: string }) => watchReturn(s.url)}
             onMessage={(e: { nativeEvent: { data: string } }) => {
               try {
                 const msg = JSON.parse(e.nativeEvent.data);

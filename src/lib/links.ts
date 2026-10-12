@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Linking, Platform } from 'react-native';
 
-import { isWebUrl } from '@/lib/url';
+import { routeLink } from '@/lib/url';
 
 /**
  * Opens ANY page inside the app, on the app's own browser screen (src/app/web.tsx):
@@ -13,11 +14,18 @@ export function openInApp(url: string, title = ''): void {
     window.open(url, '_blank', 'noopener');
     return;
   }
-  if (!isWebUrl(url)) {
-    Linking.openURL(url).catch(() => {});
+  const route = routeLink(url);
+  if (route.kind === 'auth') {
+    WebBrowser.openAuthSessionAsync(route.url).catch(() => {});
     return;
   }
-  router.push({ pathname: '/web', params: { url, title } });
+  if (route.kind === 'app') {
+    Linking.openURL(route.url).catch(() => {
+      if (route.fallback) router.push({ pathname: '/web', params: { url: route.fallback, title } });
+    });
+    return;
+  }
+  router.push({ pathname: '/web', params: { url: route.url, title } });
 }
 
 /** Kept for older call sites — also stays inside the app now. */

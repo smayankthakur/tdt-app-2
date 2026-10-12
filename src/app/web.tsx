@@ -9,11 +9,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, tap } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
-import { hostOf, intentToUrl, isWebUrl, needsSystemAuth } from '@/lib/url';
+import { hostOf, isRazorpay, KEEP_IN_APP_JS, routeLink } from '@/lib/url';
 
 /**
- * The app's built-in browser. Every outside page (website, booking, Razorpay payment
- * pages, Kundli, support, socials) opens here, styled like the rest of the app.
+ * The app's built-in browser. Every web page — all *.thedivinetarotonline.com sites, Razorpay
+ * payment pages (rzp.io, checkout, bank OTP pages), Kundli, support, socials — opens and stays here.
+ * Nothing is sent to Chrome / Safari. Only UPI apps, phone, email, WhatsApp and the Play Store
+ * are handed to the phone, because they are apps, not web pages.
  */
 type Any = any;
 let WebView: Any = null;
@@ -52,20 +54,38 @@ export default function InAppBrowser() {
     return () => sub.remove();
   }, [back]);
 
-  const onRequest = (req: { url: string }) => {
-    const next = req.url;
-    if (needsSystemAuth(next)) {
-      WebBrowser.openAuthSessionAsync(next).catch(() => {});
+  /** Load a page in this view (used for links that tried to leave for another browser). */
+  const loadHere = useCallback((target: string) => {
+    ref.current?.injectJavaScript(`window.location.href = ${JSON.stringify(target)}; true;`);
+  }, []);
+
+  /** Returns true when the web view may load the URL itself. */
+  const handle = useCallback(
+    (next: string, fromWebView: boolean): boolean => {
+      const route = routeLink(next);
+      if (route.kind === 'web') {
+        if (route.url === next && fromWebView) return true;
+        loadHere(route.url);
+        return false;
+      }
+      if (route.kind === 'auth') {
+        WebBrowser.openAuthSessionAsync(route.url).catch(() => {});
+        return false;
+      }
+      // upi://, tel:, mailto:, whatsapp:, tez:, phonepe:, paytmmp:, market: … → the phone's app
+      Linking.openURL(route.url).catch(() => {
+        if (route.fallback) loadHere(route.fallback);
+      });
       return false;
-    }
-    if (isWebUrl(next)) return true;
-    // upi://, intent://, tel:, mailto:, whatsapp:, tez:, phonepe:, paytmmp: … → the phone's app
-    Linking.openURL(intentToUrl(next)).catch(() => {});
-    return false;
-  };
+    },
+    [loadHere],
+  );
+
+  const onRequest = (req: { url: string }) => handle(req.url, true);
 
   const shownTitle = nav.title && !/^https?:/i.test(nav.title) ? nav.title : title || hostOf(nav.url);
   const secure = nav.url.startsWith('https://');
+  const payment = isRazorpay(nav.url);
 
   return (
     <View style={styles.root}>
@@ -82,7 +102,7 @@ export default function InAppBrowser() {
             <View style={styles.hostRow}>
               {secure && <Ionicons name="lock-closed" size={10} color={Colors.success} />}
               <Text style={styles.host} numberOfLines={1}>
-                {hostOf(nav.url)}
+                {payment ? `Secure payment · ${hostOf(nav.url)}` : hostOf(nav.url)}
               </Text>
             </View>
           </View>
@@ -134,6 +154,9 @@ export default function InAppBrowser() {
           allowFileAccess
           setBuiltInZoomControls={false}
           applicationNameForUserAgent="TheDivineTarotApp/1.0"
+          // target=_blank links, window.open and pop-ups stay in this view
+          injectedJavaScriptBeforeContentLoaded={KEEP_IN_APP_JS}
+          injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
           startInLoadingState
           renderLoading={() => (
             <View style={[StyleSheet.absoluteFill, styles.center]}>
@@ -146,9 +169,7 @@ export default function InAppBrowser() {
           onError={() => setFailed(true)}
           onHttpError={() => {}}
           onOpenWindow={(e: { nativeEvent: { targetUrl: string } }) => {
-            const target = e.nativeEvent.targetUrl;
-            if (isWebUrl(target)) ref.current?.injectJavaScript(`window.location.href = ${JSON.stringify(target)}; true;`);
-            else Linking.openURL(intentToUrl(target)).catch(() => {});
+            handle(e.nativeEvent.targetUrl, false);
           }}
         />
       ) : (

@@ -24,6 +24,7 @@ export function paymentsEnabled(): boolean {
  *  1. (if Apps Script is set up) create a Razorpay Order on the server — amount can't be tampered with
  *  2. open Razorpay checkout (public Key ID only)
  *  3. (if Apps Script) verify the payment signature server-side; the server writes the entitlement to Firestore
+ *     — or, when the payment ended on a bank page / in a UPI app, the server asks Razorpay if the order is paid
  *  4. unlock locally
  */
 export async function purchase(product: Product, user: AppUser | null, prefillName?: string): Promise<PurchaseOutcome> {
@@ -57,10 +58,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
     theme: { color: '#E9C46A', backdrop_color: '#0B0710' },
   });
 
-  if (result.status === 'cancelled') return 'cancelled';
-  if (result.status === 'failed') return 'failed';
-
-  if (appsScriptConfigured) {
+  if (result.status === 'success' && appsScriptConfigured) {
     try {
       const v = await callAppsScript<{ expiresAt: number }>('verifyPayment', {
         uid: user?.uid ?? '',
@@ -68,12 +66,44 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
         ...result.data,
       });
       await grantEntitlement(product.id, product.days, v.expiresAt);
+      return 'success';
     } catch {
-      return 'failed';
+      // fall through to the server-side order check below
     }
-  } else {
+  } else if (result.status === 'success') {
     // Demo / early mode without a server: unlock on this device only.
     await grantEntitlement(product.id, product.days);
+    return 'success';
   }
-  return 'success';
+
+  // Bank-page return, a closed sheet after paying in a UPI app, or a failed signature check:
+  // ask the server, which asks Razorpay directly whether this order was paid.
+  if (orderId && appsScriptConfigured) {
+    // one quick look after a plain close; a few tries after a bank-page return
+    const paid = await confirmOrder(orderId, product, user, result.status === 'cancelled' ? [0] : [0, 2500, 5000]);
+    if (paid) return 'success';
+  }
+  if (result.status === 'cancelled') return 'cancelled';
+  return 'failed';
+}
+
+async function confirmOrder(orderId: string, product: Product, user: AppUser | null, waits: number[]): Promise<boolean> {
+  // UPI and net-banking can take a few seconds to show as captured
+  for (const wait of waits) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    try {
+      const r = await callAppsScript<{ paid: boolean; expiresAt?: number }>('checkOrder', {
+        orderId,
+        uid: user?.uid ?? '',
+        productId: product.id,
+      });
+      if (r.paid) {
+        await grantEntitlement(product.id, product.days, r.expiresAt);
+        return true;
+      }
+    } catch {
+      // keep trying
+    }
+  }
+  return false;
 }
