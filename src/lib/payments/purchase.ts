@@ -1,9 +1,7 @@
 import { Platform } from 'react-native';
 
-import { Products, RazorpayKeyId, SiteImages, StorePolicy } from '@/constants/config';
-import { appsScriptConfigured, callAppsScript } from '@/lib/apps-script';
-import { backend } from '@/lib/firebase/backend';
-import type { AppUser } from '@/lib/firebase/types';
+import { Products, SiteImages, StorePolicy } from '@/constants/config';
+import { callFunction, cloudReady, type AppUser } from '@/lib/cloud/supabase';
 import { openCheckout } from '@/lib/payments/checkout';
 import { grantEntitlement } from '@/lib/quota';
 
@@ -11,92 +9,74 @@ export type Product = (typeof Products)[keyof typeof Products];
 export type PurchaseOutcome = 'success' | 'cancelled' | 'failed' | 'not-configured' | 'sign-in-required';
 
 export function paymentsEnabled(): boolean {
-  if (!RazorpayKeyId) return false;
-  // Live payments must be verified by the server — never unlock on the device alone.
-  if (RazorpayKeyId.startsWith('rzp_live_') && !appsScriptConfigured) return false;
+  if (!cloudReady) return false;
   if (Platform.OS === 'android') return StorePolicy.razorpayOnAndroid;
   if (Platform.OS === 'ios') return StorePolicy.razorpayOnIos;
   return StorePolicy.razorpayOnWeb;
 }
 
 /**
- * Full purchase flow:
- *  1. (if Apps Script is set up) create a Razorpay Order on the server — amount can't be tampered with
- *  2. open Razorpay checkout (public Key ID only)
- *  3. (if Apps Script) verify the payment signature server-side; the server writes the entitlement to Firestore
- *     — or, when the payment ended on a bank page / in a UPI app, the server asks Razorpay if the order is paid
- *  4. unlock locally
+ * Full purchase flow (server = Supabase Edge Function "app-payments", which holds the Razorpay secret):
+ *  1. create a Razorpay Order on the server — the amount is decided there, not by the app
+ *  2. open Razorpay checkout with the public Key ID the server returns
+ *  3. the server checks the payment signature (or, after a bank page / UPI app, asks Razorpay directly)
+ *     and saves the unlock to the account — Ginni Unlimited also unlocks Ginni on the website
+ *  4. unlock on this phone
+ * A login is required so the purchase is never lost when the phone changes.
  */
 export async function purchase(product: Product, user: AppUser | null, prefillName?: string): Promise<PurchaseOutcome> {
   if (!paymentsEnabled()) return 'not-configured';
-  if (backend.ready && !user) return 'sign-in-required';
+  if (!user) return 'sign-in-required';
 
-  let orderId: string | undefined;
-  if (appsScriptConfigured) {
-    try {
-      const r = await callAppsScript<{ orderId: string }>('createOrder', { productId: product.id, uid: user?.uid ?? '' });
-      orderId = r.orderId;
-    } catch {
-      return 'failed';
-    }
+  let order: { orderId: string; amount: number; keyId: string };
+  try {
+    order = await callFunction('app-payments', { action: 'createOrder', productId: product.id });
+  } catch (e) {
+    return (e as Error).message === 'auth_required' ? 'sign-in-required' : 'failed';
   }
 
   const result = await openCheckout({
-    key: RazorpayKeyId,
-    amount: product.price * 100,
+    key: order.keyId,
+    amount: order.amount,
     currency: 'INR',
     name: 'The Divine Tarot',
     description: product.description,
     image: SiteImages.logo,
-    order_id: orderId,
+    order_id: order.orderId,
     prefill: {
-      name: prefillName || user?.displayName || undefined,
-      email: user?.email || undefined,
-      contact: user?.phoneNumber || undefined,
+      name: prefillName || user.displayName || undefined,
+      email: user.email || undefined,
+      contact: user.phoneNumber || undefined,
     },
-    notes: { productId: product.id, uid: user?.uid ?? 'guest' },
+    notes: { productId: product.id },
     theme: { color: '#E9C46A', backdrop_color: '#0B0710' },
   });
 
-  if (result.status === 'success' && appsScriptConfigured) {
+  if (result.status === 'success') {
     try {
-      const v = await callAppsScript<{ expiresAt: number }>('verifyPayment', {
-        uid: user?.uid ?? '',
-        productId: product.id,
-        ...result.data,
-      });
+      const v = await callFunction<{ expiresAt: number }>('app-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
       await grantEntitlement(product.id, product.days, v.expiresAt);
       return 'success';
     } catch {
-      // fall through to the server-side order check below
+      // fall through to the order check below
     }
-  } else if (result.status === 'success') {
-    // Demo / early mode without a server: unlock on this device only.
-    await grantEntitlement(product.id, product.days);
-    return 'success';
   }
 
   // Bank-page return, a closed sheet after paying in a UPI app, or a failed signature check:
-  // ask the server, which asks Razorpay directly whether this order was paid.
-  if (orderId && appsScriptConfigured) {
-    // one quick look after a plain close; a few tries after a bank-page return
-    const paid = await confirmOrder(orderId, product, user, result.status === 'cancelled' ? [0] : [0, 2500, 5000]);
-    if (paid) return 'success';
-  }
+  // the server asks Razorpay directly whether this order was paid.
+  // One quick look after a plain close; a few tries after a bank-page return.
+  const paid = await confirmOrder(order.orderId, product, result.status === 'cancelled' ? [0] : [0, 2500, 5000]);
+  if (paid) return 'success';
   if (result.status === 'cancelled') return 'cancelled';
   return 'failed';
 }
 
-async function confirmOrder(orderId: string, product: Product, user: AppUser | null, waits: number[]): Promise<boolean> {
+async function confirmOrder(orderId: string, product: Product, waits: number[]): Promise<boolean> {
   // UPI and net-banking can take a few seconds to show as captured
   for (const wait of waits) {
     if (wait) await new Promise((r) => setTimeout(r, wait));
     try {
-      const r = await callAppsScript<{ paid: boolean; expiresAt?: number }>('checkOrder', {
-        orderId,
-        uid: user?.uid ?? '',
-        productId: product.id,
-      });
+      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('app-payments', { action: 'checkOrder', orderId, productId: product.id });
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
         return true;

@@ -13,7 +13,7 @@ import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
 import { getStreak, getTodaysDraw, revealToday, weeklyTrio } from '@/lib/daily';
-import { loadTestimonials, type Testimonial } from '@/lib/firebase/db';
+import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { openInApp } from '@/lib/links';
 import type { DailyDraw, Streak } from '@/lib/storage';
@@ -41,7 +41,7 @@ export default function HomeScreen() {
 
   const { control, banner } = useStarRefresh(load);
   const dailyCard = daily ? getCard(daily.cardId) : undefined;
-  const contentW = Math.min(width, 640) - Spacing.lg * 2;
+  const contentW = Math.min(width, 640) - Spacing.lg * 2; // card trio + testimonials
 
   const reveal = async () => {
     if (!daily || daily.revealed) {
@@ -83,10 +83,12 @@ export default function HomeScreen() {
         </View>
         <View style={styles.heroText}>
           {banner}
-          <Eyebrow>{t('home.eyebrow')}</Eyebrow>
+          <Eyebrow style={styles.center}>{t('home.eyebrow')}</Eyebrow>
           <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
-          <Body muted>{t('home.heroSub')}</Body>
-          <Button label={t('home.heroCta')} icon="sparkles" onPress={() => router.navigate('/reading')} style={{ marginTop: Spacing.sm, alignSelf: 'flex-start' }} />
+          <Body muted style={styles.center}>
+            {t('home.heroSub')}
+          </Body>
+          <Button label={t('home.heroCta')} icon="sparkles" onPress={() => router.navigate('/reading')} style={styles.heroCta} />
         </View>
       </View>
 
@@ -130,17 +132,25 @@ export default function HomeScreen() {
         {/* Feature grid */}
         <SectionTitle>{t('home.explore')}</SectionTitle>
         <View style={styles.grid}>
-          {features.map((f) => (
-            <Pressable
-              key={f.label}
-              accessibilityRole="button"
-              onPress={() => { tap(); f.onPress(); }}
-              style={({ pressed }) => [styles.feature, { width: (contentW - Spacing.sm * 2) / 3 }, pressed && { transform: [{ scale: 0.96 }] }]}>
-              <IconTile icon={f.icon} />
-              <Text style={styles.featureLabel} numberOfLines={2}>
-                {f.label}
-              </Text>
-            </Pressable>
+          {[features.slice(0, 3), features.slice(3, 6)].map((row, r) => (
+            <View key={r} style={styles.gridRow}>
+              {row.map((f) => (
+                <Pressable
+                  key={f.label}
+                  accessibilityRole="button"
+                  onPress={() => { tap(); f.onPress(); }}
+                  style={({ pressed }) => [styles.feature, pressed && { transform: [{ scale: 0.96 }] }]}>
+                  <IconTile icon={f.icon} />
+                  <Text style={styles.featureLabel} numberOfLines={2}>
+                    {f.label}
+                  </Text>
+                </Pressable>
+              ))}
+              {/* keep tiles the same size when a row has fewer than 3 */}
+              {Array.from({ length: 3 - row.length }, (_, k) => (
+                <View key={`gap${k}`} style={styles.featureGap} />
+              ))}
+            </View>
           ))}
         </View>
 
@@ -245,8 +255,10 @@ const styles = StyleSheet.create({
   header: { position: 'absolute', top: Spacing.md, left: Spacing.lg, right: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   logo: { width: 40, height: 46 },
   brand: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text, letterSpacing: 1 },
-  heroText: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, bottom: Spacing.lg, gap: Spacing.sm },
-  heroTitle: { fontFamily: Fonts.serif, fontSize: 31, lineHeight: 40, color: Colors.text },
+  heroText: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, bottom: Spacing.xl, gap: Spacing.sm, alignItems: 'center' },
+  heroTitle: { fontFamily: Fonts.serif, fontSize: 29, lineHeight: 38, color: Colors.text, textAlign: 'center' },
+  center: { textAlign: 'center' },
+  heroCta: { marginTop: Spacing.md, alignSelf: 'center', minWidth: 240 },
   body: { paddingHorizontal: Spacing.lg, gap: Spacing.md, maxWidth: 640, width: '100%', alignSelf: 'center' },
   stats: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
   statPill: {
@@ -267,9 +279,14 @@ const styles = StyleSheet.create({
   cotdMsg: { fontFamily: Fonts.serifItalic, fontSize: 15.5, lineHeight: 22, color: Colors.goldSoft },
   cotdTap: { fontFamily: Fonts.serifItalic, fontSize: 16, lineHeight: 23, color: Colors.goldSoft },
   link: { fontFamily: Fonts.bodySemi, fontSize: 13.5, color: Colors.gold },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  grid: { gap: Spacing.sm },
+  gridRow: { flexDirection: 'row', gap: Spacing.sm },
+  featureGap: { flex: 1 },
   feature: {
+    flex: 1,
+    minHeight: 104,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingVertical: Spacing.md,
     paddingHorizontal: 6,

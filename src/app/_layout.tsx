@@ -88,6 +88,8 @@ export default function RootLayout() {
             <Stack.Screen name="history" options={{ title: '' }} />
             <Stack.Screen name="deck" options={{ title: '' }} />
             <Stack.Screen name="web" options={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }} />
+            {/* transparent so the starfield shows behind the login card */}
+            <Stack.Screen name="login" options={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
           </Stack>
           <IntroSplash />
           <CheckoutHost />

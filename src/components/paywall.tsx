@@ -28,7 +28,7 @@ export function Paywall({ product, title, body, cta, onUnlocked }: { product: Pr
       onUnlocked();
     } else if (r === 'sign-in-required') {
       setMsg(t('paywall.signInFirst'));
-      router.navigate('/profile');
+      router.push('/login');
     } else if (r === 'not-configured') setMsg(t('paywall.notConfigured'));
     else if (r === 'cancelled') setMsg(t('paywall.cancelled'));
     else setMsg(t('paywall.failed'));

@@ -40,8 +40,8 @@ changing in the app.
   - Cards, UPI ID, wallets: finish inside the sheet.
   - Netbanking or a card that needs an OTP: the bank page opens in the same sheet. When it finishes, Razorpay returns to
     `https://thedivinetarotonline.com/?tdt_payment_return=1`. The app catches that address, closes the sheet, and asks the
-    server (`checkOrder` in Apps Script) whether the order was paid.
-  - UPI apps: the UPI app opens. When the user comes back and closes the sheet, the app checks the order once.
+    server (the Supabase function `app-payments` → `checkOrder`) whether the order was paid.
+  - UPI apps: the UPI app opens. When the user comes back and closes the sheet, the app checks the order once (same `checkOrder`).
 - **Course links (`rzp.io`) and booking checkout**: these are Razorpay pages on the website. They run in the in-app browser.
 
 ### One website change recommended (`booking.` page)

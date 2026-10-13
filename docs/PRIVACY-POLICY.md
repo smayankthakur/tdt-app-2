@@ -20,16 +20,17 @@ This policy explains how **[LEGAL BUSINESS NAME]** ("we", "us") collects and use
 
 ### 1. Information we collect
 
-**a) If you sign in** (with Google, Apple or your phone number):
+**a) If you create an account or log in** (with your email address and a password):
 
-- Your **name**, **email address** and/or **phone number**, and **profile photo** from your Google or Apple account
-  (Apple lets you hide your email).
+- Your **email address** and your **password** (stored only in scrambled, "hashed" form by our login provider — we cannot read it).
 - A **user ID** created by our login provider.
+- The same account is used for **Ginni Ki Baatein** on our website (`reading.thedivinetarotonline.com`), so your
+  Ginni Premium status and your daily free-reading count are shared between the App and that website.
 
 **b) Profile details you choose to enter** (all optional): gender, date of birth, time of birth, place of birth,
 marital status, occupation and a profile photo. These are used to personalise your readings.
 
-**c) Your saved readings:** the question you typed, the topic, the cards drawn and the date. If you are signed in,
+**c) Your saved readings:** the question you typed, the topic, the cards drawn and the date. If you are logged in,
 these are saved to your account so they appear on your other devices.
 
 **d) Purchases:** which product you bought, the amount, the date, the Razorpay order and payment IDs, and until
@@ -37,7 +38,7 @@ when it is active. **We never see or store your card, UPI or bank details** — 
 
 **e) Usage data (optional, ON by default):** each time the App opens we may record the date and time, a random
 session code, platform (Android/iOS/web), operating-system version, device model, app version, App language
-and, if you are signed in, your user ID. You can turn this off any time in **Profile → Privacy → Share anonymous usage data**.
+and, if you are logged in, your user ID. You can turn this off any time in **Profile → Privacy → Share anonymous usage data**.
 We do **not** send your questions, readings or profile details with this.
 
 **f) Approximate location (optional, OFF by default):** only if you turn on **Profile → Privacy → Share approximate city**
@@ -60,13 +61,13 @@ We do **not** sell your data, show third-party ads, or track you across other co
 
 | Service | What it handles | Provider |
 |---|---|---|
-| Firebase Authentication and Cloud Firestore | Login, profile, saved readings, purchase status | Google LLC |
-| Google Sign-In / Sign in with Apple | Login | Google LLC / Apple Inc. |
+| Supabase (database, login and server functions) | Login (email + password), profile, saved readings, purchase status and payment records | Supabase, Inc. |
 | Razorpay | Payment processing | Razorpay Software Pvt. Ltd. |
-| Google Sheets and Google Apps Script | Payment records and usage records | Google LLC |
+| Google Sheets and Google Apps Script | Usage records only (optional, see 1e and 1f) | Google LLC |
 | thedivinetarotonline.com | Card pictures and website pages opened from the App | [HOSTING PROVIDER] |
 
-Google may store data on servers outside India. These providers process data for us under their own terms
+Your account data is stored by Supabase in its **Sydney, Australia** region (ap-southeast-2), outside India.
+Usage records stored by Google may also be on servers outside India. These providers process data for us under their own terms
 and security measures. Links in the App to our booking, courses and support websites are covered by those sites' policies.
 
 ### 4. How long we keep it
@@ -77,13 +78,15 @@ and security measures. Links in the App to our booking, courses and support webs
 
 ### 5. Your choices and rights
 
-- **Delete your account in the App:** **Profile → Delete account**. This permanently deletes your login, profile
-  and saved readings from our servers. Purchase records are kept as explained above.
+- **Delete your account in the App:** **Profile → Delete account**. This permanently deletes your login, profile,
+  saved readings and purchases from our servers. Because the App and **Ginni Ki Baatein** on our website share one account,
+  this also deletes your Ginni Ki Baatein login and any Ginni Premium. A record of each payment (order, amount, date)
+  is kept, without your account, as explained above.
 - Turn usage data or location sharing on/off in **Profile → Privacy**.
 - Edit your profile any time in **Profile → Edit profile**.
 - You can ask us to access, correct or erase your personal data, or raise a grievance, by writing to **[CONTACT EMAIL]**.
   We will reply within [30] days.
-- If you use the App without signing in, your data stays on your device; uninstalling the App removes it.
+- If you use the App without logging in (as a guest), your data stays on your device; uninstalling the App removes it.
 
 ### 6. Children
 

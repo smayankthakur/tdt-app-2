@@ -3,19 +3,45 @@
 **Razorpay** is the Indian payment company that collects money in the app (UPI, cards, net banking, wallets).
 The app uses **Razorpay Standard Checkout** — the normal Razorpay payment screen.
 
-What users can buy (set in `src/constants/config.ts` → `Products`):
+What users can buy:
 
 | Product | Price | What it unlocks |
 |---|---|---|
-| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (free users get 3 a day) |
+| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (free users get 3 a day). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
 | Kundli full report | ₹99 | Full 8-koota Kundli Milan reports |
 
-Razorpay has **two keys**:
+**Buying needs a login** (email + password), so the purchase follows the user to other phones.
 
-- **Key ID** (`rzp_test_…` or `rzp_live_…`) — public, goes in the app (`EXPO_PUBLIC_RAZORPAY_KEY_ID`).
-- **Key Secret** — private. It goes **only** in Apps Script → Script properties. Never in `.env`, never in the app, never on WhatsApp/email.
+> **This is already set up and working — with LIVE keys. App payments are real money.**
+> Read "How it works" and "Testing", then keep this page for support questions.
 
-Do these steps after [Firebase](SETUP-FIREBASE.md) and together with [Apps Script](SETUP-APPS-SCRIPT.md).
+---
+
+## How it works
+
+The payments run on a small server program in Supabase, the Edge Function **`app-payments`**
+(code: `supabase/functions/app-payments/index.ts`, already deployed). It does three things:
+
+1. **`createOrder`** — creates the Razorpay order. The price is decided here, so nobody can change it on their phone.
+2. **`verifyPayment`** — checks Razorpay's payment signature with the secret key, then unlocks the purchase for the user.
+3. **`checkOrder`** — for payments that finish on a bank page or in a UPI app: asks Razorpay directly whether the order was paid.
+
+Each paid order is saved once in the Supabase table **`app_payments`**, so one payment can never unlock twice.
+
+## Where the keys are
+
+Razorpay has **two keys**. Both are **already stored** in the Supabase project as function secrets
+(the same ones the Ginni Ki Baatein website uses):
+
+| Secret | Where it lives |
+|---|---|
+| `RAZORPAY_KEY_ID` (`rzp_live_…`) | Supabase Dashboard → **Edge Functions → Secrets** |
+| `RAZORPAY_KEY_SECRET` | Supabase Dashboard → **Edge Functions → Secrets** |
+
+- The app gets the public **Key ID** from the server when it creates an order. There is **nothing to put in `.env`**
+  and no Razorpay key inside the app.
+- The **Key Secret** lives **only** in Supabase. Never put it in `.env`, the app, WhatsApp or email.
+- These are **LIVE** keys (`rzp_live_…`). If you ever change them, it changes payments for **both** the app and the Ginni website.
 
 ---
 
@@ -46,90 +72,91 @@ features still work; on that platform every paywall (Ginni Unlimited, Kundli ful
 
 ---
 
-## Step 1 — Create the Razorpay account
+## Testing
 
-1. Go to <https://dashboard.razorpay.com/signup> and sign up with the business email and mobile.
-2. You can test immediately; going live needs **KYC / Activation** (Step 5).
+The server uses the **live** keys, so there is no "test mode" for the app on its own. Switching the function to test keys
+would also switch the **Ginni website** to test payments. So the simple, safe way is:
 
-## Step 2 — Get the TEST keys
+**Do one real ₹99 purchase yourself, then refund it.**
 
-1. In the Dashboard, switch the top toggle to **Test Mode**.
-2. Go to **Account & Settings → API Keys** (under "Website and app settings") → **Generate Key** (or **Regenerate**).
-3. Copy the **Key ID** (`rzp_test_…`) and the **Key Secret**. The secret is shown only once — paste it straight into Apps Script.
-
-## Step 3 — Put the keys in their places
-
-| Key | Where |
-|---|---|
-| Key ID `rzp_test_…` | `.env` → `EXPO_PUBLIC_RAZORPAY_KEY_ID` (and in EAS env vars for cloud builds) |
-| Key ID `rzp_test_…` | Apps Script → Script properties → `RAZORPAY_KEY_ID` |
-| Key Secret | Apps Script → Script properties → `RAZORPAY_KEY_SECRET` |
-
-The Key ID in the app and the Key ID in Apps Script must be **the same**.
-
-If `EXPO_PUBLIC_RAZORPAY_KEY_ID` is empty, the paywalls are hidden. With a **live** key (`rzp_live_…`) the paywalls also
-stay hidden until `EXPO_PUBLIC_APPS_SCRIPT_URL` is set — real payments are always checked by the server.
-
-## Step 4 — Test a payment (no real money)
-
-1. Make sure `EXPO_PUBLIC_APPS_SCRIPT_URL` is set (otherwise the purchase only unlocks on that phone, without a server check).
-2. In the app, sign in, then go to **Reading** and use up the free readings (or open **Kundli**) and tap **Pay ₹…**.
-3. In the Razorpay screen use test details from Razorpay's docs ("Test card details" / "Test UPI"),
-   for example UPI ID **`success@razorpay`**.
-4. Check:
+1. In the app, log in (**Profile → Log in**), open **Kundli** and tap **Pay ₹99**.
+2. Pay with your own UPI or card.
+3. Check:
    - [ ] The app shows the plan in **Profile → Your plan**.
-   - [ ] A new row appears in the **Payments** sheet.
-   - [ ] Razorpay Dashboard (Test Mode) → **Transactions → Payments** shows the payment as **Captured**.
-   - [ ] Firebase → Firestore → `entitlements` → a document with the user's ID exists.
-5. Also test **cancelling** the payment screen — nothing should unlock.
-6. Test **Netbanking** (test mode shows a fake bank page with Success / Failure buttons) and a **card that asks for OTP**.
-   These pages open inside the same payment screen. After **Success**, the screen closes by itself and the plan unlocks
-   (the app asks Apps Script → `checkOrder` → Razorpay whether the order is paid).
+   - [ ] Supabase Dashboard → **Table Editor → `app_payments`** has a new row (order ID, product, amount in paise, payment ID).
+   - [ ] Razorpay Dashboard (Live Mode) → **Transactions → Payments** shows the payment as **Captured**.
+4. Refund it: Razorpay Dashboard → **Transactions → Payments** → open the payment → **Refund**.
+5. Also try **cancelling** the payment screen once — nothing should unlock.
 
-The app's payment screen tells Razorpay to come back to `https://thedivinetarotonline.com/?tdt_payment_return=1`
-after a bank or OTP page. The app catches that address — nobody actually lands on the website. If Razorpay ever shows
-"callback URL not allowed", add **thedivinetarotonline.com** under **Account & Settings → Website and app details**.
+### Bank pages and UPI apps
 
-If a payment shows **Authorized** but not **Captured**, go to **Account & Settings → Payment capture** and set it to **Automatic**.
+- **Netbanking** and **cards that ask for an OTP** open their bank page inside the same payment screen. When it finishes,
+  Razorpay returns to `https://thedivinetarotonline.com/?tdt_payment_return=1`. The app catches that address
+  (nobody actually lands on the website), closes the screen, and asks the server (**`app-payments` → `checkOrder`**)
+  whether the order was paid. It tries a few times, because banks can take a few seconds.
+- **UPI apps** (PhonePe, Google Pay, Paytm…): the UPI app opens. When the user comes back and closes the payment screen,
+  the app checks the order once with `checkOrder`.
 
-## Step 5 — Go LIVE (after KYC)
+If Razorpay ever shows **"callback URL not allowed"**, add **thedivinetarotonline.com** under
+**Account & Settings → Website and app details** in the Razorpay Dashboard.
 
-1. Dashboard → complete the **Activation** form: business type, PAN, GST (if any), bank account, and the
-   website/app details. Razorpay checks that the website has **Privacy policy, Terms & conditions,
-   Refund/Cancellation policy and Contact us** pages. (See `PRIVACY-POLICY.md` for the privacy text.)
-   Use **thedivinetarotonline.com** as the website — the app's payment screen runs on that domain.
-2. Wait for the "account activated" email (usually a few working days).
-3. Switch the toggle to **Live Mode** → **Account & Settings → API Keys → Generate Key**. Copy the live Key ID and Secret.
-4. Replace **both** Script properties in Apps Script with the live pair (no new deployment needed for property changes).
-5. Replace `EXPO_PUBLIC_RAZORPAY_KEY_ID` with `rzp_live_…` in EAS env vars and `.env`, then publish a new build or update.
-6. Do one real ₹99 purchase yourself and refund it from the Dashboard (**Payments → select → Refund**).
+If a payment shows **Authorized** but not **Captured**, go to **Account & Settings → Payment capture** and set it to
+**Automatic**. (The server only counts **captured** payments.)
 
-Change the app key and the Apps Script keys **at the same time**. A test key in the app with live keys in
-Apps Script (or the reverse) makes every payment fail.
+---
 
 ## Money, refunds and records
 
-- Settlements (money to your bank) follow Razorpay's schedule — see **Settlements** in the Dashboard.
+- Settlements (money to your bank) follow Razorpay's schedule — see **Settlements** in the Razorpay Dashboard.
 - Refunds: **Transactions → Payments** → open the payment → **Refund**. A refund does **not** automatically
-  remove the unlock in the app. (It expires on its own for Ginni after 30 days.)
-- The **Payments** sheet + Razorpay Dashboard together are your sales record. Keep them for accounts/GST.
+  remove the unlock in the app. (Ginni Unlimited expires on its own after 30 days.)
+- **Your sales record** = Supabase **Table Editor → `app_payments`** + the Razorpay Dashboard.
+  Keep them for accounts/GST. `app_payments` has: `order_id`, `user_id`, `product_id`, `amount_paise`
+  (₹ × 100), `payment_id`, `expires_at`, `created_at`.
+- If a user deletes their account, their `app_payments` rows stay (with an empty `user_id`) as the sales record.
 
 ## "I paid but it is not unlocked"
 
 The app checks the order with Razorpay itself after a bank page, and once more when the user closes the payment
 screen (for example after paying in a UPI app). So this is rare — mostly when the internet drops right after payment.
 
-1. Ask the user for the phone/email they signed in with and the Razorpay payment ID (in their Razorpay SMS/email).
-2. In Razorpay Dashboard, confirm the payment is **Captured**.
-3. Look for its Order ID in the **Payments** sheet. If it is there, ask the user to close and reopen the app while signed in.
-4. If it is not there, either **refund** it, or ask your developer to add the unlock manually in Firestore
-   (`entitlements/<user ID>` → `products` → `<product id>` = expiry time in milliseconds) and add a matching row in the Payments sheet.
+1. Ask the user for the **email** they log in with and the **Razorpay payment ID** (in their Razorpay SMS/email).
+2. In the Razorpay Dashboard, find the payment and confirm it is **Captured**. Note its **Order ID** (`order_…`).
+3. In Supabase → **Table Editor → `app_payments`**, search for that Order ID.
+   - **If it is there:** the unlock is saved. Ask the user to log out and log in again (or close and reopen the app) with the same email.
+   - **If it is not there:** open Supabase → **Edge Functions → app-payments → Logs** and look for an error at that time.
+     Then either **refund** the payment, or ask your developer to add the unlock by hand
+     (a row in `app_entitlements` for that user and product — and, for Ginni Unlimited, `premium_until` in `ginni_access` —
+     plus a matching row in `app_payments`).
+4. To find the user's ID: Supabase → **Authentication → Users** → search by email.
+
+## Changing prices
+
+Prices are written in **two** places and must match:
+
+| File | Ginni Unlimited | Kundli full report |
+|---|---|---|
+| `src/constants/config.ts` → `Products` (rupees — what the app **shows**) | `price: 199` | `price: 99` |
+| `supabase/functions/app-payments/index.ts` → `PRODUCTS` (paise = rupees × 100 — what is **charged**) | `amount: 19900` | `amount: 9900` |
+
+1. Change both files.
+2. Redeploy the function (needs `npx supabase login` once on your computer):
+
+   ```bash
+   npx supabase functions deploy app-payments --project-ref agwpfisykktphrrmnnzu
+   ```
+
+3. Publish an app update for the new shown price (an over-the-air update is enough — see `BUILD-AND-PUBLISH.md`).
+
+If they don't match, the shown price and the charged price differ — always change both.
 
 ## Common problems
 
 | Symptom | Fix |
 |---|---|
-| No paywall / Pay button appears | `EXPO_PUBLIC_RAZORPAY_KEY_ID` empty in this build, a live key without `EXPO_PUBLIC_APPS_SCRIPT_URL`, or the `StorePolicy` switch is off for that platform |
-| "Please sign in" before paying | Normal: when login is set up, purchases need an account so they follow the user |
-| Payment fails at once | Key mismatch between app and Apps Script, or Apps Script not deployed — check its **Executions** |
+| No paywall / Pay button appears | The `StorePolicy` switch is off for that platform, or the app cannot reach Supabase |
+| "Please log in first so your purchase is saved to your account." | Normal: purchases need an account. Log in or create one |
+| Payment fails at once | Supabase → **Edge Functions → app-payments → Logs**. `razorpay_401` means the keys in **Edge Functions → Secrets** are wrong |
+| `order_amount_mismatch` in the logs | The price in `app-payments` was changed after the order was made; the user should try again |
+| Paid, but the screen says it failed | See "I paid but it is not unlocked" above |
 | UPI app does not open on phone | Make sure the UPI app is installed; try "Pay by UPI ID" instead |

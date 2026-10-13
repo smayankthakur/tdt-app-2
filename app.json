@@ -14,7 +14,6 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Choose a profile photo for your Divine Tarot profile.",
         "NSLocationWhenInUseUsageDescription": "Only if you allow it in Privacy settings: your approximate city is used to improve the app."
@@ -81,13 +80,18 @@
           "isIosBackgroundLocationEnabled": false
         }
       ],
-      "expo-apple-authentication",
       "expo-localization",
       "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dbecb0c4-3a12-4b6e-958b-0bfc9ff43be3"
+      }
     }
   }
 }

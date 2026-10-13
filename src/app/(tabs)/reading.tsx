@@ -14,7 +14,7 @@ import { Products } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/constants/theme';
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { pushReading } from '@/lib/firebase/db';
+import { pushReading } from '@/lib/cloud/db';
 import { buildReading, readingToText, type Reading } from '@/lib/ginni/engine';
 import { classify, type Intent } from '@/lib/ginni/intents';
 import { consumeReading, getQuota, type QuotaState } from '@/lib/quota';
@@ -40,9 +40,10 @@ export default function ReadingScreen() {
   const scroll = useRef<ScrollView>(null);
   const starting = useRef(false);
 
+  const uidNow = user?.uid ?? null;
   const refreshQuota = useCallback(() => {
-    getQuota().then(setQuota);
-  }, []);
+    getQuota(uidNow).then(setQuota);
+  }, [uidNow]);
   useFocusEffect(refreshQuota);
   useEffect(refreshQuota, [version, refreshQuota]);
 
@@ -63,7 +64,7 @@ export default function ReadingScreen() {
     starting.current = true;
     tap();
     setInput('');
-    const qState = await getQuota();
+    const qState = await getQuota(uidNow);
     starting.current = false;
     setQuota(qState);
     if (!qState.unlimited && qState.left <= 0) {
@@ -97,12 +98,17 @@ export default function ReadingScreen() {
     const ids = picked.map((i) => drawing.deck[i]);
     setDrawing(null);
     setTimeout(async () => {
+      // Counted here (on the server for logged-in users, shared with Ginni on the website)
+      if (!(await consumeReading(uidNow))) {
+        push({ id: uid(), kind: 'ginni', text: t('reading.quotaOut') }, { id: uid(), kind: 'paywall' });
+        refreshQuota();
+        return;
+      }
       const reading = buildReading(intent, ids, lang);
       push({ id: uid(), kind: 'ginni', text: t('reading.revealing') }, { id: uid(), kind: 'reading', question, reading });
       tap('success');
-      await consumeReading();
       refreshQuota();
-      await pushReading(user?.uid ?? null, {
+      await pushReading(uidNow, {
         id: `${Date.now()}`,
         createdAt: Date.now(),
         question,

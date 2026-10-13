@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/** On-device storage. Cloud copies (Firestore) are handled in lib/firebase/db.ts. */
+/** On-device storage. Cloud copies (Supabase) are handled in lib/cloud/db.ts. */
 const KEYS = {
   history: 'tdt.history.v2',
   daily: 'tdt.daily.v1',

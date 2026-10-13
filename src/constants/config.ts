@@ -6,15 +6,9 @@
 const env = (key: string, fallback = ''): string => {
   // Expo inlines EXPO_PUBLIC_* at build time; the explicit names below make that work.
   const map: Record<string, string | undefined> = {
-    EXPO_PUBLIC_RAZORPAY_KEY_ID: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_APPS_SCRIPT_URL: process.env.EXPO_PUBLIC_APPS_SCRIPT_URL,
-    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-    EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-    EXPO_PUBLIC_FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-    EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   };
   return (map[key] ?? fallback).trim();
 };
@@ -46,26 +40,21 @@ export function cardImageUrl(cardName: string): string {
   return `${SITE}${encodeURIComponent(`/card_img/${cardName}.png`)}&w=384&q=75`;
 }
 
-/** Firebase project: the-divine-tarot-2-project (web keys are public by design). */
-export const FirebaseWebConfig = {
-  apiKey: env('EXPO_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: env('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN', 'the-divine-tarot-2-project.firebaseapp.com'),
-  projectId: env('EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'the-divine-tarot-2-project'),
-  appId: env('EXPO_PUBLIC_FIREBASE_APP_ID'),
-  messagingSenderId: env('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  storageBucket: env('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-};
+/**
+ * Supabase project "Tdt-Ginni" — the SAME login as Ginni Ki Baatein on the web.
+ * Both values are public by design (Row Level Security protects the data); .env can override them.
+ */
+export const SupabaseUrl = env('EXPO_PUBLIC_SUPABASE_URL', 'https://agwpfisykktphrrmnnzu.supabase.co');
+export const SupabaseKey = env('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_m0JfmCymyMgWvnkFz70T2Q_X5F7RWUn');
 
-/** Google "Web client ID" (OAuth 2.0, type Web) from the Firebase project — needed for native Google sign-in. */
-export const GoogleWebClientId = env('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID');
+/** Testimonials managed in the admin panel (Firebase project the-divine-tarot-2-project, public read). */
+export const TestimonialsUrl =
+  'https://firestore.googleapis.com/v1/projects/the-divine-tarot-2-project/databases/(default)/documents/testimonials?pageSize=20';
 
-/** Razorpay PUBLIC Key ID only (rzp_live_… / rzp_test_…). The Key Secret lives in Apps Script. */
-export const RazorpayKeyId = env('EXPO_PUBLIC_RAZORPAY_KEY_ID');
-
-/** Google Apps Script web-app URL (orders, payment verification, analytics). */
+/** Optional: Google Apps Script web-app URL for the consent-based usage sheet (see docs/SETUP-APPS-SCRIPT.md). */
 export const AppsScriptUrl = env('EXPO_PUBLIC_APPS_SCRIPT_URL');
 
-/** Paid products — prices in rupees. Confirm with the client before launch. */
+/** Paid products — prices in rupees. The server price list is in supabase/functions/app-payments (in paise). */
 export const Products = {
   ginniUnlimited: {
     id: 'ginni_unlimited_30d',

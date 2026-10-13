@@ -1,7 +1,11 @@
 # Build and publish (Android, iPhone, web, updates)
 
 The app is built in the cloud by **EAS** (Expo Application Services) — you do not need Android Studio or a Mac.
-Finish [Firebase](SETUP-FIREBASE.md), [Apps Script](SETUP-APPS-SCRIPT.md) and [Razorpay](SETUP-RAZORPAY.md) first.
+Go through the setup guides first, in this order:
+
+1. [Supabase](SETUP-SUPABASE.md) — already set up; just check the dashboard settings listed there
+2. [Razorpay](SETUP-RAZORPAY.md) — already set up with live keys; do the ₹99 test purchase and refund
+3. [Apps Script](SETUP-APPS-SCRIPT.md) — **optional** anonymous usage sheet
 
 App facts: name **The Divine Tarot**, Android package and iOS bundle ID **`com.thedivinetarotonline.app`**,
 Expo SDK 57, iPhone only (no iPad layout).
@@ -39,16 +43,20 @@ Commit the changes these commands make (`app.json`, `eas.json`, `package.json`).
 
 All `EXPO_PUBLIC_…` values are public — they ship inside the app — so no secrets here.
 
-- **On your computer:** copy `.env.example` to `.env` and fill it in.
+**No values are required to build.** The Supabase address and public key are built into `src/constants/config.ts`,
+and the Razorpay key comes from the server. The only value you may want to add is the optional
+`EXPO_PUBLIC_APPS_SCRIPT_URL` (usage sheet, see `SETUP-APPS-SCRIPT.md`).
+
+- **On your computer:** copy `.env.example` to `.env` and fill in only what you need.
 - **For cloud builds**, EAS does not see your local `.env` unless it is committed. Choose one:
   - **Option A (recommended):** save each value in EAS, once per environment (`production`, `preview`, `development`):
 
     ```bash
-    eas env:create --environment production --name EXPO_PUBLIC_RAZORPAY_KEY_ID --value rzp_test_xxx --visibility plaintext
     eas env:create --environment production --name EXPO_PUBLIC_APPS_SCRIPT_URL --value https://script.google.com/macros/s/xxx/exec --visibility plaintext
     ```
 
-    Repeat for every line in `.env.example`, and again with `--environment preview` and `--environment development`.
+    Repeat with `--environment preview` and `--environment development`. (The Supabase lines in `.env.example` are
+    only needed if you ever point the app at a different Supabase project.)
     You can also manage them on expo.dev → your project → **Environment variables**.
   - **Option B:** commit the `.env` file to git (allowed here because every value is public).
 
@@ -68,7 +76,7 @@ Notes:
   it gives you, then run `npx expo start` and scan the QR code.
 - Build numbers go up automatically for production. To change the version users see (e.g. 1.0.0 → 1.1.0),
   edit `"version"` in `app.json`.
-- Every time the Firebase files, `app.json` plugins/permissions or a native library change, you need a **new build** (an OTA update is not enough).
+- Every time `app.json` plugins/permissions or a native library change, you need a **new build** (an OTA update is not enough).
 - Before each build run: `npm run typecheck`, `npm run lint`, `npx expo-doctor`.
 
 ---
@@ -87,18 +95,18 @@ Google requires new apps to target **Android 16 (API 36)** since 31 Aug 2026 —
 1. Play Console → **Create app** → name "The Divine Tarot", language English (India), **App**, **Free** (in-app payments are allowed in a free app).
 2. Run `eas build --profile production --platform android`. When done, download the `.aab` from expo.dev.
 3. **The first upload must be manual:** **Testing → Internal testing → Create new release** → upload the `.aab` → **Save → Review release → Start rollout**.
-4. Now add Play's signing fingerprints to Firebase: **Setup → App signing** → copy SHA-1 and SHA-256 (see `SETUP-FIREBASE.md` Step 5B). Re-download `google-services.json`, commit, rebuild.
-5. For later uploads use `eas submit -p android`. It needs a Google **service account JSON key** (a login file for robots): follow <https://expo.fyi/creating-google-service-account>. The upload goes to the **internal** track as a **draft**; open Play Console to roll it out.
-6. Fill in **every item on the Dashboard ("Set up your app")**:
-   - **App access:** "All or some functionality is restricted" → add the Firebase test phone number and OTP (e.g. `+91 9999900001` / `123456`).
+4. For later uploads use `eas submit -p android`. It needs a Google **service account JSON key** (a login file for robots): follow <https://expo.fyi/creating-google-service-account>. The upload goes to the **internal** track as a **draft**; open Play Console to roll it out.
+5. Fill in **every item on the Dashboard ("Set up your app")**:
+   - **App access:** "All or some functionality is restricted" → add the **review account's email and password**
+     (create it in the app with **Profile → Create account** — see `SETUP-SUPABASE.md` → "Account for the app store reviewers").
    - **Ads:** No ads.
    - **Content rating:** answer the questionnaire honestly.
    - **Target audience:** **18 and over** only.
    - **Data safety:** see the table in section 7.
    - **Privacy policy URL:** `https://thedivinetarotonline.com/privacy`.
    - **Store listing:** short and full description, icon 512×512, feature graphic 1024×500, at least 2 phone screenshots.
-7. **Closed testing** (personal accounts): create a track, add 12+ testers' Gmail IDs, share the opt-in link, wait 14 days, then **Apply for production**.
-8. **Production → Create new release** → choose the tested build → **Start rollout**.
+6. **Closed testing** (personal accounts): create a track, add 12+ testers' Gmail IDs, share the opt-in link, wait 14 days, then **Apply for production**.
+7. **Production → Create new release** → choose the tested build → **Start rollout**.
 
 ## 6. Apple App Store (iPhone)
 
@@ -111,13 +119,14 @@ Since 28 Apr 2026 Apple requires builds made with **Xcode 26 / iOS 26 SDK** — 
    - **App Information:** category **Lifestyle** (or Entertainment), age rating questionnaire, privacy policy URL.
    - **App Privacy:** see section 7.
    - **Screenshots:** iPhone only. Apple requires the **"iPhone with Dynamic Island (medium display)"** size — **1206×2622** or **1179×2556** pixels.
-   - **App Review Information → Sign-in required:** give the Firebase test phone number and OTP, and write:
-     "Log in with phone: enter 9999900001, OTP 123456. Account deletion: Profile → Delete account."
+   - **App Review Information → Sign-in required:** give the review account's **email and password**, and write:
+     "Log in: Profile → Log in, then enter the email and password above. Account deletion: Profile → Delete account."
 4. Select the build → **Add for Review → Submit**.
 
 **Review points to be ready for:**
 
-- **Sign in with Apple** is included because the app offers Google sign-in (guideline 4.8).
+- **Sign in with Apple is not needed.** Guideline 4.8 applies only to apps that offer a third-party or social login
+  (like Google). This app has only its own email + password login.
 - **Account deletion** is in the app: **Profile → Delete account** (guideline 5.1.1(v); Google requires it too).
 - **Payments (3.1.1):** Razorpay for digital items may be rejected. If so, set `razorpayOnIos: false`
   (and if needed `courseEnrolLinks: false`) in `src/constants/config.ts`, then resubmit. Personal Reading (live call) is allowed (3.1.3(d)). See `SETUP-RAZORPAY.md`.
@@ -130,11 +139,11 @@ Both stores now require you to **declare** what the app collects. Answer to matc
 
 | Data | Collected? | Why | Optional? |
 |---|---|---|---|
-| Name, email address, phone number | Yes | Account / login | Needed only if user signs in |
-| User ID | Yes | Account | Needed only if user signs in |
+| Name, email address | Yes | Account / login | Needed only if user logs in |
+| User ID | Yes | Account | Needed only if user logs in |
 | Profile info the user enters: gender, birth date/time/place, marital status, occupation | Yes ("Other info") | App functionality / personalisation | Optional |
 | Photo (profile photo) | Yes | App functionality | Optional |
-| Questions typed in readings (saved readings) | Yes ("Other user-generated content") | App functionality | Saved to cloud only when signed in |
+| Questions typed in readings (saved readings) | Yes ("Other user-generated content") | App functionality | Saved to cloud only when logged in |
 | Purchase history | Yes | App functionality / payments | Only if user buys |
 | App interactions / diagnostics (device model, OS, app version) | Yes | Analytics | Optional — user can turn off |
 | Approximate (coarse) location | Yes | Analytics | Optional — off by default |
@@ -148,16 +157,15 @@ Card and UPI details are handled by Razorpay, not by the app.
 ## 8. Web version
 
 1. Build the website files: `npx expo export --platform web` → creates a `dist/` folder.
-2. Host it, for example on Vercel: `npx vercel deploy dist --prod` (or Firebase Hosting).
+2. Host it, for example on Vercel: `npx vercel deploy dist --prod` (or any static web host).
 3. Point a sub-domain such as **`app.thedivinetarotonline.com`** to it (Vercel → Project → **Settings → Domains**, then add the CNAME record it shows at your domain provider).
-4. Add the domain in Firebase → **Authentication → Settings → Authorized domains**.
-5. Card links like `/card/the-fool` work on Vercel out of the box: `public/vercel.json` (copied into `dist/`) has the rewrite rule. On another host, add the same rule (`/card/:id` → `/card/[id].html`).
+4. Card links like `/card/the-fool` work on Vercel out of the box: `public/vercel.json` (copied into `dist/`) has the rewrite rule. On another host, add the same rule (`/card/:id` → `/card/[id].html`).
 
-On the web, sign-in uses a Google pop-up and phone OTP with an invisible "I'm not a robot" check. Animations are static on web by design.
+On the web, login is the same email + password screen as on the phone. Animations are static on web by design.
 
 ## 9. Sending an over-the-air update
 
-For changes to text, prices, switches, screens or `EXPO_PUBLIC_` values (no new native library, no Firebase file change):
+For changes to text, prices, switches, screens or `EXPO_PUBLIC_` values (no new native library, no `app.json` change):
 
 ```bash
 eas update --channel production --environment production --message "Fix price text"
@@ -165,14 +173,19 @@ eas update --channel production --environment production --message "Fix price te
 
 Users get it the next time they open the app (sometimes the time after). For the testers' preview builds use `--channel preview`.
 
-When **not** to use an update: new library, `app.json` permission/plugin change, Firebase files, or a new `"version"` — make a new build and submit it instead.
+When **not** to use an update: new library, `app.json` permission/plugin change, or a new `"version"` — make a new build and submit it instead.
+
+A price change needs **both** an update (the shown price) **and** a redeploy of the Supabase function `app-payments`
+(the charged price) — see `SETUP-RAZORPAY.md` → "Changing prices". Server changes in `supabase/functions/` never need a new app build.
 
 ## Launch checklist
 
-- [ ] `EXPO_PUBLIC_APPS_SCRIPT_URL` set (otherwise purchases unlock only on the device — never launch like that)
-- [ ] Razorpay **live** keys in both app and Apps Script; one real test payment refunded
-- [ ] Firebase files committed; Play signing fingerprints added; Google, phone and Apple login tested
-- [ ] Firestore rules merged; admin panel still works
+- [ ] Supabase settings checked (`SETUP-SUPABASE.md`): password-reset URL, leaked-password protection, email confirmation choice
+- [ ] Sign up, log in, log out and **Forgot password?** tested on a real phone
+- [ ] One real ₹99 purchase made and refunded; the row appears in Supabase → `app_payments`
+- [ ] Prices in `src/constants/config.ts` match `supabase/functions/app-payments/index.ts`
+- [ ] **Delete account** tested with a spare account
 - [ ] Privacy page live at `/privacy`; store privacy forms filled as in section 7
-- [ ] Test phone number + OTP written in both stores' review notes
+- [ ] Review account (email + password) created in the app and written in both stores' review notes
+- [ ] (Optional) `EXPO_PUBLIC_APPS_SCRIPT_URL` set if you want the usage sheet
 - [ ] `expo-updates` installed before the first store build

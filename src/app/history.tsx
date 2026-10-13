@@ -8,7 +8,7 @@ import { Body, Button, Card, Screen } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { removeReading, syncReadings } from '@/lib/firebase/db';
+import { removeReading, syncReadings } from '@/lib/cloud/db';
 import { useSession } from '@/lib/session';
 import { Storage, type SavedReading } from '@/lib/storage';
 

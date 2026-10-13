@@ -11,19 +11,24 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 | **Reading** — *Ginni Ki Baatein* | Private tarot chat: type a question, pick cards from the fan, get the answer. 3 free readings a day; **Ginni Unlimited** (₹199 / 30 days) removes the limit |
 | **Courses** | The courses from learn.thedivinetarotonline.com, with "Enrol now" links to the website |
 | **Kundli** | Kundli Milan (8-koota, 36 gunas), worked out on the phone. **Full report** ₹99 |
-| **Profile** | Sign in (Google, phone OTP, Apple on iPhone), profile details, My readings, Card library, daily reminder, language (English / हिन्दी / Hinglish), privacy switches, Delete account |
+| **Profile** | "Your Divine Tarot account" card (Log in / Create account — email + password, same account as Ginni Ki Baatein on the website), profile details, My readings, Card library, daily reminder, language (English / हिन्दी / Hinglish), privacy switches, Delete account |
 
 - Without login the app runs in **guest mode**; everything is saved on the phone.
-- With login (Firebase), the profile, saved readings and purchases follow the user to other devices.
-- Payments use **Razorpay**; a small **Google Apps Script** backend checks each payment and logs it in a Google Sheet.
+- Login is **email + password** on **Supabase** (project "Tdt-Ginni") — the **same accounts as Ginni Ki Baatein** on
+  `reading.thedivinetarotonline.com`. With login, the profile, saved readings and purchases follow the user to other devices.
+  Ginni website Premium users get unlimited readings in the app, and the 3 free readings a day are shared between app and website.
+- Payments use **Razorpay** (**live** keys — real money). The Supabase server function **`app-payments`** creates each order,
+  checks each payment and records it in the `app_payments` table. Buying needs a login.
+- **Google Apps Script** is optional and only keeps an anonymous, consent-based usage sheet.
+- Home testimonials are read (public, read-only) from the admin panel's Firebase project — nothing to set up in the app.
 - **Everything opens inside the app — never in Chrome or Safari.** All `*.thedivinetarotonline.com` sites, Razorpay payment pages (rzp.io links, checkout, bank and card-OTP pages), course enrol links, support and social profiles open on the app's own browser screen (`src/app/web.tsx`). Links that try to open a new tab, a pop-up or "open in Chrome" stay on that screen too. Only UPI apps, phone calls, email, WhatsApp and the Play Store hand over to the phone. Full list of sites and rules: [docs/IN-APP-LINKS.md](docs/IN-APP-LINKS.md).
 - Card pictures load from `https://thedivinetarotonline.com/card_img/<Card Name>.png` — **do not rename those files on the website.**
 
 ## Setup guides — do them in this order
 
-1. [Firebase](docs/SETUP-FIREBASE.md) — login, profiles, saved readings, security rules
-2. [Apps Script](docs/SETUP-APPS-SCRIPT.md) — payment checks, Payments and Sessions sheets
-3. [Razorpay](docs/SETUP-RAZORPAY.md) — keys, testing, going live, store payment rules
+1. [Supabase](docs/SETUP-SUPABASE.md) — login, profiles, saved readings, purchases. **Already set up** — just check the dashboard settings
+2. [Razorpay](docs/SETUP-RAZORPAY.md) — how payments work, testing, refunds, "paid but not unlocked", prices, store payment rules
+3. [Apps Script](docs/SETUP-APPS-SCRIPT.md) — **optional** anonymous usage sheet
 4. [Build and publish](docs/BUILD-AND-PUBLISH.md) — EAS builds, Play Store, App Store, web, over-the-air updates
 
 Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy` page.
@@ -32,10 +37,10 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 
 | I want to change… | File |
 |---|---|
-| Prices, products, free readings per day | `src/constants/config.ts` (`Products`, `FREE_READINGS_PER_DAY`) **and** `apps-script/Code.gs` (`PRODUCTS`, in paise) |
+| Prices, products, free readings per day | `src/constants/config.ts` (`Products`, `FREE_READINGS_PER_DAY`) **and** `supabase/functions/app-payments/index.ts` (`PRODUCTS`, in paise — then redeploy the function) |
 | Turn Razorpay off on Android / iPhone / web, hide course prices + Enrol links, hide Home's Personal Reading shortcut | `src/constants/config.ts` → `StorePolicy` |
 | Website, social and booking links | `src/constants/config.ts` → `Links` |
-| Keys and URLs (Razorpay Key ID, Apps Script URL, Firebase web config) | `.env` (copy of `.env.example`) / EAS environment variables |
+| Supabase address and public key (built-in defaults), optional Apps Script URL | `src/constants/config.ts`; override in `.env` (copy of `.env.example`) / EAS environment variables |
 | All on-screen text, in 3 languages | `src/i18n/strings.ts` |
 | Card meanings (78 cards) | `src/data/cards.ts` |
 | Ginni's answers (knowledge base) | `src/data/kb/*.json` (fill gaps with `npm run kb:translate`) |
@@ -46,18 +51,19 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 | Kundli maths | `src/lib/kundli/` |
 | Payment flow | `src/lib/payments/` |
 | In-app browser (all outside pages) | `src/app/web.tsx`, `src/lib/links.ts`, link rules in `src/lib/url.ts` |
-| Login and cloud data | `src/lib/firebase/` |
+| Login screen (Log in / Sign up / Forgot password / Continue as guest) | `src/app/login.tsx` |
+| Login and cloud data (Supabase, Ginni sharing) | `src/lib/cloud/` |
 | App name, bundle ID / package, icons, permissions | `app.json`, `assets/images/` |
-| Firebase native set-up (added only when the Firebase files exist) | `app.config.ts` |
 | Build and submit profiles | `eas.json` |
-| Server (orders, payment check, analytics) | `apps-script/Code.gs`, `apps-script/appsscript.json` |
-| Database security rules (merge into Firebase, don't replace) | `firestore.rules` |
+| Server functions (payments, delete account) | `supabase/functions/` (redeploy after a change — see `docs/SETUP-SUPABASE.md`) |
+| Database tables and security rules (record of what is on the live project) | `supabase/migrations/` |
+| Optional usage sheet | `apps-script/Code.gs`, `apps-script/appsscript.json` |
 
 ## Quick start (on your computer)
 
 ```bash
 npm ci                     # install exact library versions
-cp .env.example .env       # then fill in the values (see the setup guides)
+cp .env.example .env       # optional — no values are required to build
 npx expo start --web       # quick look in the browser
 ```
 
@@ -68,7 +74,7 @@ eas build --profile development --platform android   # install the APK it gives 
 npx expo start                                        # open the dev app and scan the QR code
 ```
 
-Code changes then appear on the phone instantly. Rebuild only after adding a native library or changing `app.json` / Firebase files.
+Code changes then appear on the phone instantly. Rebuild only after adding a native library or changing `app.json`.
 
 ## Checks before every build
 
@@ -84,7 +90,7 @@ npx expo-doctor        # checks library versions and config
 - **Never run `npm audit fix --force`** — it installs wrong library versions and breaks the build.
 - **Never install the old global `expo-cli`** — use `npx expo …` and `eas-cli` only.
 - Add libraries with `npx expo install <name>`, not `npm install`, so versions match SDK 57.
-- Never put the Razorpay **Key Secret** in `.env` or anywhere in the app — it belongs only in Apps Script.
-- `google-services.json` and `GoogleService-Info.plist` are not secret and **must be committed** so EAS can use them.
+- Never put the Razorpay **Key Secret** (or the Supabase `service_role` key) in `.env` or anywhere in the app — the Key Secret lives only in the Supabase function secrets (Dashboard → Edge Functions → Secrets).
+- Razorpay keys are **live**: every purchase in the app is real money. Test with one real ₹99 purchase and refund it.
 
 Developed by [Sitelytc](https://sitelytc.com/).

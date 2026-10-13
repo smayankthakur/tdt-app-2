@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
@@ -15,8 +15,6 @@ import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { CITIES, type City } from '@/data/cities';
 import { LANGS, useLang, type Lang } from '@/i18n';
 import { requestLocation } from '@/lib/analytics';
-import { backend } from '@/lib/firebase/backend';
-import { AuthCancelled } from '@/lib/firebase/types';
 import { openInApp } from '@/lib/links';
 import { cancelDailyReminder, notificationsAvailable, requestNotificationPermission, scheduleDailyReminder } from '@/lib/notifications';
 import { useSession } from '@/lib/session';
@@ -34,7 +32,7 @@ const fmt = (h: number, m: number) => `${h % 12 === 0 ? 12 : h % 12}:${String(m)
 
 export default function ProfileScreen() {
   const { t, lang, setLanguage } = useLang();
-  const { user, firebaseReady, profile, updateProfile, version, signOut, deleteAccount } = useSession();
+  const { user, cloudReady, profile, updateProfile, version, signOut, deleteAccount } = useSession();
   const [draft, setDraft] = useState<Profile>(profile);
   const [editing, setEditing] = useState(false);
   const [toast, setToast] = useState('');
@@ -103,8 +101,8 @@ export default function ProfileScreen() {
         await deleteAccount();
         flash('✓');
       } catch (e) {
-        const code = String((e as { code?: string }).code ?? (e as Error).message);
-        Alert.alert(t('profile.deleteAccount'), code.includes('recent-login') ? 'Please sign out, sign in again, and then delete.' : code);
+        const code = (e as Error).message;
+        Alert.alert(t('profile.deleteAccount'), code === 'auth_required' ? t('auth.err.sessionExpired') : t('auth.err.network'));
       }
     };
     if (Platform.OS === 'web') {
@@ -149,7 +147,7 @@ export default function ProfileScreen() {
       </View>
       {toast ? <Text style={styles.toast}>{toast}</Text> : null}
 
-      {!user && (firebaseReady ? <SignIn /> : <Body muted style={{ fontSize: 13 }}>{t('profile.firebaseMissing')}</Body>)}
+      {!user && cloudReady && <SignInCard />}
 
       {/* Details */}
       <Card style={{ gap: Spacing.md }}>
@@ -320,81 +318,20 @@ export default function ProfileScreen() {
   );
 }
 
-function SignIn() {
+/** Guest → login screen. Same account as Ginni Ki Baatein on the website. */
+function SignInCard() {
   const { t } = useLang();
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [step, setStep] = useState<'idle' | 'phone' | 'code'>('idle');
-  const [busy, setBusy] = useState<string | null>(null);
-  const [err, setErr] = useState('');
-
-  const run = async (key: string, fn: () => Promise<void>) => {
-    setErr('');
-    setBusy(key);
-    try {
-      await fn();
-    } catch (e) {
-      if (!(e instanceof AuthCancelled)) setErr(String((e as { code?: string }).code ?? (e as Error).message ?? e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const e164 = () => (phone.startsWith('+') ? phone.replace(/\s/g, '') : `+91${phone.replace(/\D/g, '').slice(-10)}`);
-
   return (
-    <Card style={{ gap: Spacing.sm }}>
-      <Button label={t('profile.google')} icon="logo-google" onPress={() => run('g', backend.signInGoogle)} loading={busy === 'g'} />
-      {backend.supportsApple && <Button label={t('profile.apple')} variant="ghost" icon="logo-apple" onPress={() => run('a', backend.signInApple)} loading={busy === 'a'} />}
-      {step === 'idle' && <Button label={t('profile.phone')} variant="ghost" icon="call-outline" onPress={() => setStep('phone')} />}
-      {step !== 'idle' && (
-        <View style={{ gap: Spacing.sm }}>
-          <View style={styles.phoneRow}>
-            <Text style={styles.cc}>+91</Text>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              placeholder={t('profile.phonePlaceholder')}
-              placeholderTextColor={Colors.textDim}
-              keyboardType="phone-pad"
-              style={[styles.input, { flex: 1 }]}
-              maxLength={14}
-              editable={step === 'phone'}
-            />
-          </View>
-          {step === 'phone' ? (
-            <Button
-              label={t('profile.sendOtp')}
-              onPress={() =>
-                run('p', async () => {
-                  await backend.startPhone(e164());
-                  setStep('code');
-                })
-              }
-              loading={busy === 'p'}
-              disabled={phone.replace(/\D/g, '').length < 10}
-            />
-          ) : (
-            <>
-              <Text style={styles.small}>{t('profile.otpSent', { phone: e164() })}</Text>
-              <TextInput
-                value={code}
-                onChangeText={setCode}
-                placeholder={t('profile.otpPlaceholder')}
-                placeholderTextColor={Colors.textDim}
-                keyboardType="number-pad"
-                maxLength={6}
-                style={[styles.input, { letterSpacing: 6, textAlign: 'center', fontSize: 20 }]}
-                textContentType="oneTimeCode"
-                autoComplete="sms-otp"
-              />
-              <Button label={t('profile.verify')} onPress={() => run('c', () => backend.confirmPhone(code))} loading={busy === 'c'} disabled={code.length < 6} />
-            </>
-          )}
-        </View>
-      )}
-      {busy && <ActivityIndicator color={Colors.gold} />}
-      {err ? <Text style={styles.err}>{err}</Text> : null}
+    <Card style={styles.signIn}>
+      <View style={styles.signInHead}>
+        <Ionicons name="sparkles" size={18} color={Colors.gold} />
+        <Text style={styles.h}>{t('auth.cardTitle')}</Text>
+      </View>
+      <Body muted style={{ fontSize: 13.5 }}>
+        {t('auth.cardBody')}
+      </Body>
+      <Button label={t('auth.login')} icon="log-in-outline" onPress={() => router.push('/login')} />
+      <Button label={t('auth.createAccount')} variant="ghost" icon="person-add-outline" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
     </Card>
   );
 }
@@ -448,8 +385,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.body,
     fontSize: 15,
   },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  cc: { fontFamily: Fonts.bodySemi, color: Colors.text, fontSize: 15 },
-  err: { fontFamily: Fonts.body, color: Colors.danger, fontSize: 12.5, textAlign: 'center' },
+  signIn: { gap: Spacing.sm, borderColor: 'rgba(233,196,106,0.45)' },
+  signInHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   footer: { fontFamily: Fonts.body, fontSize: 12, color: Colors.textDim, textAlign: 'center', marginTop: Spacing.md, lineHeight: 18 },
 });
