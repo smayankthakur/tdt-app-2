@@ -40,8 +40,8 @@ That deploys all four with the right settings from `supabase/config.toml`:
 | Function | What it does | JWT verification |
 |---|---|---|
 | `tdt-auth` | Log in / sign up with the website email + password | **Off** (nobody is logged in yet; it checks the password itself and is rate limited) |
-| `tdt-payments` | Creates Razorpay orders and checks payments | On |
-| `tdt-delete-account` | **Profile → Delete account** | On |
+| `tdt-payments` | Creates Razorpay orders and checks payments | Off (checks the login itself) |
+| `tdt-delete-account` | **Profile → Delete account** | Off (checks the login itself) |
 | `tdt-razorpay-webhook` | Unlocks late payments when Razorpay captures them | **Off** (checks Razorpay's signature instead) |
 
 - [ ] Functions deployed (Dashboard → **Edge Functions** lists all four)

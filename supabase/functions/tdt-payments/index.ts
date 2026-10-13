@@ -1,6 +1,6 @@
 // Supabase Edge Function: tdt-payments  (The Divine Tarot mobile app, on the Ginni website project)
 //   { action: "createOrder", productId } · { action: "verifyPayment", … } · { action: "checkOrder", productId, orderId }
-// Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET. Deploy WITH JWT verification.
+// Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET. requireUser() checks the login, so the legacy "Verify JWT" switch stays off.
 import { CORS, HttpError, json, requireUser } from "../_tdt/common.ts";
 import { assertOrder, capturedPayment, checkoutSignature, fetchOrder, KEY_ID, product, razorpay, razorpayConfigured, unlock } from "../_tdt/payments.ts";
 
@@ -41,6 +41,6 @@ Deno.serve(async (req) => {
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;
     if (status >= 500) console.error("tdt-payments", e);
-    return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, status);
+    return json({ ok: false, error: e instanceof HttpError ? e.message : "server_error" }, status);
   }
 });

@@ -5,7 +5,8 @@ import { openInApp } from '@/lib/links';
 /**
  * Login = the Ginni Ki Baatein website account (reading.thedivinetarotonline.com): same email and password.
  * The server function tdt-auth checks the password against the website's accounts, then hands the app a
- * one-time password for Supabase Auth, which keeps the app logged in (and refreshes the login) on this phone.
+ * single-use login token for Supabase Auth, which keeps the app logged in (and refreshes the login) on this phone.
+ * Logging in on one phone never signs the user out on another.
  */
 
 /** Short codes the login screen turns into friendly text (strings: auth.err.<code>). */
@@ -49,8 +50,8 @@ const AUTH_CODES: Record<string, AuthErrorCode> = {
   rate_limited: 'rate-limited',
 };
 
-/** Calls tdt-auth (no login needed) and returns the one-time app password for Supabase Auth. */
-async function websiteAccount(body: Record<string, string>): Promise<{ email: string; password: string }> {
+/** Calls tdt-auth (no login needed) and returns a single-use login token for Supabase Auth. */
+async function websiteAccount(body: Record<string, string>): Promise<string> {
   let res: Response;
   try {
     res = await fetch(`${SupabaseUrl}/functions/v1/tdt-auth`, {
@@ -61,19 +62,15 @@ async function websiteAccount(body: Record<string, string>): Promise<{ email: st
   } catch {
     throw new AuthError('network');
   }
-  const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; email?: string; password?: string } | null;
-  if (!res.ok || !data?.ok || !data.email || !data.password) throw new AuthError(AUTH_CODES[data?.error ?? ''] ?? (res.status === 429 ? 'rate-limited' : 'unknown'));
-  return { email: data.email, password: data.password };
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; token_hash?: string } | null;
+  if (!res.ok || !data?.ok || !data.token_hash) throw new AuthError(AUTH_CODES[data?.error ?? ''] ?? (res.status === 429 ? 'rate-limited' : 'unknown'));
+  return data.token_hash;
 }
 
 async function startSession(body: Record<string, string>): Promise<void> {
-  // Two phones logging in at the same moment can replace each other's one-time password: try once more.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const acc = await websiteAccount(body);
-    const { error } = await supabase.auth.signInWithPassword(acc);
-    if (!error) return;
-    if (attempt === 1) throw mapError(error);
-  }
+  const tokenHash = await websiteAccount(body);
+  const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+  if (error) throw mapError(error);
 }
 
 /** Log in with the Ginni website email + password. */

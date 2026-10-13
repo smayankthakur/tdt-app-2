@@ -9,11 +9,13 @@ project_id = "hnaggjopklxcgzxsyswc"
 [functions.tdt-auth]
 verify_jwt = false
 
+# These two check the user's login themselves (requireUser → Supabase Auth). The platform's legacy JWT check is
+# off because it only accepts tokens signed with the legacy secret, which this project's logins may not use.
 [functions.tdt-payments]
-verify_jwt = true
+verify_jwt = false
 
 [functions.tdt-delete-account]
-verify_jwt = true
+verify_jwt = false
 
 # Razorpay can't send a Supabase login; the function checks Razorpay's signature instead.
 [functions.tdt-razorpay-webhook]

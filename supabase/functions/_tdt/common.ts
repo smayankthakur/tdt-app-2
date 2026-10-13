@@ -1,6 +1,17 @@
 // Shared helpers for The Divine Tarot app's functions on the Ginni website project (ginni2).
 export const SB_URL = Deno.env.get("SUPABASE_URL")!;
-export const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Legacy service_role key if the project still has one, otherwise its new secret key (sb_secret_…).
+function secretKey(): string {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}") as Record<string, string>;
+    return keys.default ?? Object.values(keys)[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+export const SB_SERVICE = secretKey();
 
 export const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +28,11 @@ export class HttpError extends Error {
   }
 }
 
-const serviceHeaders = () => ({ apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`, "Content-Type": "application/json" });
+// A new-style secret key goes in the apikey header only; a legacy service_role JWT also goes in Authorization.
+const serviceHeaders = (): Record<string, string> =>
+  SB_SERVICE.startsWith("sb_")
+    ? { apikey: SB_SERVICE, "Content-Type": "application/json" }
+    : { apikey: SB_SERVICE, Authorization: `Bearer ${SB_SERVICE}`, "Content-Type": "application/json" };
 
 /** PostgREST with the service role (server only). */
 export async function rest(path: string, init: RequestInit & { prefer?: string } = {}) {

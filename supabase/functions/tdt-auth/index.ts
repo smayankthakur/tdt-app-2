@@ -1,13 +1,13 @@
 // Supabase Edge Function: tdt-auth  (The Divine Tarot mobile app, on the Ginni website project)
 // Log in / sign up with the SAME email + password as Ginni Ki Baatein (reading.thedivinetarotonline.com).
 //
-//   { action: "login",  email, password }        → { ok, email, password: <one-time app password> }
+//   { action: "login",  email, password }        → { ok, email, token_hash: <single-use login token> }
 //   { action: "signup", name, email, password }  → same; also creates the website account
 //
 // The password is checked against the website's "User" table (bcrypt). The function then makes sure a matching
-// Supabase Auth user exists (linked in tdt_accounts), gives it a fresh random one-time password, and returns it;
-// the app signs in with that through Supabase Auth on the phone. The website password itself is never stored in
-// Supabase Auth.
+// Supabase Auth user exists (linked in tdt_accounts) and returns a single-use login token for it (an admin magic
+// link that is never e-mailed); the app exchanges it with supabase.auth.verifyOtp. The website password itself is
+// never stored in Supabase Auth, and logging in on one phone does not sign out the others.
 // Deploy WITHOUT JWT verification (nobody is logged in yet). Rate-limited per email and per IP.
 import { authAdmin, CORS, HttpError, json, rest, rpc } from "../_tdt/common.ts";
 
@@ -57,12 +57,22 @@ async function ensureAuthUser(gid: string, email: string, name: string | null): 
   return id;
 }
 
-async function oneTimePassword(authId: string, email: string) {
-  const pw = randomPassword();
-  // Also copies the website email, in case the user changed it on the website since their last app login.
-  const r = await authAdmin("PUT", `users/${authId}`, { email, password: pw, email_confirm: true });
-  if (!r.ok) throw new Error(`auth_update_failed_${r.status}`);
-  return pw;
+/**
+ * A single-use login token for the linked Auth user (an admin "magic link" that is never e-mailed).
+ * The app exchanges it with supabase.auth.verifyOtp. Unlike changing the user's password, this does NOT sign
+ * the user out on their other phones.
+ */
+async function loginToken(authId: string, email: string): Promise<string> {
+  // Keep the Auth email in step with the website email, in case it was changed on the website.
+  const cur = await authAdmin("GET", `users/${authId}`);
+  if (cur.ok && cur.data?.email !== email) {
+    const upd = await authAdmin("PUT", `users/${authId}`, { email, email_confirm: true });
+    if (!upd.ok) throw new Error(`auth_update_failed_${upd.status}`);
+  }
+  const link = await authAdmin("POST", "generate_link", { type: "magiclink", email });
+  const hash = link.data?.properties?.hashed_token ?? link.data?.hashed_token;
+  if (!link.ok || !hash) throw new Error(`auth_link_failed_${link.status}`);
+  return hash;
 }
 
 Deno.serve(async (req) => {
@@ -98,7 +108,7 @@ Deno.serve(async (req) => {
     if (!account) throw new Error("account_missing_after_signup");
 
     const authId = await ensureAuthUser(account.id, account.email, account.name);
-    return json({ ok: true, email: account.email, password: await oneTimePassword(authId, account.email), name: account.name ?? "" });
+    return json({ ok: true, email: account.email, token_hash: await loginToken(authId, account.email), name: account.name ?? "" });
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;
     if (status >= 500) console.error("tdt-auth", e);
