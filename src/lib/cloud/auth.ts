@@ -63,8 +63,9 @@ export async function resetPassword(email: string): Promise<void> {
   if (error) throw mapError(error);
 }
 
+/** Signs out on THIS phone only — the website and other phones stay logged in. */
 export async function signOut(): Promise<void> {
-  await supabase.auth.signOut().catch(() => {});
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
 
 /** Deletes the account on the server (same login as Ginni on the web), then signs out on this phone. */

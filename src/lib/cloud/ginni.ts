@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/cloud/supabase';
+import { dropStaleLogin, supabase } from '@/lib/cloud/supabase';
 
 /**
  * Readings on the server (Supabase project "Tdt-Ginni"):
@@ -31,7 +31,11 @@ type UseResult = { allowed: boolean; premium?: boolean; premiumUntil?: number | 
 export async function spendReadingOnServer(): Promise<UseResult | null> {
   try {
     const { data, error } = await supabase.rpc('app_use_reading');
-    if (error) return null;
+    if (error) {
+      // login rejected by the server (expired / signed out elsewhere) → back to the login screen
+      if (error.code === '28000' || /auth_required|jwt/i.test(error.message ?? '')) await dropStaleLogin();
+      return null;
+    }
     return data as UseResult;
   } catch {
     return null;

@@ -14,26 +14,91 @@ import { EMPTY_PROFILE, Storage, type Profile, type SavedReading } from '@/lib/s
 
 const PROFILE_KEYS = Object.keys(EMPTY_PROFILE) as (keyof Profile)[];
 
-export async function loadProfile(uid: string): Promise<Profile | null> {
+/** ok:false = the request failed (offline / server error) — never treat that as "no profile". */
+export type ProfileLoad = { ok: true; profile: Profile | null } | { ok: false };
+
+export async function loadProfile(uid: string): Promise<ProfileLoad> {
   try {
     const { data, error } = await supabase.from('app_profiles').select('*').eq('user_id', uid).maybeSingle();
-    if (error || !data) return null;
+    if (error) return { ok: false };
+    if (!data) return { ok: true, profile: null };
     const p = { ...EMPTY_PROFILE };
     for (const k of PROFILE_KEYS) if (typeof data[k] === 'string') (p as Record<string, string>)[k] = data[k];
-    return p;
+    return { ok: true, profile: p };
   } catch {
-    return null;
+    return { ok: false };
   }
 }
 
-export async function saveProfile(uid: string | null, profile: Profile): Promise<void> {
-  await Storage.setProfile(profile);
-  if (!uid) return;
-  // Not awaited, so the editor never freezes on a slow connection; it is sent again on the next login if it fails.
-  supabase
-    .from('app_profiles')
-    .upsert({ user_id: uid, ...profile, updated_at: new Date().toISOString() })
-    .then(() => {}, () => {});
+const GENDERS = ['', 'male', 'female', 'other'];
+const MARITAL = ['', 'single', 'married', 'divorced', 'widowed'];
+
+/** Keeps every value inside the database limits, so one bad field can never make the whole save fail. */
+export function sanitizeProfile(p: Profile): Profile {
+  const photo = /^(data:image\/|https:\/\/)/.test(p.photo) && p.photo.length <= 400_000 ? p.photo : '';
+  return {
+    name: (p.name ?? '').trim().slice(0, 120),
+    gender: (GENDERS.includes(p.gender) ? p.gender : '') as Profile['gender'],
+    birthplace: (p.birthplace ?? '').slice(0, 200),
+    dob: /^\d{4}-\d{2}-\d{2}$/.test(p.dob) ? p.dob : '',
+    tob: /^\d{2}:\d{2}$/.test(p.tob) ? p.tob : '',
+    marital: (MARITAL.includes(p.marital) ? p.marital : '') as Profile['marital'],
+    occupation: (p.occupation ?? '').trim().slice(0, 120),
+    photo,
+  };
+}
+
+/** Uploads the profile. true = saved in the cloud. */
+export async function pushProfile(uid: string, profile: Profile): Promise<boolean> {
+  try {
+    const timeout = new Promise<{ error: unknown }>((resolve) => setTimeout(() => resolve({ error: 'timeout' }), 10_000));
+    const write = supabase.from('app_profiles').upsert({ user_id: uid, ...sanitizeProfile(profile), updated_at: new Date().toISOString() });
+    const { error } = await Promise.race([write, timeout]);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Saves on the phone straight away, then in the cloud.
+ * 'saved' = in the cloud too; 'local' = only on this phone for now (sent automatically on the next sync).
+ */
+export async function saveProfile(uid: string | null, profile: Profile): Promise<'saved' | 'local'> {
+  const clean = sanitizeProfile(profile);
+  await Storage.setProfile(clean);
+  if (!uid) return 'local';
+  const ok = await pushProfile(uid, clean);
+  await Storage.setProfileDirty(!ok);
+  return ok ? 'saved' : 'local';
+}
+
+/**
+ * Merges the cloud profile with the one on the phone at login.
+ * Returns null when the cloud could not be reached — the caller must then leave the cloud alone.
+ */
+export async function syncProfile(uid: string, fallbackName: string, fallbackPhoto = ''): Promise<Profile | null> {
+  const remote = await loadProfile(uid);
+  if (!remote.ok) return null;
+  const local = await Storage.getProfile();
+  const dirty = await Storage.getProfileDirty();
+  const filled = (p: Profile) => Object.fromEntries(Object.entries(p).filter(([, v]) => !!v)) as Partial<Profile>;
+
+  let merged: Profile;
+  if (remote.profile) {
+    // Edits made on this phone that never reached the cloud win; otherwise the cloud wins.
+    merged = dirty ? { ...remote.profile, ...filled(local) } : { ...local, ...filled(remote.profile) };
+  } else {
+    merged = { ...local };
+  }
+  if (!merged.name && fallbackName) merged.name = fallbackName;
+  if (!merged.photo && fallbackPhoto) merged.photo = fallbackPhoto;
+  merged = sanitizeProfile(merged);
+  // Upload when there is no cloud row yet, or the merge added anything the cloud doesn't have.
+  const upload = !remote.profile || (Object.keys(merged) as (keyof Profile)[]).some((k) => merged[k] !== remote.profile![k]);
+  await Storage.setProfile(merged);
+  if (upload) await Storage.setProfileDirty(!(await pushProfile(uid, merged)));
+  return merged;
 }
 
 export async function pushReading(uid: string | null, r: SavedReading): Promise<void> {

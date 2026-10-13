@@ -28,7 +28,13 @@ function profileOf(p: Person): MoonProfile {
   return getMoonProfile(birthToUtc({ year: y, month: m, day: d, hour: hh, minute: mm, tzOffsetHours: p.place?.tz ?? 5.5 }));
 }
 
+/** Keyed by account: logging out (or another person logging in) clears the two people's birth details. */
 export default function KundliScreen() {
+  const { user } = useSession();
+  return <KundliForm key={user?.uid ?? 'guest'} />;
+}
+
+function KundliForm() {
   const { t, lang } = useLang();
   const { version } = useSession();
   const [boy, setBoy] = useState<Person>(EMPTY);

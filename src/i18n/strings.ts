@@ -164,6 +164,13 @@ const en = {
     searchCity: 'Search city…',
     noCity: 'No city found',
   },
+  web: {
+    blockedTitle: 'This link can’t be opened here',
+    blockedText: 'For your safety, the app only opens The Divine Tarot’s own pages and trusted payment pages.',
+    failedTitle: 'Page could not load',
+    failedText: 'Check your internet connection and try again.',
+    needsUpdate: 'This page needs an updated app version.',
+  },
   auth: {
     cardTitle: 'Your Divine Tarot account',
     cardBody: 'Log in to keep your readings, profile and purchases safe on every phone. Already use Ginni Ki Baatein on the website? Use the same email and password.',
@@ -251,6 +258,8 @@ const en = {
     deleteConfirm: 'This permanently deletes your account, profile, saved readings and purchases — including your Ginni Ki Baatein login on the website. Continue?',
     signedInAs: 'Signed in as {{who}}',
     savedToast: 'Profile saved ✨',
+    savedLocalToast: 'Saved on this phone — it will reach your account when you’re back online.',
+    photoFailed: 'That photo couldn’t be used. Please choose another one.',
   },
   paywall: {
     title: 'Unlock more',
@@ -428,6 +437,13 @@ const hi: Dict = {
     searchCity: 'शहर खोजें…',
     noCity: 'कोई शहर नहीं मिला',
   },
+  web: {
+    blockedTitle: 'यह लिंक यहाँ नहीं खुल सकता',
+    blockedText: 'आपकी सुरक्षा के लिए ऐप सिर्फ़ The Divine Tarot के अपने पेज और भरोसेमंद पेमेंट पेज खोलता है।',
+    failedTitle: 'पेज नहीं खुल सका',
+    failedText: 'अपना इंटरनेट देखें और फिर से कोशिश करें।',
+    needsUpdate: 'इस पेज के लिए ऐप का नया वर्ज़न चाहिए।',
+  },
   auth: {
     cardTitle: 'आपका Divine Tarot अकाउंट',
     cardBody: 'लॉग इन करें ताकि आपकी रीडिंग, प्रोफ़ाइल और ख़रीद हर फ़ोन पर सुरक्षित रहें। वेबसाइट पर Ginni Ki Baatein इस्तेमाल करते हैं? वही ईमेल और पासवर्ड डालें।',
@@ -515,6 +531,8 @@ const hi: Dict = {
     deleteConfirm: 'इससे आपका अकाउंट, प्रोफ़ाइल, सेव की गई रीडिंग और ख़रीद हमेशा के लिए हट जाएँगी — वेबसाइट का Ginni Ki Baatein लॉग इन भी। आगे बढ़ें?',
     signedInAs: '{{who}} के रूप में साइन इन',
     savedToast: 'प्रोफ़ाइल सेव हो गई ✨',
+    savedLocalToast: 'इस फ़ोन पर सेव हो गई — इंटरनेट आते ही आपके अकाउंट में पहुँच जाएगी।',
+    photoFailed: 'यह फ़ोटो इस्तेमाल नहीं हो सकी। कृपया कोई दूसरी चुनें।',
   },
   paywall: {
     title: 'और खोलें',
@@ -690,6 +708,13 @@ const hinglish: Dict = {
     searchCity: 'City search karo…',
     noCity: 'Koi city nahi mili',
   },
+  web: {
+    blockedTitle: 'Yeh link yahan nahi khul sakta',
+    blockedText: 'Tumhari safety ke liye app sirf The Divine Tarot ke apne pages aur trusted payment pages kholta hai.',
+    failedTitle: 'Page load nahi hua',
+    failedText: 'Internet check karo aur phir se try karo.',
+    needsUpdate: 'Is page ke liye app ka naya version chahiye.',
+  },
   auth: {
     cardTitle: 'Tumhara Divine Tarot account',
     cardBody: 'Log in karo taaki tumhari readings, profile aur purchases har phone pe safe rahein. Website pe Ginni Ki Baatein use karte ho? Wahi email aur password daalo.',
@@ -777,6 +802,8 @@ const hinglish: Dict = {
     deleteConfirm: 'Isse tumhara account, profile, saved readings aur purchases hamesha ke liye delete ho jayenge — website ka Ginni Ki Baatein login bhi. Continue?',
     signedInAs: '{{who}} ke roop mein signed in',
     savedToast: 'Profile save ho gayi ✨',
+    savedLocalToast: 'Is phone pe save ho gayi — internet aate hi account mein pahunch jayegi.',
+    photoFailed: 'Yeh photo use nahi ho payi. Koi doosri choose karo.',
   },
   paywall: {
     title: 'Aur unlock karo',

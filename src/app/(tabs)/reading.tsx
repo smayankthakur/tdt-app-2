@@ -30,9 +30,24 @@ type Msg =
 
 const uid = () => Math.random().toString(36).slice(2);
 
+/** Ginni needs a login. The chat is keyed by account, so nobody ever sees the previous user's chat. */
 export default function ReadingScreen() {
+  const { user, initialised } = useSession();
+  if (!user) {
+    return initialised ? (
+      <LoginGate />
+    ) : (
+      <View style={[styles.gate, { justifyContent: 'center' }]}>
+        <ActivityIndicator color={Colors.gold} />
+      </View>
+    );
+  }
+  return <ReadingChat key={user.uid} />;
+}
+
+function ReadingChat() {
   const { t, lang } = useLang();
-  const { user, version, initialised } = useSession();
+  const { user, version } = useSession();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [drawing, setDrawing] = useState<{ intent: Intent; question: string; deck: string[]; picked: number[] } | null>(null);
@@ -124,17 +139,6 @@ export default function ReadingScreen() {
       });
     }, 900);
   };
-
-  // Readings need a login (3 free readings per account, then Ginni Unlimited)
-  if (!user) {
-    return initialised ? (
-      <LoginGate />
-    ) : (
-      <View style={[styles.gate, { justifyContent: 'center' }]}>
-        <ActivityIndicator color={Colors.gold} />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>

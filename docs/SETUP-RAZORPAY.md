@@ -97,6 +97,28 @@ would also switch the **Ginni website** to test payments. So the simple, safe wa
 - **UPI apps** (PhonePe, Google Pay, Paytm…): the UPI app opens. When the user comes back and closes the payment screen,
   the app checks the order once with `checkOrder`.
 
+**Late payments are covered twice:**
+- The app remembers every order it opened. Each time the app opens or comes back to the screen (for example after
+  paying in a UPI app), it asks the server about any order that isn't confirmed yet, for up to 3 days.
+- A **Razorpay webhook** tells the server the moment a payment is captured, even if the user never opens the app again.
+  This one needs a 5-minute setup — see **Set up the payment webhook** below.
+
+### Set up the payment webhook (do this once)
+
+1. Think of a long random password for the webhook (30+ letters and numbers). This is the **webhook secret**.
+2. Razorpay Dashboard → **Accounts & Settings → Webhooks → + Add New Webhook**:
+   - **Webhook URL:** `https://agwpfisykktphrrmnnzu.supabase.co/functions/v1/app-razorpay-webhook`
+   - **Secret:** the password from step 1
+   - **Active events:** tick **payment.captured**
+   - Save. (Make sure the toggle at the top is on **Live Mode**.)
+3. Supabase → **Edge Functions → Secrets → Add new secret**:
+   - **Name:** `APP_RAZORPAY_WEBHOOK_SECRET`
+   - **Value:** the same password from step 1
+4. Check: after your test ₹99 purchase, Supabase → **Edge Functions → app-razorpay-webhook → Logs** should show a
+   call with status 200. Ginni website payments also reach this webhook; they're ignored safely.
+
+Ginni's own subscription webhook (`razorpay-webhook`) stays as it is — this is a separate one just for the app.
+
 If Razorpay ever shows **"callback URL not allowed"**, add **thedivinetarotonline.com** under
 **Account & Settings → Website and app details** in the Razorpay Dashboard.
 
@@ -117,14 +139,15 @@ If a payment shows **Authorized** but not **Captured**, go to **Account & Settin
 
 ## "I paid but it is not unlocked"
 
-The app checks the order with Razorpay itself after a bank page, and once more when the user closes the payment
-screen (for example after paying in a UPI app). So this is rare — mostly when the internet drops right after payment.
+The app re-checks unconfirmed orders every time it opens (for 3 days), and the webhook unlocks a captured payment
+on the server straight away. So this should be very rare — check first that the webhook is set up (above).
 
 1. Ask the user for the **email** they log in with and the **Razorpay payment ID** (in their Razorpay SMS/email).
 2. In the Razorpay Dashboard, find the payment and confirm it is **Captured**. Note its **Order ID** (`order_…`).
 3. In Supabase → **Table Editor → `app_payments`**, search for that Order ID.
    - **If it is there:** the unlock is saved. Ask the user to log out and log in again (or close and reopen the app) with the same email.
-   - **If it is not there:** open Supabase → **Edge Functions → app-payments → Logs** and look for an error at that time.
+   - **If it is not there:** open Supabase → **Edge Functions → app-razorpay-webhook → Logs** and **app-payments → Logs**
+     and look for an error at that time.
      Then either **refund** the payment, or ask your developer to add the unlock by hand
      (a row in `app_entitlements` for that user and product — and, for Ginni Unlimited, `premium_until` in `ginni_access` —
      plus a matching row in `app_payments`).
@@ -137,13 +160,14 @@ Prices are written in **two** places and must match:
 | File | Ginni Unlimited | Kundli full report |
 |---|---|---|
 | `src/constants/config.ts` → `Products` (rupees — what the app **shows**) | `price: 199` | `price: 99` |
-| `supabase/functions/app-payments/index.ts` → `PRODUCTS` (paise = rupees × 100 — what is **charged**) | `amount: 19900` | `amount: 9900` |
+| `supabase/functions/_shared/payments.ts` → `PRODUCTS` (paise = rupees × 100 — what is **charged**) | `amount: 19900` | `amount: 9900` |
 
 1. Change both files.
 2. Redeploy the function (needs `npx supabase login` once on your computer):
 
    ```bash
    npx supabase functions deploy app-payments --project-ref agwpfisykktphrrmnnzu
+   npx supabase functions deploy app-razorpay-webhook --project-ref agwpfisykktphrrmnnzu
    ```
 
 3. Publish an app update for the new shown price (an over-the-air update is enough — see `BUILD-AND-PUBLISH.md`).

@@ -56,11 +56,15 @@ export default function ProfileScreen() {
     setTimeout(() => setToast(''), 2500);
   };
 
+  const [saving, setSaving] = useState(false);
   const save = async () => {
-    await updateProfile(draft);
+    setSaving(true);
+    const r = await updateProfile(draft);
+    setSaving(false);
     tap('success');
     setEditing(false);
-    flash(t('profile.savedToast'));
+    // Only say "saved" when it really reached the account; otherwise be honest that it's on this phone for now.
+    flash(r === 'saved' ? t('profile.savedToast') : t('profile.savedLocalToast'));
   };
 
   const pickPhoto = async () => {
@@ -68,9 +72,11 @@ export default function ProfileScreen() {
     if (r.canceled || !r.assets?.[0]) return;
     try {
       const small = await manipulateAsync(r.assets[0].uri, [{ resize: { width: 256, height: 256 } }], { compress: 0.7, format: SaveFormat.JPEG, base64: true });
+      if (!small.base64) throw new Error('no-image-data');
       setDraft((d) => ({ ...d, photo: `data:image/jpeg;base64,${small.base64}` }));
     } catch {
-      setDraft((d) => ({ ...d, photo: r.assets[0].uri }));
+      // A file path only works on this phone, so it is never saved as the profile photo.
+      Alert.alert(t('profile.photo'), t('profile.photoFailed'));
     }
   };
 
@@ -194,7 +200,7 @@ export default function ProfileScreen() {
             <Field label={t('profile.occupation')} value={draft.occupation} onChange={(occupation) => setDraft({ ...draft, occupation })} />
             <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
               <Button label={t('common.cancel')} variant="ghost" style={{ flex: 1 }} onPress={() => { setDraft(profile); setEditing(false); }} />
-              <Button label={t('common.save')} style={{ flex: 1 }} onPress={save} />
+              <Button label={t('common.save')} style={{ flex: 1 }} onPress={save} loading={saving} />
             </View>
           </>
         ) : (
@@ -336,11 +342,12 @@ function SignInCard() {
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+/** maxLength matches the database limit (120), so a save can never be rejected for a long name. */
+function Field({ label, value, onChange, maxLength = 120 }: { label: string; value: string; onChange: (v: string) => void; maxLength?: number }) {
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput value={value} onChangeText={onChange} placeholder={label} placeholderTextColor={Colors.textDim} style={styles.input} />
+      <TextInput value={value} onChangeText={onChange} placeholder={label} placeholderTextColor={Colors.textDim} style={styles.input} maxLength={maxLength} />
     </View>
   );
 }

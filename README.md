@@ -37,7 +37,7 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 
 | I want to change… | File |
 |---|---|
-| Prices, products, free readings | `src/constants/config.ts` (`Products`, `FREE_READINGS`; the server limit is in the `app_use_reading()` database function) **and** `supabase/functions/app-payments/index.ts` (`PRODUCTS`, in paise — then redeploy the function) |
+| Prices, products, free readings | `src/constants/config.ts` (`Products`, `FREE_READINGS`; the server limit is in the `app_use_reading()` database function) **and** `supabase/functions/_shared/payments.ts` (`PRODUCTS`, in paise — then redeploy `app-payments` and `app-razorpay-webhook`) |
 | Turn Razorpay off on Android / iPhone / web, hide course prices + Enrol links, hide Home's Personal Reading shortcut | `src/constants/config.ts` → `StorePolicy` |
 | Website, social and booking links | `src/constants/config.ts` → `Links` |
 | Supabase address and public key (built-in defaults), optional Apps Script URL | `src/constants/config.ts`; override in `.env` (copy of `.env.example`) / EAS environment variables |

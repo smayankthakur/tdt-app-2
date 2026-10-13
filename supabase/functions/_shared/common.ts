@@ -23,7 +23,10 @@ export async function requireUser(req: Request): Promise<{ id: string; email: st
   const auth = req.headers.get("Authorization") || "";
   if (!/^Bearer .+/.test(auth)) throw new HttpError(401, "auth_required");
   const r = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_SERVICE, Authorization: auth } });
-  if (!r.ok) throw new HttpError(401, "auth_required");
+  // Only a definite "this login is not valid" means auth_required (the app then signs out).
+  // Rate limits or an Auth outage are temporary: 503, and the app keeps the user logged in.
+  if (r.status === 401 || r.status === 403) throw new HttpError(401, "auth_required");
+  if (!r.ok) throw new HttpError(503, "auth_unavailable");
   const u = await r.json();
   if (!u?.id || u.is_anonymous) throw new HttpError(401, "auth_required");
   return { id: u.id, email: u.email ?? null };

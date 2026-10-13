@@ -4,6 +4,7 @@ import { Products, SiteImages, StorePolicy } from '@/constants/config';
 import { callFunction, cloudReady, type AppUser } from '@/lib/cloud/supabase';
 import { openCheckout } from '@/lib/payments/checkout';
 import { grantEntitlement } from '@/lib/quota';
+import { Storage } from '@/lib/storage';
 
 export type Product = (typeof Products)[keyof typeof Products];
 export type PurchaseOutcome = 'success' | 'cancelled' | 'failed' | 'not-configured' | 'sign-in-required';
@@ -34,6 +35,8 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
   } catch (e) {
     return (e as Error).message === 'auth_required' ? 'sign-in-required' : 'failed';
   }
+  // Remembered until confirmed, so a payment that completes late (UPI / bank) is still unlocked later.
+  await Storage.addPendingOrder({ orderId: order.orderId, productId: product.id, uid: user.uid, createdAt: Date.now() });
 
   const result = await openCheckout({
     key: order.keyId,
@@ -56,6 +59,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
     try {
       const v = await callFunction<{ expiresAt: number }>('app-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
       await grantEntitlement(product.id, product.days, v.expiresAt);
+      await Storage.removePendingOrder(order.orderId);
       return 'success';
     } catch {
       // fall through to the order check below
@@ -79,6 +83,7 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
       const r = await callFunction<{ paid: boolean; expiresAt?: number }>('app-payments', { action: 'checkOrder', orderId, productId: product.id });
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
+        await Storage.removePendingOrder(orderId);
         return true;
       }
     } catch {
@@ -86,4 +91,40 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
     }
   }
   return false;
+}
+
+const PENDING_MAX_AGE = 3 * 86_400_000;
+
+/**
+ * Re-checks orders that were opened on this phone but never confirmed (paid in a UPI app and came back
+ * late, bank page timed out, app closed…). Runs when the app opens or comes back to the foreground.
+ * Returns true when something was unlocked.
+ */
+export async function recheckPendingOrders(uid: string): Promise<boolean> {
+  const list = (await Storage.getPendingOrders()).filter((o) => o.uid === uid);
+  let unlocked = false;
+  for (const o of list) {
+    if (Date.now() - o.createdAt > PENDING_MAX_AGE) {
+      await Storage.removePendingOrder(o.orderId);
+      continue;
+    }
+    const product = Object.values(Products).find((p) => p.id === o.productId);
+    if (!product) {
+      await Storage.removePendingOrder(o.orderId);
+      continue;
+    }
+    try {
+      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('app-payments', { action: 'checkOrder', orderId: o.orderId, productId: o.productId });
+      if (r.paid) {
+        await grantEntitlement(product.id, product.days, r.expiresAt);
+        await Storage.removePendingOrder(o.orderId);
+        unlocked = true;
+      }
+    } catch (e) {
+      const code = (e as Error).message;
+      if (code === 'order_mismatch' || code === 'bad_order_id' || code === 'unknown_product') await Storage.removePendingOrder(o.orderId);
+      if (code === 'auth_required') break;
+    }
+  }
+  return unlocked;
 }

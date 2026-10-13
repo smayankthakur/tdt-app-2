@@ -1,0 +1,14 @@
+# Supabase CLI settings for The Divine Tarot app's Edge Functions (project "Tdt-Ginni").
+# Deploy with:  npx supabase functions deploy <name> --project-ref agwpfisykktphrrmnnzu
+# Ginni's own functions (reading-gate, razorpay-webhook, …) live in the Ginni repo, not here.
+project_id = "agwpfisykktphrrmnnzu"
+
+[functions.app-payments]
+verify_jwt = true
+
+[functions.app-delete-account]
+verify_jwt = true
+
+# Razorpay can't send a Supabase login; the function checks Razorpay's signature instead.
+[functions.app-razorpay-webhook]
+verify_jwt = false

@@ -41,9 +41,14 @@ export default function LoginScreen() {
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/profile'));
 
-  // Signed in (here, or by the session restoring) → back to where the user came from.
+  // Close only when a login HAPPENS while this screen is open (not because a stale login was still
+  // around when it opened — the server may just have rejected that one).
+  const wasLoggedIn = useRef(!!user);
   useEffect(() => {
-    if (!user) return;
+    const now = !!user;
+    const justLoggedIn = now && !wasLoggedIn.current;
+    wasLoggedIn.current = now;
+    if (!justLoggedIn) return;
     if (router.canGoBack()) router.back();
     else router.replace('/profile');
   }, [user]);

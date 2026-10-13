@@ -30,9 +30,11 @@ same email and password, and the other way round.
 
 - [x] **Row Level Security (RLS)** is on for all five tables: each user sees only their own rows.
   Anonymous visitors of the Ginni website cannot write app data. Nobody can give themselves a purchase from the app.
-- [x] **Two server functions ("Edge Functions") are deployed:**
+- [x] **Three server functions ("Edge Functions") are deployed:**
   - `app-payments` — creates Razorpay orders and checks payments (see [SETUP-RAZORPAY.md](SETUP-RAZORPAY.md)).
   - `app-delete-account` — deletes a user's account when they tap **Profile → Delete account**.
+  - `app-razorpay-webhook` — unlocks late payments the moment Razorpay captures them.
+    **Needs a one-time setup:** see "Set up the payment webhook" in [SETUP-RAZORPAY.md](SETUP-RAZORPAY.md).
 - [x] **The app already knows the project.** The URL and the publishable key are built into
   `src/constants/config.ts`. They are public by design (RLS protects the data). **No `.env` values are needed to build.**
 - [x] **Checked live on 13 Oct 2026** with a temporary test account (created, then deleted): sign-up, log in,
@@ -150,9 +152,12 @@ Only needed if a developer changes code in `supabase/functions/` (for example, n
 npx supabase login                                                      # once per computer
 npx supabase functions deploy app-payments --project-ref agwpfisykktphrrmnnzu
 npx supabase functions deploy app-delete-account --project-ref agwpfisykktphrrmnnzu
+npx supabase functions deploy app-razorpay-webhook --project-ref agwpfisykktphrrmnnzu
 ```
 
-Deploy only the function that changed. Keep JWT verification **on** (the default) — both functions need a logged-in user.
+Deploy only the function that changed (if you change `supabase/functions/_shared/`, redeploy all three).
+`supabase/config.toml` keeps JWT verification **on** for `app-payments` and `app-delete-account` (they need a logged-in
+user) and **off** for `app-razorpay-webhook` (Razorpay can't log in; the function checks Razorpay's signature instead).
 The Razorpay keys are already stored as function secrets (**Edge Functions → Secrets**); you do not need to set them again.
 
 To see what a function did: **Edge Functions → (function name) → Logs**.

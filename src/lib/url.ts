@@ -26,9 +26,32 @@ export function isRazorpay(url: string): boolean {
   return RAZORPAY_HOSTS.test(hostOf(url));
 }
 
-/** Pages the in-app browser can show. */
+/** Real web pages (the only thing the in-app browser loads as a page). */
 export function isWebUrl(url: string): boolean {
-  return /^(https?:|about:|data:|blob:)/i.test(url);
+  return /^https?:\/\//i.test(url);
+}
+
+/** about:blank, data: and blob: — only ever allowed inside a page's frames (payment widgets use them), never as the page. */
+export function isFrameOnlyUrl(url: string): boolean {
+  return /^(about:|data:|blob:)/i.test(url);
+}
+
+/**
+ * Sites the in-app browser may be OPENED with. The /web screen can be reached by a deep link
+ * (divinetarot://web?url=…), so it must not show any page someone sends it — that would allow fake
+ * pages dressed up as the app. Once open, the user can still follow links anywhere.
+ */
+const START_HOSTS = [
+  SITE_HOSTS,
+  RAZORPAY_HOSTS,
+  /(^|\.)(instagram\.com|facebook\.com|fb\.com|youtube\.com|youtu\.be|sitelytc\.com|forms\.gle|wa\.me)$/i,
+  /^(docs|forms|meet|play)\.google\.com$/i,
+];
+
+export function isStartAllowed(url: string): boolean {
+  if (!/^https:\/\//i.test(url)) return false;
+  const host = hostOf(url);
+  return !!host && START_HOSTS.some((re) => re.test(host));
 }
 
 /**
@@ -62,12 +85,15 @@ export type LinkRoute =
   | { kind: 'web'; url: string }
   /** hand to another app on the phone; if that app is missing, `fallback` loads in the web view */
   | { kind: 'app'; url: string; fallback?: string }
+  /** about:/data:/blob: — allowed only inside frames of a page */
+  | { kind: 'frame'; url: string }
   /** Google sign-in sheet */
   | { kind: 'auth'; url: string };
 
 /**
  * Where should this link go?
- *  - https pages (incl. every subdomain, rzp.io, Razorpay, bank pages) → in-app web view
+ *  - http(s) pages (incl. every subdomain, rzp.io, Razorpay, bank pages) → in-app web view
+ *  - about:/data:/blob: → only inside a page's frames
  *  - "open in Chrome / Edge / Firefox" links → the same page, in-app
  *  - intent:// links that point to a web page → in-app
  *  - upi:, tel:, mailto:, whatsapp:, market: … → the phone's app
@@ -75,6 +101,7 @@ export type LinkRoute =
 export function routeLink(url: string): LinkRoute {
   if (needsSystemAuth(url)) return { kind: 'auth', url };
   if (isWebUrl(url)) return { kind: 'web', url };
+  if (isFrameOnlyUrl(url)) return { kind: 'frame', url };
 
   // Links that try to push the page out to another browser app: keep the page here instead.
   const browser = /^(googlechromes?|microsoft-edge(-https?)?|firefox|opera-https?|brave|samsunginternet):\/\/(.*)$/i.exec(url);

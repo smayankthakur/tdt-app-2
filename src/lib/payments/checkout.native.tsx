@@ -47,10 +47,12 @@ function html(options: CheckoutOptions) {
   function send(o){ window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
   try {
     var options = ${JSON.stringify(options.order_id ? { ...options, callback_url: PAYMENT_RETURN_URL } : options).replace(/</g, '\\u003c')};
+    var lastError = null;
     options.handler = function (r) { send({ type: 'success', data: r }); };
-    options.modal = { ondismiss: function () { send({ type: 'dismiss' }); }, escape: false };
+    // a failed attempt keeps Razorpay open for a retry, so only report it when the user closes the window
+    options.modal = { ondismiss: function () { send(lastError === null ? { type: 'dismiss' } : { type: 'failed', message: lastError }); }, escape: false };
     var rzp = new Razorpay(options);
-    rzp.on('payment.failed', function (r) { send({ type: 'failed', message: (r && r.error && r.error.description) || '' }); });
+    rzp.on('payment.failed', function (r) { lastError = (r && r.error && r.error.description) || ''; });
     rzp.open();
   } catch (e) { send({ type: 'failed', message: String(e) }); }
 </script></body></html>`;
@@ -101,12 +103,14 @@ export function CheckoutHost() {
             setSupportMultipleWindows={false}
             startInLoadingState
             renderLoading={() => <ActivityIndicator color={Colors.gold} style={{ marginTop: 40 }} />}
-            onShouldStartLoadWithRequest={(req: { url: string }) => {
+            onShouldStartLoadWithRequest={(req: { url: string; isTopFrame?: boolean }) => {
               if (isReturn(req.url)) {
                 finish({ status: 'returned' });
                 return false;
               }
               const route = routeLink(req.url);
+              // inside the payment widget's frames only (Android doesn't report isTopFrame → allowed)
+              if (route.kind === 'frame') return req.isTopFrame !== true;
               if (route.kind === 'web') return route.url === req.url;
               // UPI apps, tel:, mailto: … (Google sign-in never appears inside checkout)
               Linking.openURL(route.url).catch(() => {});

@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, tap } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
-import { hostOf, isRazorpay, KEEP_IN_APP_JS, routeLink } from '@/lib/url';
+import { hostOf, isRazorpay, isStartAllowed, KEEP_IN_APP_JS, routeLink } from '@/lib/url';
 
 /**
  * The app's built-in browser. Every web page — all *.thedivinetarotonline.com sites, Razorpay
@@ -26,7 +26,10 @@ try {
 }
 
 export default function InAppBrowser() {
-  const { url, title } = useLocalSearchParams<{ url: string; title?: string }>();
+  const params = useLocalSearchParams<{ url: string; title?: string }>();
+  // Only https pages of known sites can be opened here (this screen is reachable by deep link).
+  const url = typeof params.url === 'string' && isStartAllowed(params.url) ? params.url : '';
+  const title = url ? params.title : '';
   const { t } = useLang();
   const ref = useRef<Any>(null);
   const [nav, setNav] = useState({ canGoBack: false, title: title ?? '', url: url ?? '' });
@@ -61,8 +64,11 @@ export default function InAppBrowser() {
 
   /** Returns true when the web view may load the URL itself. */
   const handle = useCallback(
-    (next: string, fromWebView: boolean): boolean => {
+    (next: string, fromWebView: boolean, topFrame?: boolean): boolean => {
       const route = routeLink(next);
+      // about:blank / data: / blob: only inside frames (e.g. Razorpay's widget), never as the page itself.
+      // Android doesn't say whether a request is for a frame (topFrame undefined) — only a known top-frame load is refused.
+      if (route.kind === 'frame') return fromWebView && topFrame !== true;
       if (route.kind === 'web') {
         if (route.url === next && fromWebView) return true;
         loadHere(route.url);
@@ -81,7 +87,7 @@ export default function InAppBrowser() {
     [loadHere],
   );
 
-  const onRequest = (req: { url: string }) => handle(req.url, true);
+  const onRequest = (req: { url: string; isTopFrame?: boolean }) => handle(req.url, true, req.isTopFrame);
 
   const shownTitle = nav.title && !/^https?:/i.test(nav.title) ? nav.title : title || hostOf(nav.url);
   const secure = nav.url.startsWith('https://');
@@ -118,11 +124,18 @@ export default function InAppBrowser() {
         </View>
       </SafeAreaView>
 
-      {!url ? null : failed ? (
+      {!url ? (
+        <View style={styles.center}>
+          <Ionicons name="shield-checkmark-outline" size={48} color={Colors.gold} />
+          <Text style={styles.errTitle}>{t('web.blockedTitle')}</Text>
+          <Text style={styles.errText}>{t('web.blockedText')}</Text>
+          <Button label={t('common.close')} icon="close" onPress={close} />
+        </View>
+      ) : failed ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={Colors.gold} />
-          <Text style={styles.errTitle}>Page could not load</Text>
-          <Text style={styles.errText}>Check your internet connection and try again.</Text>
+          <Text style={styles.errTitle}>{t('web.failedTitle')}</Text>
+          <Text style={styles.errText}>{t('web.failedText')}</Text>
           <Button
             label={t('common.retry')}
             icon="refresh"
@@ -151,7 +164,6 @@ export default function InAppBrowser() {
           mediaPlaybackRequiresUserAction={false}
           allowsBackForwardNavigationGestures
           pullToRefreshEnabled
-          allowFileAccess
           setBuiltInZoomControls={false}
           applicationNameForUserAgent="TheDivineTarotApp/1.0"
           // target=_blank links, window.open and pop-ups stay in this view
@@ -174,7 +186,7 @@ export default function InAppBrowser() {
         />
       ) : (
         <View style={styles.center}>
-          <Text style={styles.errText}>This page needs an updated app build.</Text>
+          <Text style={styles.errText}>{t('web.needsUpdate')}</Text>
         </View>
       )}
     </View>

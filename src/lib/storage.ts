@@ -13,7 +13,15 @@ const KEYS = {
   profile: 'tdt.profile.v1',
   kundliForm: 'tdt.kundli.v1',
   introSeen: 'tdt.intro.v1',
+  /** uid of the account the personal data on this phone belongs to ('' = guest) */
+  owner: 'tdt.owner.v1',
+  /** the profile was edited but not yet saved to the cloud */
+  profileDirty: 'tdt.profileDirty.v1',
+  /** Razorpay orders opened but not confirmed yet — re-checked when the app opens */
+  pendingOrders: 'tdt.pendingOrders.v1',
 } as const;
+
+export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number };
 
 export type SavedReading = {
   id: string;
@@ -115,11 +123,39 @@ export const Storage = {
   getIntroSeen: () => readJSON<boolean>(KEYS.introSeen, false),
   setIntroSeen: () => writeJSON(KEYS.introSeen, true),
 
-  /** Removes the signed-in person's data from this phone (sign-out / account deletion). */
+  getOwner: () => readJSON<string>(KEYS.owner, ''),
+  setOwner: (uid: string) => writeJSON(KEYS.owner, uid),
+
+  getProfileDirty: () => readJSON<boolean>(KEYS.profileDirty, false),
+  setProfileDirty: (dirty: boolean) => writeJSON(KEYS.profileDirty, dirty),
+
+  getPendingOrders: () => readJSON<PendingOrder[]>(KEYS.pendingOrders, []),
+  async addPendingOrder(o: PendingOrder): Promise<void> {
+    const list = await Storage.getPendingOrders();
+    await writeJSON(KEYS.pendingOrders, [o, ...list.filter((x) => x.orderId !== o.orderId)].slice(0, 20));
+  },
+  async removePendingOrder(orderId: string): Promise<void> {
+    const list = await Storage.getPendingOrders();
+    await writeJSON(KEYS.pendingOrders, list.filter((x) => x.orderId !== orderId));
+  },
+
+  /**
+   * Removes everything personal from this phone: sign-out, account deletion, a login that ended on its own,
+   * or a different account logging in. (Settings like language, reminder and privacy stay.)
+   */
   async clearUserData(): Promise<void> {
     await writeJSON(KEYS.history, []);
     await writeJSON(KEYS.profile, EMPTY_PROFILE);
     await writeJSON(KEYS.entitlements, {});
+    await writeJSON(KEYS.quota, { date: '', used: 0 });
+    await writeJSON(KEYS.pendingOrders, []);
+    await writeJSON(KEYS.profileDirty, false);
+    await writeJSON(KEYS.owner, '');
+    try {
+      await AsyncStorage.removeItem(KEYS.kundliForm);
+    } catch {
+      // non-fatal
+    }
   },
 
   /** A random number fixed per install, so each user gets their own daily card. */

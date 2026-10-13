@@ -23,12 +23,19 @@ export async function openCheckout(options: CheckoutOptions): Promise<CheckoutRe
     return { status: 'failed', message: String(e) };
   }
   return new Promise((resolve) => {
+    // A failed attempt keeps Razorpay's window open so the user can retry with another method,
+    // so don't finish on failure — finish on success, or when the window is closed.
+    let lastError: string | undefined;
+    let failedOnce = false;
     const rzp = new Razorpay({
       ...options,
       handler: (r: CheckoutSuccess) => resolve({ status: 'success', data: r }),
-      modal: { ondismiss: () => resolve({ status: 'cancelled' }) },
+      modal: { ondismiss: () => resolve(failedOnce ? { status: 'failed', message: lastError } : { status: 'cancelled' }) },
     });
-    rzp.on('payment.failed', (r) => resolve({ status: 'failed', message: r?.error?.description }));
+    rzp.on('payment.failed', (r) => {
+      failedOnce = true;
+      lastError = r?.error?.description;
+    });
     rzp.open();
   });
 }
