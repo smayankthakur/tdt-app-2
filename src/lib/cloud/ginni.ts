@@ -1,39 +1,38 @@
-import { todayKey } from '@/lib/daily';
 import { supabase } from '@/lib/cloud/supabase';
 
 /**
- * Ginni Ki Baatein's own daily allowance, shared with the website.
- * Table ginni_access (own row readable) + Edge Function "reading-gate" (counts one reading).
+ * Readings on the server (Supabase project "Tdt-Ginni"):
+ *  - premium comes from Ginni's ginni_access (website subscription) or the app's own purchase
+ *  - free readings: 3 per account for life, counted by the database function app_use_reading()
  */
 
-/** Today's used count and premium expiry, or null when offline. */
+/** Free readings used so far and premium expiry, or null when offline. */
 export async function serverUsage(uid: string): Promise<{ used: number; premiumUntil: number } | null> {
   try {
-    const { data, error } = await supabase.from('ginni_access').select('daily_date,daily_count,premium_until').eq('user_id', uid).maybeSingle();
-    if (error) return null;
-    return {
-      used: data && data.daily_date === todayKey() ? Number(data.daily_count) || 0 : 0,
-      premiumUntil: data?.premium_until ? Date.parse(data.premium_until) : 0,
-    };
+    const [usage, ginni, own] = await Promise.all([
+      supabase.from('app_reading_usage').select('free_used').eq('user_id', uid).maybeSingle(),
+      supabase.from('ginni_access').select('premium_until').eq('user_id', uid).maybeSingle(),
+      supabase.from('app_entitlements').select('expires_at').eq('user_id', uid).eq('product_id', 'ginni_unlimited_30d').maybeSingle(),
+    ]);
+    if (usage.error) return null;
+    const premiumUntil = Math.max(
+      ginni.data?.premium_until ? Date.parse(ginni.data.premium_until) : 0,
+      own.data?.expires_at ? Date.parse(own.data.expires_at) : 0,
+    );
+    return { used: Number(usage.data?.free_used) || 0, premiumUntil };
   } catch {
     return null;
   }
 }
 
-type Gate = { allowed: boolean; premium?: boolean; premiumUntil?: number | null; remaining?: number | null };
+type UseResult = { allowed: boolean; premium?: boolean; premiumUntil?: number | null; remaining?: number | null };
 
-/** Counts one reading on the server. null = server not reachable (the phone counts instead). */
-export async function gateReading(): Promise<Gate | null> {
+/** Uses up one reading on the server. null = server not reachable. */
+export async function spendReadingOnServer(): Promise<UseResult | null> {
   try {
-    const { data, error } = await supabase.functions.invoke('reading-gate', { body: { localDate: todayKey() } });
-    if (!error) return data as Gate;
-    // 429 = today's free readings are used up
-    const ctx = (error as { context?: Response }).context;
-    if (ctx?.status === 429) {
-      const body = (await ctx.json().catch(() => ({}))) as Gate;
-      return { ...body, allowed: false };
-    }
-    return null;
+    const { data, error } = await supabase.rpc('app_use_reading');
+    if (error) return null;
+    return data as UseResult;
   } catch {
     return null;
   }

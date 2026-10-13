@@ -73,7 +73,8 @@ export const Products = {
 } as const;
 export type ProductId = (typeof Products)[keyof typeof Products]['id'];
 
-export const FREE_READINGS_PER_DAY = 3;
+/** Free Ginni readings per account, for life (the server limit is in the app_use_reading() database function). */
+export const FREE_READINGS = 3;
 
 /**
  * Store payment switches. The business chose Razorpay everywhere (see launch guide,

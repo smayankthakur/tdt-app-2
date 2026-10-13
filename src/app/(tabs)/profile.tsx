@@ -10,7 +10,7 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View }
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
-import { FREE_READINGS_PER_DAY, Links, Products } from '@/constants/config';
+import { FREE_READINGS, Links, Products } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { CITIES, type City } from '@/data/cities';
 import { LANGS, useLang, type Lang } from '@/i18n';
@@ -277,7 +277,7 @@ export default function ProfileScreen() {
       <Card>
         <Text style={styles.h}>{t('profile.plan')}</Text>
         {active.length === 0 ? (
-          <Body muted>{t('profile.planFree', { count: FREE_READINGS_PER_DAY })}</Body>
+          <Body muted>{t('profile.planFree', { count: FREE_READINGS })}</Body>
         ) : (
           active.map(([id, until]) => (
             <Body key={id}>✨ {t('profile.planUntil', { name: productName(id), date: new Date(until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })}</Body>

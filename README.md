@@ -8,15 +8,15 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 | Tab | What it does |
 |---|---|
 | **Home** | Card of the Day, quick links (incl. Personal Reading booking), testimonials from the admin panel (hidden if there are none) |
-| **Reading** — *Ginni Ki Baatein* | Private tarot chat: type a question, pick cards from the fan, get the answer. 3 free readings a day; **Ginni Unlimited** (₹199 / 30 days) removes the limit |
+| **Reading** — *Ginni Ki Baatein* | Private tarot chat: type a question, pick cards from the fan, get the answer. **Login required.** 3 free readings per account (for life); then **Ginni Unlimited** (₹199 / 30 days) |
 | **Courses** | The courses from learn.thedivinetarotonline.com, with "Enrol now" links to the website |
 | **Kundli** | Kundli Milan (8-koota, 36 gunas), worked out on the phone. **Full report** ₹99 |
 | **Profile** | "Your Divine Tarot account" card (Log in / Create account — email + password, same account as Ginni Ki Baatein on the website), profile details, My readings, Card library, daily reminder, language (English / हिन्दी / Hinglish), privacy switches, Delete account |
 
-- Without login the app runs in **guest mode**; everything is saved on the phone.
+- Without login the app runs in **guest mode** (everything except Ginni readings); data is saved on the phone.
 - Login is **email + password** on **Supabase** (project "Tdt-Ginni") — the **same accounts as Ginni Ki Baatein** on
   `reading.thedivinetarotonline.com`. With login, the profile, saved readings and purchases follow the user to other devices.
-  Ginni website Premium users get unlimited readings in the app, and the 3 free readings a day are shared between app and website.
+  Ginni readings need a login: every account gets 3 free readings for life (counted on the server), then Ginni Unlimited. Ginni website Premium users get unlimited readings in the app.
 - Payments use **Razorpay** (**live** keys — real money). The Supabase server function **`app-payments`** creates each order,
   checks each payment and records it in the `app_payments` table. Buying needs a login.
 - **Google Apps Script** is optional and only keeps an anonymous, consent-based usage sheet.
@@ -37,7 +37,7 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 
 | I want to change… | File |
 |---|---|
-| Prices, products, free readings per day | `src/constants/config.ts` (`Products`, `FREE_READINGS_PER_DAY`) **and** `supabase/functions/app-payments/index.ts` (`PRODUCTS`, in paise — then redeploy the function) |
+| Prices, products, free readings | `src/constants/config.ts` (`Products`, `FREE_READINGS`; the server limit is in the `app_use_reading()` database function) **and** `supabase/functions/app-payments/index.ts` (`PRODUCTS`, in paise — then redeploy the function) |
 | Turn Razorpay off on Android / iPhone / web, hide course prices + Enrol links, hide Home's Personal Reading shortcut | `src/constants/config.ts` → `StorePolicy` |
 | Website, social and booking links | `src/constants/config.ts` → `Links` |
 | Supabase address and public key (built-in defaults), optional Apps Script URL | `src/constants/config.ts`; override in `.env` (copy of `.env.example`) / EAS environment variables |

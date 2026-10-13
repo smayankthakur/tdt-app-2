@@ -7,7 +7,7 @@ What users can buy:
 
 | Product | Price | What it unlocks |
 |---|---|---|
-| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (free users get 3 a day). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
+| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (every account gets 3 free readings for life). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
 | Kundli full report | ₹99 | Full 8-koota Kundli Milan reports |
 
 **Buying needs a login** (email + password), so the purchase follows the user to other phones.

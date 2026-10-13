@@ -26,8 +26,9 @@ same email and password, and the other way round.
   | `app_readings` | Saved readings | The user (own rows only) |
   | `app_entitlements` | What the user has bought and until when | **Only the server** (the payment function) |
   | `app_payments` | One row per paid order — your sales record, and it stops one payment from unlocking twice | **Only the server**. Admins can read it |
+  | `app_reading_usage` | How many of the 3 free readings each account has used (for life) | **Only the server** (database function `app_use_reading()`) |
 
-- [x] **Row Level Security (RLS)** is on for all four tables: each user sees only their own rows.
+- [x] **Row Level Security (RLS)** is on for all five tables: each user sees only their own rows.
   Anonymous visitors of the Ginni website cannot write app data. Nobody can give themselves a purchase from the app.
 - [x] **Two server functions ("Edge Functions") are deployed:**
   - `app-payments` — creates Razorpay orders and checks payments (see [SETUP-RAZORPAY.md](SETUP-RAZORPAY.md)).
@@ -35,7 +36,7 @@ same email and password, and the other way round.
 - [x] **The app already knows the project.** The URL and the publishable key are built into
   `src/constants/config.ts`. They are public by design (RLS protects the data). **No `.env` values are needed to build.**
 - [x] **Checked live on 13 Oct 2026** with a temporary test account (created, then deleted): sign-up, log in,
-  profile save, reading save, RLS blocking a self-made purchase, the shared 3-a-day count, creating a ₹99 order,
+  profile save, reading save, RLS blocking a self-made purchase, the free-reading count, creating a ₹99 order,
   checking an unpaid order, a fake payment signature being rejected, and account deletion.
 
 No Ginni table was changed. The app only **reads** Ginni's `ginni_access` table, and the payment function
@@ -48,16 +49,18 @@ updates `premium_until` in it when someone buys Ginni Unlimited.
 - **Email + password only.** There is no Google, Apple or phone-OTP login.
 - Screen: `src/app/login.tsx` — **Log in**, **Sign up**, **Forgot password?** and **Continue as guest**.
 - **Profile tab** shows a **"Your Divine Tarot account"** card with **Log in** and **Create account** buttons.
-- **Guests** (no login) can still use the free features. Their profile and readings are saved on that phone only.
+- **Ginni readings need a login.** Guests see a "Talk to Ginni" screen with Log in / Create account buttons.
+  Guests can still use Card of the Day, Kundli Milan, courses and the card library.
 - **Buying something needs a login**, so the purchase follows the user to other phones and to the website.
 
 ### Sharing with Ginni Ki Baatein (website)
 
 - A user who has **Ginni Premium on the website** gets **unlimited readings in the app** automatically
   (the app reads Ginni's `ginni_access` table).
-- **Logged-in users:** the 3 free readings a day are counted by Ginni's existing server function **`reading-gate`**.
-  So the 3 a day are **shared** between the app and the website (not 3 + 3).
-- **Guests:** the 3 a day are counted on the phone.
+- **3 free readings per account, for life** — not per day. After that the user needs Ginni Unlimited (₹199 / 30 days)
+  or Ginni Premium on the website. The count lives on the server (table `app_reading_usage`, counted by the database
+  function `app_use_reading()`), so reinstalling the app or changing phones does not reset it.
+- The website keeps its own free-reading rules; only **premium** is shared.
 - Buying **Ginni Unlimited** in the app (₹199 / 30 days) also unlocks Ginni on the website.
 
 ### Where the code is
@@ -68,7 +71,7 @@ updates `premium_until` in it when someone buys Ginni Unlimited.
 | Supabase connection | `src/lib/cloud/supabase.ts` |
 | Log in / sign up / reset / log out | `src/lib/cloud/auth.ts` |
 | Profile, readings, purchases in the cloud | `src/lib/cloud/db.ts` |
-| Ginni sharing (premium + 3-a-day count) | `src/lib/cloud/ginni.ts` |
+| Premium check + lifetime free-reading count | `src/lib/cloud/ginni.ts`, `src/lib/quota.ts` |
 | Server functions | `supabase/functions/` |
 | Tables and security rules | `supabase/migrations/` |
 
@@ -121,7 +124,9 @@ Google and phone login are **OFF** in this project. Leave them off — the app d
 **Authentication → Users** lists every account (app and Ginni website together). From here you can find a user by email,
 send a password reset, or delete a user.
 
-To see app data: **Table Editor** → `app_profiles`, `app_readings`, `app_entitlements`, `app_payments`.
+To see app data: **Table Editor** → `app_profiles`, `app_readings`, `app_reading_usage`, `app_entitlements`, `app_payments`.
+
+To give someone extra free readings: Table Editor → `app_reading_usage` → find their row (user ID from Authentication → Users) → lower `free_used`.
 
 ---
 

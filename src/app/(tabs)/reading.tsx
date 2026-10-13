@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +10,7 @@ import { CardFan } from '@/components/card-fan';
 import { Paywall } from '@/components/paywall';
 import { CardFront, FlipCard } from '@/components/tarot-card';
 import { Button, tap } from '@/components/ui';
-import { Products } from '@/constants/config';
+import { FREE_READINGS, Products } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/constants/theme';
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
@@ -32,7 +32,7 @@ const uid = () => Math.random().toString(36).slice(2);
 
 export default function ReadingScreen() {
   const { t, lang } = useLang();
-  const { user, version } = useSession();
+  const { user, version, initialised } = useSession();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [drawing, setDrawing] = useState<{ intent: Intent; question: string; deck: string[]; picked: number[] } | null>(null);
@@ -98,8 +98,13 @@ export default function ReadingScreen() {
     const ids = picked.map((i) => drawing.deck[i]);
     setDrawing(null);
     setTimeout(async () => {
-      // Counted here (on the server for logged-in users, shared with Ginni on the website)
-      if (!(await consumeReading(uidNow))) {
+      // Counted here, on the server (3 free readings per account for life)
+      const used = await consumeReading(uidNow);
+      if (used === 'offline') {
+        push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
+        return;
+      }
+      if (used === 'limit') {
         push({ id: uid(), kind: 'ginni', text: t('reading.quotaOut') }, { id: uid(), kind: 'paywall' });
         refreshQuota();
         return;
@@ -119,6 +124,17 @@ export default function ReadingScreen() {
       });
     }, 900);
   };
+
+  // Readings need a login (3 free readings per account, then Ginni Unlimited)
+  if (!user) {
+    return initialised ? (
+      <LoginGate />
+    ) : (
+      <View style={[styles.gate, { justifyContent: 'center' }]}>
+        <ActivityIndicator color={Colors.gold} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -181,6 +197,40 @@ export default function ReadingScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function LoginGate() {
+  const { t } = useLang();
+  const perks: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
+    ['gift-outline', t('reading.gatePerkFree', { count: FREE_READINGS })],
+    ['bookmark-outline', t('reading.gatePerkSaved')],
+    ['infinite-outline', t('reading.gatePerkShared')],
+  ];
+  return (
+    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.gate} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: 'center', gap: Spacing.md }}>
+          <LinearGradient colors={Gradients.tile} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gateOrb}>
+            <Text style={{ fontSize: 44 }}>🔮</Text>
+          </LinearGradient>
+          <Text style={styles.gateTitle}>{t('reading.gateTitle')}</Text>
+          <Text style={styles.gateBody}>{t('reading.gateBody', { count: FREE_READINGS })}</Text>
+        </Animated.View>
+        <Animated.View entering={FadeInDown.duration(500).delay(120)} style={styles.gateCard}>
+          {perks.map(([icon, text]) => (
+            <View key={text} style={styles.perk}>
+              <View style={styles.perkIcon}>
+                <Ionicons name={icon} size={18} color={Colors.gold} />
+              </View>
+              <Text style={styles.perkText}>{text}</Text>
+            </View>
+          ))}
+          <Button label={t('auth.login')} icon="log-in-outline" onPress={() => router.push('/login')} />
+          <Button label={t('auth.createAccount')} variant="ghost" icon="person-add-outline" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
+        </Animated.View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -295,6 +345,27 @@ function ReadingView({ question, reading, onAgain }: { question: string; reading
 }
 
 const styles = StyleSheet.create({
+  gate: { flexGrow: 1, justifyContent: 'center', gap: Spacing.lg, padding: Spacing.lg, paddingBottom: TAB_BAR_SPACE + Spacing.lg, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  gateOrb: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(251,231,181,0.6)',
+    shadowColor: Colors.gold,
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 10,
+  },
+  gateTitle: { fontFamily: Fonts.display, fontSize: 24, color: Colors.text, textAlign: 'center' },
+  gateBody: { fontFamily: Fonts.serifItalic, fontSize: 17, lineHeight: 25, color: Colors.goldSoft, textAlign: 'center' },
+  gateCard: { gap: Spacing.md, padding: Spacing.lg, borderRadius: Radius.xl, backgroundColor: 'rgba(20,14,28,0.85)', borderWidth: 1, borderColor: Colors.cardBorder },
+  perk: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  perkIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.12)' },
+  perkText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 14.5, color: Colors.text },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: Fonts.display, fontSize: 20, color: Colors.text },

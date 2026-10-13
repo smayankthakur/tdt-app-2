@@ -70,3 +70,59 @@ create policy "real accounts only" on public.app_profiles as restrictive for all
 create policy "real accounts only" on public.app_readings as restrictive for all to authenticated
   using (coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false)
   with check (coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false) = false);
+
+-- ── 13 Oct 2026 (migration "divine_tarot_app_lifetime_free_readings") ──
+-- 3 free readings per account, for life, then Ginni Unlimited. (Ginni on the website keeps its own daily rules; premium is shared.)
+create table public.app_reading_usage (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  free_used integer not null default 0 check (free_used >= 0),
+  total_readings integer not null default 0 check (total_readings >= 0),
+  updated_at timestamptz not null default now()
+);
+alter table public.app_reading_usage enable row level security;
+create policy "own usage read" on public.app_reading_usage for select to authenticated
+  using ((select auth.uid()) = user_id or public.has_role((select auth.uid()), 'admin'));
+
+create or replace function public.app_use_reading()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  is_anon boolean := coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false);
+  free_limit constant integer := 3;
+  prem timestamptz;
+  used integer;
+begin
+  if uid is null or is_anon then
+    raise exception 'auth_required' using errcode = '28000';
+  end if;
+
+  select greatest(
+    (select g.premium_until from public.ginni_access g where g.user_id = uid),
+    (select e.expires_at from public.app_entitlements e where e.user_id = uid and e.product_id = 'ginni_unlimited_30d')
+  ) into prem;
+
+  insert into public.app_reading_usage (user_id) values (uid) on conflict (user_id) do nothing;
+
+  if prem is not null and prem > now() then
+    update public.app_reading_usage set total_readings = total_readings + 1, updated_at = now() where user_id = uid;
+    return jsonb_build_object('allowed', true, 'premium', true, 'premiumUntil', (extract(epoch from prem) * 1000)::bigint, 'remaining', null);
+  end if;
+
+  update public.app_reading_usage
+     set free_used = free_used + 1, total_readings = total_readings + 1, updated_at = now()
+   where user_id = uid and free_used < free_limit
+  returning free_used into used;
+
+  if used is null then
+    return jsonb_build_object('allowed', false, 'premium', false, 'remaining', 0);
+  end if;
+  return jsonb_build_object('allowed', true, 'premium', false, 'remaining', free_limit - used);
+end;
+$$;
+
+revoke all on function public.app_use_reading() from public, anon;
+grant execute on function public.app_use_reading() to authenticated;
