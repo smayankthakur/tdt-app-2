@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +11,9 @@ import { StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { COURSES, formatINR, type Course } from '@/data/courses';
 import { useLang } from '@/i18n';
-import { openInApp } from '@/lib/links';
+import { courseProduct, paymentsEnabled, purchase } from '@/lib/payments/purchase';
+import { hasEntitlement } from '@/lib/quota';
+import { useSession } from '@/lib/session';
 
 function CourseImage({ uri, style }: { uri: string; style: object }) {
   const [loaded, setLoaded] = useState(false);
@@ -25,7 +28,39 @@ function CourseImage({ uri, style }: { uri: string; style: object }) {
 export default function CoursesScreen() {
   const { t } = useLang();
   const { width } = useWindowDimensions();
+  const { user, profile, refresh } = useSession();
   const [open, setOpen] = useState<Course | null>(null);
+  const [owned, setOwned] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const loadOwned = useCallback(async () => {
+    const entries = await Promise.all(COURSES.map(async (c) => [c.id, await hasEntitlement(courseProduct(c).id)] as const));
+    setOwned(Object.fromEntries(entries));
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadOwned();
+    }, [loadOwned]),
+  );
+
+  // Enrol = pay the course price in Razorpay's native sheet; the team sends the course login by email.
+  const enrol = async (c: Course) => {
+    setMsg(null);
+    setBusy(true);
+    const r = await purchase(courseProduct(c), user, profile.name);
+    setBusy(false);
+    if (r === 'success') {
+      tap('success');
+      refresh();
+      await loadOwned();
+    } else if (r === 'sign-in-required') {
+      setOpen(null);
+      router.push('/login');
+    } else if (r === 'cancelled') setMsg(t('paywall.cancelled'));
+    else if (r === 'not-configured') setMsg(t('paywall.notConfigured'));
+    else setMsg(t('paywall.failed'));
+  };
   const contentW = Math.min(width, 900) - Spacing.lg * 2;
   const cols = width > 700 ? 3 : 2;
   const cardW = (contentW - Spacing.md * (cols - 1)) / cols;
@@ -58,12 +93,12 @@ export default function CoursesScreen() {
         ))}
       </View>
 
-      <Modal visible={!!open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setOpen(null)}>
+      <Modal visible={!!open} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setOpen(null); setMsg(null); }}>
         {open && (
           <View style={{ flex: 1, backgroundColor: Colors.bg }}>
             <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
               <View style={styles.modalBar}>
-                <Pressable accessibilityLabel={t('common.close')} onPress={() => setOpen(null)} hitSlop={12} style={styles.close}>
+                <Pressable accessibilityLabel={t('common.close')} onPress={() => { setOpen(null); setMsg(null); }} hitSlop={12} style={styles.close}>
                   <Ionicons name="close" size={22} color={Colors.text} />
                 </Pressable>
               </View>
@@ -85,18 +120,22 @@ export default function CoursesScreen() {
                   <Text style={styles.h}>{t('courses.access')}</Text>
                   <Body muted>{t('courses.accessText')}</Body>
                 </Card>
-                {StorePolicy.courseEnrolLinks && (
+                {owned[open.id] ? (
+                  <Card style={styles.enrolled}>
+                    <Ionicons name="checkmark-circle" size={26} color={Colors.success} />
+                    <Text style={styles.h}>{t('courses.enrolled')}</Text>
+                    <Body muted style={{ textAlign: 'center' }}>
+                      {t('courses.enrolledText')}
+                    </Body>
+                  </Card>
+                ) : StorePolicy.courseEnrolLinks && paymentsEnabled() ? (
                   <>
                     <Text style={styles.modalPrice}>{formatINR(open.price)}</Text>
-                    <Button label={t('courses.enrol')} icon="open-outline" onPress={() => {
-                        const target = open.enrolUrl;
-                        const title = open.title;
-                        setOpen(null);
-                        // let the course sheet close, then show the payment page in the app
-                        setTimeout(() => openInApp(target, title), 350);
-                      }} />
+                    <Button label={t('courses.enrolPay', { price: formatINR(open.price) })} icon="sparkles" loading={busy} onPress={() => enrol(open)} />
+                    {msg && <Text style={styles.msg}>{msg}</Text>}
+                    <Text style={styles.secure}>🔒 Razorpay · UPI · Cards · Netbanking</Text>
                   </>
-                )}
+                ) : null}
               </ScrollView>
             </SafeAreaView>
           </View>
@@ -119,5 +158,8 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: Fonts.serif, fontSize: 26, lineHeight: 32, color: Colors.text },
   h: { fontFamily: Fonts.bodySemi, fontSize: 15, color: Colors.text },
   li: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  enrolled: { alignItems: 'center', gap: Spacing.sm, borderColor: 'rgba(91,211,138,0.45)' },
+  msg: { fontFamily: Fonts.bodyMedium, fontSize: 13.5, color: Colors.goldSoft, textAlign: 'center' },
+  secure: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
   modalPrice: { fontFamily: Fonts.display, fontSize: 26, color: Colors.goldSoft, textAlign: 'center', marginTop: Spacing.sm },
 });

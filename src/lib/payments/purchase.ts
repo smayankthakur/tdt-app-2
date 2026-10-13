@@ -1,12 +1,21 @@
 import { Platform } from 'react-native';
 
 import { Products, SiteImages, StorePolicy } from '@/constants/config';
+import { COURSES, type Course } from '@/data/courses';
 import { callFunction, cloudReady, type AppUser } from '@/lib/cloud/supabase';
 import { openCheckout } from '@/lib/payments/checkout';
 import { grantEntitlement } from '@/lib/quota';
 import { Storage } from '@/lib/storage';
 
-export type Product = (typeof Products)[keyof typeof Products];
+/** Anything the app sells: Ginni Unlimited, the Kundli report, or a course (see courseProduct). */
+export type Product = { id: string; name: string; price: number; days: number; description: string };
+
+/** A course from learn.thedivinetarotonline.com as a purchasable product (prices are set again on the server). */
+export function courseProduct(c: Course): Product {
+  return { id: `course_${c.id.replace(/-/g, '_')}`, name: c.title, price: c.price, days: 36500, description: `${c.title} — enrolment` };
+}
+
+const allProducts = (): Product[] => [...Object.values(Products), ...COURSES.map(courseProduct)];
 export type PurchaseOutcome = 'success' | 'cancelled' | 'failed' | 'not-configured' | 'sign-in-required';
 
 export function paymentsEnabled(): boolean {
@@ -19,7 +28,7 @@ export function paymentsEnabled(): boolean {
 /**
  * Full purchase flow (server = Supabase Edge Function "tdt-payments", which holds the Razorpay secret):
  *  1. create a Razorpay Order on the server — the amount is decided there, not by the app
- *  2. open Razorpay checkout with the public Key ID the server returns
+ *  2. open Razorpay's native payment sheet with the public Key ID the server returns
  *  3. the server checks the payment signature (or, after a bank page / UPI app, asks Razorpay directly)
  *     and saves the unlock to the account — Ginni Unlimited also unlocks Ginni on the website
  *  4. unlock on this phone
@@ -108,7 +117,7 @@ export async function recheckPendingOrders(uid: string): Promise<boolean> {
       await Storage.removePendingOrder(o.orderId);
       continue;
     }
-    const product = Object.values(Products).find((p) => p.id === o.productId);
+    const product = allProducts().find((p) => p.id === o.productId);
     if (!product) {
       await Storage.removePendingOrder(o.orderId);
       continue;

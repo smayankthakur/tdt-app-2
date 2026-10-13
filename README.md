@@ -21,7 +21,7 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
   checks each payment and records it in the `tdt_payments` table. Buying needs a login.
 - **Google Apps Script** is optional and only keeps an anonymous, consent-based usage sheet.
 - Home testimonials are read (public, read-only) from the admin panel's Firebase project — nothing to set up in the app.
-- **Everything opens inside the app — never in Chrome or Safari.** All `*.thedivinetarotonline.com` sites, Razorpay payment pages (rzp.io links, checkout, bank and card-OTP pages), course enrol links, support and social profiles open on the app's own browser screen (`src/app/web.tsx`). Links that try to open a new tab, a pop-up or "open in Chrome" stay on that screen too. Only UPI apps, phone calls, email, WhatsApp and the Play Store hand over to the phone. Full list of sites and rules: [docs/IN-APP-LINKS.md](docs/IN-APP-LINKS.md).
+- **No web pages — everything is an app screen.** Personal Reading booking (pay → form → slot + Google Meet link), course enrolment, Support, About, Privacy policy and Forgot password are native screens that use the websites' own backends. Payments use **Razorpay's native payment sheet**. Only UPI apps, the Google Meet call, WhatsApp and social apps hand over to the phone. Details: [docs/IN-APP-LINKS.md](docs/IN-APP-LINKS.md).
 - Card pictures load from `https://thedivinetarotonline.com/card_img/<Card Name>.png` — **do not rename those files on the website.**
 
 ## Setup guides — do them in this order

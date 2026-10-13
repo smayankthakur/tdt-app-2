@@ -9,6 +9,8 @@ export type CheckoutOptions = {
   prefill?: { name?: string; email?: string; contact?: string };
   notes?: Record<string, string>;
   theme?: { color: string; backdrop_color?: string };
+  /** seconds the payment sheet stays open (Razorpay checkout option) */
+  timeout?: number;
 };
 
 export type CheckoutSuccess = {

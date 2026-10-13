@@ -15,8 +15,20 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Choose a profile photo for your Divine Tarot profile.",
-        "NSLocationWhenInUseUsageDescription": "Only if you allow it in Privacy settings: your approximate city is used to improve the app."
+        "NSPhotoLibraryUsageDescription": "Choose a photo for your profile, your Personal Reading form or a support request.",
+        "NSLocationWhenInUseUsageDescription": "Only if you allow it in Privacy settings: your approximate city is used to improve the app.",
+        "LSApplicationQueriesSchemes": [
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "credpay",
+          "bhim",
+          "mobikwik",
+          "in.fampay.app",
+          "amazonpay",
+          "myairtel",
+          "upi"
+        ]
       }
     },
     "android": {
@@ -67,7 +79,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Choose a profile photo for your Divine Tarot profile.",
+          "photosPermission": "Choose a photo for your profile, your Personal Reading form or a support request.",
           "cameraPermission": false,
           "microphonePermission": false
         }

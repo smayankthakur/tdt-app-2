@@ -19,6 +19,7 @@ const KEYS = {
   profileDirty: 'tdt.profileDirty.v1',
   /** Razorpay orders opened but not confirmed yet — re-checked when the app opens */
   pendingOrders: 'tdt.pendingOrders.v1',
+  bookings: 'tdt.bookings.v1',
 } as const;
 
 export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number };
@@ -134,6 +135,9 @@ export const Storage = {
     const list = await Storage.getPendingOrders();
     await writeJSON(KEYS.pendingOrders, [o, ...list.filter((x) => x.orderId !== o.orderId)].slice(0, 20));
   },
+  /** Personal Reading bookings made on this phone (see src/lib/booking.ts). Kept across log-outs: a paid booking isn't tied to a login. */
+  getBookings: () => readJSON<import('@/lib/booking').SavedBooking[]>(KEYS.bookings, []),
+  setBookings: (list: import('@/lib/booking').SavedBooking[]) => writeJSON(KEYS.bookings, list),
   async removePendingOrder(orderId: string): Promise<void> {
     const list = await Storage.getPendingOrders();
     await writeJSON(KEYS.pendingOrders, list.filter((x) => x.orderId !== orderId));

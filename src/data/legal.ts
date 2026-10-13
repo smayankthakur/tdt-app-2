@@ -1,0 +1,82 @@
+/**
+ * The app's privacy policy, shown natively on Profile → Privacy policy (src/app/privacy.tsx).
+ * Keep it true to what the app does; update it together with the Play Store / App Store privacy forms.
+ * Have it reviewed by a lawyer before launch (see docs/PRIVACY-POLICY.md).
+ */
+export const PRIVACY_UPDATED = '13 Oct 2026';
+export const PRIVACY_CONTACT = 'thedivinetarot111@gmail.com';
+
+export const PRIVACY: { h: string; p: string[] }[] = [
+  {
+    h: '',
+    p: [
+      'This policy explains how The Divine Tarot ("we", "us") collects and uses information in The Divine Tarot app for Android, iPhone and web (the "App"). By using the App you agree to this policy.',
+    ],
+  },
+  {
+    h: '1. Information we collect',
+    p: [
+      'Account: if you create an account or log in, your email address, your name and your password. The password is stored only in scrambled ("hashed") form — nobody can read it. The account is the same as Ginni Ki Baatein on our website (reading.thedivinetarotonline.com), so your free-reading count and Ginni Premium are shared between the App and that website.',
+      'Profile details you choose to enter (all optional): gender, date, time and place of birth, marital status, occupation and a profile photo. They are used to personalise your readings.',
+      'Saved readings: the question you typed, the topic, the cards drawn and the date. If you are logged in they are saved to your account so they appear on your other phones.',
+      'Purchases: which product you bought, the amount, the date, the Razorpay order and payment IDs, and until when it is active. We never see or store your card, UPI or bank details — Razorpay handles those.',
+      'Personal Reading bookings: after you pay, the form asks for your name, WhatsApp number, email, place, date and time of birth and a photo, and the same for up to two other people you ask about, plus your concern. These go to our reader so she can prepare your reading, and your slot and Google Meet link are emailed to you.',
+      'Support requests: your name, email, the problem you describe and any screenshots you attach.',
+      'Usage data (optional, ON by default): each time the App opens we may record the date and time, a random session code, platform, operating-system version, device model, app version, App language and, if logged in, your user ID. Turn it off any time in Profile → Privacy. Your questions, readings and profile are never sent with it.',
+      'Approximate location (optional, OFF by default): only if you turn on Profile → Privacy → Share approximate city and allow location permission, we record your city, state and country — never your exact position.',
+      'Stored only on your phone: Kundli Milan names and birth details, your daily card, streak and reminder settings. Reminders are scheduled on your phone; we do not run a push-notification server.',
+    ],
+  },
+  {
+    h: '2. How we use it',
+    p: [
+      'To log you in and keep your profile, readings and purchases across phones; to personalise readings and Kundli features; to process payments, unlock what you bought and handle support; to arrange and hold your Personal Reading; to understand, in total, how the App is used and improve it (only with usage data on); and to meet legal, tax and accounting duties.',
+      'We do not sell your data, show third-party ads, or track you across other companies’ apps or websites.',
+    ],
+  },
+  {
+    h: '3. Who processes it',
+    p: [
+      'Supabase (database, login and server functions): account, profile, saved readings, purchases.',
+      'Razorpay: payments.',
+      'Google (Firebase, Calendar, Sheets and Drive): Personal Reading bookings, Google Meet links, support tickets and optional usage records.',
+      'Our email providers (including Resend): booking confirmations, support replies and password-reset emails.',
+      'These providers process data for us under their own terms and security measures, and their servers may be outside India.',
+    ],
+  },
+  {
+    h: '4. How long we keep it',
+    p: [
+      'Account, profile and saved readings: until you delete your account (or a reading). Purchase and booking payment records: as long as Indian tax and accounting law requires, even after account deletion. Booking details: as long as needed to hold and follow up your reading. Usage records: up to 24 months, then deleted or made fully anonymous.',
+    ],
+  },
+  {
+    h: '5. Your choices and rights',
+    p: [
+      'Delete your account in the App: Profile → Delete account. This permanently deletes your login, profile, saved readings and purchases from our servers — and, because it is the same account, your Ginni Ki Baatein login on the website. A record of each payment is kept, without your account, as explained above.',
+      'Turn usage data or location sharing on or off in Profile → Privacy, and edit your profile any time.',
+      `You can ask us to access, correct or erase your personal data, or raise a grievance, by writing to ${PRIVACY_CONTACT}. We reply within 30 days.`,
+      'If you use the App without logging in, your data stays on your phone; uninstalling the App removes it.',
+    ],
+  },
+  {
+    h: '6. Children',
+    p: ['The App is meant only for people aged 18 and above, because it offers paid astrology and tarot services. We do not knowingly collect data from anyone under 18. If you believe a minor has given us data, contact us and we will delete it.'],
+  },
+  {
+    h: '7. Security',
+    p: ['Data is sent over encrypted connections (HTTPS). Security rules let each user read only their own profile and readings. No method is 100% secure, but we take reasonable steps to protect your data.'],
+  },
+  {
+    h: '8. Readings are for guidance',
+    p: ['Tarot, Kundli and astrology content is for guidance and entertainment. It is not medical, legal, financial or professional advice.'],
+  },
+  {
+    h: '9. Changes',
+    p: ['We may update this policy. We will change the "Last updated" date and, for important changes, tell you in the App.'],
+  },
+  {
+    h: '10. Contact',
+    p: [`The Divine Tarot · ${PRIVACY_CONTACT} · WhatsApp +91 88281 16545`],
+  },
+];

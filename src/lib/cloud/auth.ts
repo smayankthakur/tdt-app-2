@@ -1,6 +1,7 @@
-import { Links, SupabaseKey, SupabaseUrl } from '@/constants/config';
+import { Platform } from 'react-native';
+
+import { GinniForgotPasswordApi, Links, SupabaseKey, SupabaseUrl } from '@/constants/config';
 import { callFunction, supabase } from '@/lib/cloud/supabase';
-import { openInApp } from '@/lib/links';
 
 /**
  * Login = the Ginni Ki Baatein website account (reading.thedivinetarotonline.com): same email and password.
@@ -84,9 +85,29 @@ export async function signUp(name: string, email: string, password: string): Pro
   return 'signed-in';
 }
 
-/** Passwords belong to the Ginni website account, so they are reset there (opens inside the app). */
-export function resetPassword(): void {
-  openInApp(Links.ginniWeb, 'Ginni Ki Baatein');
+/**
+ * Passwords belong to the Ginni website account, so the website's own reset is used: it e-mails a link
+ * (valid 30 minutes) to set a new password. For privacy it answers the same whether or not the email has an account.
+ */
+export async function resetPassword(email: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    // the website's API doesn't accept calls from other sites: use its own page
+    window.open(Links.ginniWeb, '_blank', 'noopener');
+    return;
+  }
+  let res: Response;
+  try {
+    res = await fetch(GinniForgotPasswordApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+  } catch {
+    throw new AuthError('network');
+  }
+  if (res.status === 400) throw new AuthError('invalid-email');
+  if (res.status === 429) throw new AuthError('rate-limited');
+  if (!res.ok) throw new AuthError('unknown');
 }
 
 /** Signs out on THIS phone only — the website and other phones stay logged in. */

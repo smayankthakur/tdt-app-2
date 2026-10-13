@@ -1,7 +1,8 @@
 # Razorpay setup (in-app payments)
 
 **Razorpay** is the Indian payment company that collects money in the app (UPI, cards, net banking, wallets).
-The app uses **Razorpay Standard Checkout** — the normal Razorpay payment screen.
+The app uses **Razorpay's native payment sheet** (`react-native-razorpay`, Razorpay's own Android / iOS SDK) — no web page.
+It needs an app build made after this change (it is a native library; an over-the-air update is not enough).
 
 What users can buy:
 
@@ -9,6 +10,8 @@ What users can buy:
 |---|---|---|
 | Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (every account gets 3 free readings for life). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
 | Kundli full report | ₹99 | Full 8-koota Kundli Milan reports |
+| Courses (5) | ₹10,000 – ₹25,000 | Enrolment. The order notes carry the course, name and email; the team sends the course login by email (see "Course enrolments" below) |
+| Personal Reading | ₹5,500 offer (₹8,500) / ₹17,000 urgent | Paid to the **booking website's** Razorpay setup through its app routes, not through Supabase — see "Personal Reading" below |
 
 **Buying needs a login** (email + password), so the purchase follows the user to other phones.
 
@@ -90,12 +93,11 @@ would also switch the **Ginni website** to test payments. So the simple, safe wa
 
 ### Bank pages and UPI apps
 
-- **Netbanking** and **cards that ask for an OTP** open their bank page inside the same payment screen. When it finishes,
-  Razorpay returns to `https://thedivinetarotonline.com/?tdt_payment_return=1`. The app catches that address
-  (nobody actually lands on the website), closes the screen, and asks the server (**`tdt-payments` → `checkOrder`**)
-  whether the order was paid. It tries a few times, because banks can take a few seconds.
-- **UPI apps** (PhonePe, Google Pay, Paytm…): the UPI app opens. When the user comes back and closes the payment screen,
-  the app checks the order once with `checkOrder`.
+- **Netbanking** and **cards that ask for an OTP** open their bank page inside Razorpay's own sheet and come back to
+  the app. If the sheet reports anything but success, the app asks the server (**`tdt-payments` → `checkOrder`**)
+  whether the order was paid, a few times, because banks can take a few seconds.
+- **UPI apps** (PhonePe, Google Pay, Paytm…): Razorpay's sheet opens the UPI app, which returns to the app. The app then
+  checks the order with `checkOrder`.
 
 **Late payments are covered twice:**
 - The app remembers every order it opened. Each time the app opens or comes back to the screen (for example after
@@ -126,6 +128,25 @@ If a payment shows **Authorized** but not **Captured**, go to **Account & Settin
 **Automatic**. (The server only counts **captured** payments.)
 
 ---
+
+## Course enrolments
+
+Courses bought in the app appear in Razorpay → **Transactions → Payments** (not under Payment Pages) and in Supabase →
+**Table Editor → `tdt_payments`** (`product_id` = `course_…`). Each payment's **Notes** show `course`, `name` and `email`
+(the buyer's account email); the phone number is on the payment itself. Enrol the student from there as you do today.
+Prices: `src/data/courses.ts` (shown) and `supabase/functions/_tdt/payments.ts` → `PRODUCTS` (charged, in paise).
+
+## Personal Reading (booking)
+
+The Personal Reading screen uses the **booking website's** own backend (`booking.thedivinetarotonline.com`, its own Razorpay
+keys and Firestore), through two routes added for the app: `/api/app/order` and `/api/app/verify`
+(patch: `booking-site-app-routes.patch` → repo `tdt--personal-booking-new`). Slots, the Google Meet link and the emails work
+exactly as on the website.
+
+**One-time:** in the Razorpay Dashboard → **Webhooks**, open the booking site's webhook
+(`https://booking.thedivinetarotonline.com/api/razorpay-webhook`) and also tick **order.paid**, so a booking paid after
+the app was closed is still marked paid. Booking prices are set on the booking site (`lib/offer.ts`, `PRICE_INR`,
+`PRICE_URGENT_INR`); the app's shown prices are in `src/constants/config.ts` → `BookingPrices` — keep them in step.
 
 ## Money, refunds and records
 

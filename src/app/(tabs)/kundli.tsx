@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,13 +8,12 @@ import { CountUp } from '@/components/effects';
 import { Paywall } from '@/components/paywall';
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Eyebrow, Screen, tap, Title } from '@/components/ui';
-import { Links, Products } from '@/constants/config';
+import { Products } from '@/constants/config';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import type { City } from '@/data/cities';
 import { useLang } from '@/i18n';
 import { birthToUtc } from '@/lib/kundli/astro';
 import { getMoonProfile, matchKundli, type MatchResult, type MoonProfile } from '@/lib/kundli/milan';
-import { openInApp } from '@/lib/links';
 import { hasEntitlement } from '@/lib/quota';
 import { useSession } from '@/lib/session';
 import { readJSON, Storage, writeJSON } from '@/lib/storage';
@@ -166,7 +165,7 @@ function KundliForm() {
           <Body muted style={{ fontSize: 12.5, lineHeight: 19 }}>
             {t('kundli.disclaimer')}
           </Body>
-          <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => openInApp(Links.personalReading, t('profile.personal'))} />
+          <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => router.push('/booking')} />
         </Animated.View>
       )}
     </Screen>

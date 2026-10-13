@@ -77,6 +77,7 @@ Notes:
 - Build numbers go up automatically for production. To change the version users see (e.g. 1.0.0 → 1.1.0),
   edit `"version"` in `app.json`.
 - Every time `app.json` plugins/permissions or a native library change, you need a **new build** (an OTA update is not enough).
+- **13 Oct 2026:** the Razorpay native payment SDK (`react-native-razorpay`) was added — make a **new build** for Android and iOS; do not ship this as an OTA update to older builds. Test one payment on a real phone (Android and iPhone) before release.
 - Before each build run: `npm run typecheck`, `npm run lint`, `npx expo-doctor`.
 
 ---

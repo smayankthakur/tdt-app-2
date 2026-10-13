@@ -28,6 +28,23 @@ export const Links = {
   developer: 'https://sitelytc.com/',
 } as const;
 
+/** Personal Reading booking backend (booking.thedivinetarotonline.com) — its app routes, see src/lib/booking.ts */
+export const BookingApi = 'https://booking.thedivinetarotonline.com';
+/** Other website backends the native screens use (same APIs the websites use) */
+export const SupportApi = 'https://support.thedivinetarotonline.com/api/support';
+export const GinniForgotPasswordApi = 'https://reading.thedivinetarotonline.com/api/auth/forgot-password';
+
+/**
+ * Personal Reading prices as shown in the app. The booking server decides what is actually charged
+ * (lib/offer.ts + PRICE_INR / PRICE_URGENT_INR there) — keep these in step with it.
+ */
+export const BookingPrices = {
+  regular: 8500,
+  urgent: 17000,
+  offer: { name: 'Diwali Offer', price: 5500, until: Date.parse('2026-11-30T23:59:59+05:30'), untilText: '30 Nov 2026' },
+  whatsapp: '+91 88281 16545',
+} as const;
+
 /** Website images (served by the site's Next.js image optimiser) */
 const SITE = 'https://thedivinetarotonline.com/_next/image?url=';
 export const SiteImages = {

@@ -1,6 +1,7 @@
 /**
  * Courses as listed on https://learn.thedivinetarotonline.com/ (Oct 2026).
- * enrolUrl = the payment/enrol link used on the website. Swap for Teachable links if the client moves there.
+ * enrolUrl = the website's Razorpay page for the course (reference only — the app sells the course natively through
+ *   tdt-payments with the same price; keep prices here and in supabase/functions/_tdt/payments.ts in step).
  */
 export type Course = {
   id: string;

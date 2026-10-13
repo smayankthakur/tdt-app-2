@@ -1,7 +1,7 @@
 // Supabase Edge Function: tdt-payments  (The Divine Tarot mobile app, on the Ginni website project)
 //   { action: "createOrder", productId } · { action: "verifyPayment", … } · { action: "checkOrder", productId, orderId }
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET. requireUser() checks the login, so the legacy "Verify JWT" switch stays off.
-import { CORS, HttpError, json, requireUser } from "../_tdt/common.ts";
+import { CORS, HttpError, json, requireUser, rest } from "../_tdt/common.ts";
 import { assertOrder, capturedPayment, checkoutSignature, fetchOrder, KEY_ID, product, razorpay, razorpayConfigured, unlock } from "../_tdt/payments.ts";
 
 Deno.serve(async (req) => {
@@ -13,11 +13,17 @@ Deno.serve(async (req) => {
     switch (body.action) {
       case "createOrder": {
         const p = product(body.productId);
+        // The website account's email + name go in the notes, so the team can see who paid (and enrol course buyers).
+        const acc = (await rest(`User?id=eq.${encodeURIComponent(user.gid)}&select=email,name`).catch(() => null))?.[0];
         const order = await razorpay("POST", "/orders", {
           amount: p.amount,
           currency: "INR",
           receipt: `tdtapp_${Date.now()}`.slice(0, 40),
-          notes: { productId: body.productId, uid: user.id, gid: user.gid, source: "tdt-app" },
+          notes: {
+            productId: body.productId, uid: user.id, gid: user.gid, source: "tdt-app",
+            email: String(acc?.email ?? "").slice(0, 200), name: String(acc?.name ?? "").slice(0, 200),
+            ...(p.title ? { course: p.title } : {}),
+          },
         });
         return json({ ok: true, orderId: order.id, amount: order.amount, keyId: KEY_ID });
       }

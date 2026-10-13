@@ -8,11 +8,10 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, tap } from '@/components/ui';
-import { Links, SiteImages } from '@/constants/config';
+import { SiteImages } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
 import { AuthError, isEmail, resetPassword, signIn, signUp } from '@/lib/cloud/auth';
-import { openInApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
 
 type Mode = 'login' | 'signup' | 'reset';
@@ -62,8 +61,8 @@ export default function LoginScreen() {
 
   const validate = (): string => {
     if (mode === 'signup' && name.trim().length < 2) return t('auth.err.name');
-    if (mode === 'reset') return '';
     if (!isEmail(email)) return t('auth.err.invalid-email');
+    if (mode === 'reset') return '';
     if (password.length < MIN_PASSWORD) return t('auth.err.weak-password', { count: MIN_PASSWORD });
     return '';
   };
@@ -86,7 +85,9 @@ export default function LoginScreen() {
         tap('success');
         if (r === 'confirm-email') setDone('confirm');
       } else {
-        resetPassword();
+        await resetPassword(email);
+        tap('success');
+        setDone('reset-sent');
       }
     } catch (e) {
       const code = e instanceof AuthError ? e.code : 'unknown';
@@ -169,7 +170,7 @@ export default function LoginScreen() {
                     onSubmitEditing={() => emailRef.current?.focus()}
                   />
                 )}
-                {mode !== 'reset' && (
+                {(
                   <Field
                     ref={emailRef}
                     icon="mail-outline"
@@ -181,8 +182,8 @@ export default function LoginScreen() {
                     autoCorrect={false}
                     autoComplete="email"
                     textContentType={mode === 'signup' ? 'username' : 'emailAddress'}
-                    returnKeyType="next"
-                    onSubmitEditing={() => passRef.current?.focus()}
+                    returnKeyType={mode === 'reset' ? 'send' : 'next'}
+                    onSubmitEditing={() => (mode === 'reset' ? submit() : passRef.current?.focus())}
                   />
                 )}
                 {mode !== 'reset' && (
@@ -221,7 +222,7 @@ export default function LoginScreen() {
                   </Animated.View>
                 ) : null}
 
-                <Button label={cta} icon={mode === 'reset' ? 'open-outline' : 'sparkles'} onPress={submit} loading={busy} />
+                <Button label={cta} icon={mode === 'reset' ? 'mail-outline' : 'sparkles'} onPress={submit} loading={busy} />
 
                 {mode === 'reset' && (
                   <Pressable onPress={() => switchMode('login')} hitSlop={8} style={{ alignSelf: 'center' }}>
@@ -241,7 +242,7 @@ export default function LoginScreen() {
             </Pressable>
             <Text style={styles.legal}>
               {t('auth.legal')}{' '}
-              <Text style={styles.legalLink} onPress={() => openInApp(Links.privacy, t('profile.policy'))}>
+              <Text style={styles.legalLink} onPress={() => router.push('/privacy')}>
                 {t('profile.policy')}
               </Text>
             </Text>

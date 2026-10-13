@@ -2,9 +2,16 @@
 import { HttpError, rest, rpc } from "./common.ts";
 
 export const DAY = 86_400_000;
-export const PRODUCTS: Record<string, { amount: number; days: number; ginni?: boolean }> = {
+export const PRODUCTS: Record<string, { amount: number; days: number; ginni?: boolean; title?: string }> = {
   ginni_unlimited_30d: { amount: 19900, days: 30, ginni: true },
   kundli_full_report: { amount: 9900, days: 3650 },
+  // Courses from learn.thedivinetarotonline.com (same prices as its Razorpay pages). Enrolment is done by the team
+  // from the payment (notes carry the course, name and email); "days" just marks the course as bought in the app.
+  course_tarot_beginners: { amount: 1500000, days: 36500, title: "Tarot Reading Course For Beginners" },
+  course_tarot_advanced: { amount: 2500000, days: 36500, title: "Tarot Reading Advanced Course" },
+  course_candle_wax: { amount: 1000000, days: 36500, title: "Candle Wax Reading Course" },
+  course_runes: { amount: 1000000, days: 36500, title: "Runes Reading Course" },
+  course_dice: { amount: 1000000, days: 36500, title: "Dice Reading Course" },
 };
 
 export const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "";

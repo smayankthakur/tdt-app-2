@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Linking, Platform } from 'react-native';
 
+import { BookingPrices, Links } from '@/constants/config';
 import { isStartAllowed, routeLink } from '@/lib/url';
 
 /**
@@ -32,3 +33,39 @@ export function openInApp(url: string, title = ''): void {
 
 /** Kept for older call sites — also stays inside the app now. */
 export const openExternal = openInApp;
+
+/** Opens the first app link that works; if none of the apps is installed, the page opens inside the app. */
+async function openApps(appUrls: string[], fallback: string, title: string) {
+  if (Platform.OS !== 'web') {
+    for (const u of appUrls) {
+      try {
+        await Linking.openURL(u);
+        return;
+      } catch {
+        // app not installed — try the next one
+      }
+    }
+  }
+  openInApp(fallback, title);
+}
+
+/** Chat with the team in the WhatsApp app. */
+export function openWhatsApp() {
+  const n = BookingPrices.whatsapp.replace(/\D/g, '');
+  openApps([`whatsapp://send?phone=${n}`], `https://wa.me/${n}`, 'WhatsApp');
+}
+
+/** Social profiles open in their own apps (Instagram, YouTube, Facebook) — never in a browser. */
+export function openSocial(kind: 'instagram' | 'youtube' | 'facebook') {
+  if (kind === 'instagram') {
+    const user = Links.instagram.split('/').filter(Boolean).pop() ?? '';
+    openApps([`instagram://user?username=${user}`], Links.instagram, 'Instagram');
+  } else if (kind === 'youtube') {
+    const path = Links.youtube.replace(/^https?:\/\/(www\.)?youtube\.com/, '');
+    // Android: YouTube is built into the phone and opens its own links
+    openApps(Platform.OS === 'ios' ? [`youtube://www.youtube.com${path}`] : [Links.youtube], Links.youtube, 'YouTube');
+  } else {
+    const id = /id=(\d+)/.exec(Links.facebook)?.[1] ?? '';
+    openApps(Platform.OS === 'ios' ? [`fb://profile?id=${id}`] : [`fb://profile/${id}`], Links.facebook, 'Facebook');
+  }
+}

@@ -10,13 +10,14 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View }
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
-import { FREE_READINGS, Links, Products } from '@/constants/config';
+import { FREE_READINGS, Products, StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { CITIES, type City } from '@/data/cities';
 import { LANGS, useLang, type Lang } from '@/i18n';
 import { requestLocation } from '@/lib/analytics';
-import { openInApp } from '@/lib/links';
 import { cancelDailyReminder, notificationsAvailable, requestNotificationPermission, scheduleDailyReminder } from '@/lib/notifications';
+import { COURSES } from '@/data/courses';
+import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
 import { Storage, type Entitlements, type PrivacySettings, type Profile, type ReminderSettings } from '@/lib/storage';
 
@@ -121,7 +122,8 @@ export default function ProfileScreen() {
   };
 
   const who = user?.displayName || user?.email || user?.phoneNumber || '';
-  const productName = (id: string) => Object.values(Products).find((p) => p.id === id)?.name ?? id;
+  const productName = (id: string) =>
+    Object.values(Products).find((p) => p.id === id)?.name ?? COURSES.map(courseProduct).find((p) => p.id === id)?.name ?? id;
   const birthCity = CITIES.find((c) => `${c.name}, ${c.country === 'India' ? c.state : c.country}` === draft.birthplace) ?? null;
 
   return (
@@ -286,7 +288,12 @@ export default function ProfileScreen() {
           <Body muted>{t('profile.planFree', { count: FREE_READINGS })}</Body>
         ) : (
           active.map(([id, until]) => (
-            <Body key={id}>✨ {t('profile.planUntil', { name: productName(id), date: new Date(until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })}</Body>
+            <Body key={id}>
+              ✨{' '}
+              {id.startsWith('course_')
+                ? `${productName(id)} — ${t('courses.enrolled')}`
+                : t('profile.planUntil', { name: productName(id), date: new Date(until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })}
+            </Body>
           ))
         )}
       </Card>
@@ -294,18 +301,17 @@ export default function ProfileScreen() {
       <Group>
         <ListRow icon="time-outline" label={t('profile.myReadings')} onPress={() => router.push('/history')} />
         <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />
-        <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => openInApp(Links.personalReading, t('profile.personal'))} />
-        <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => openInApp(Links.support, t('profile.support'))} />
-        <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => openInApp(Links.privacy, t('profile.policy'))} />
-        <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => openInApp(Links.about, t('profile.about'))} />
+        {StorePolicy.personalReadingLink && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
+        <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => router.push('/support')} />
+        <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => router.push('/privacy')} />
+        <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => router.push('/about')} />
       </Group>
 
-      {/* Every site of the business, opened inside the app */}
+      {/* Everything the websites offer, as screens of this app */}
       <Group title={t('profile.websites')}>
-        <ListRow icon="globe-outline" label={t('profile.siteHome')} sub="thedivinetarotonline.com" onPress={() => openInApp(Links.website, 'The Divine Tarot')} />
-        <ListRow icon="chatbubbles-outline" label={t('profile.siteGinni')} sub="reading.thedivinetarotonline.com" onPress={() => openInApp(Links.ginniWeb, t('profile.siteGinni'))} />
-        <ListRow icon="school-outline" label={t('profile.siteCourses')} sub="learn.thedivinetarotonline.com" onPress={() => openInApp(Links.courses, t('profile.siteCourses'))} />
-        <ListRow icon="heart-outline" label={t('profile.siteKundli')} sub="thedivinetarotonline.com/kundli-milan" onPress={() => openInApp(Links.kundliMilanWeb, t('profile.siteKundli'))} />
+        <ListRow icon="chatbubbles-outline" label={t('profile.siteGinni')} onPress={() => router.navigate('/reading')} />
+        <ListRow icon="school-outline" label={t('profile.siteCourses')} onPress={() => router.navigate('/courses')} />
+        <ListRow icon="heart-outline" label={t('profile.siteKundli')} onPress={() => router.navigate('/kundli')} />
       </Group>
 
       {user && (
