@@ -5,7 +5,7 @@
  * The app sends it only when "Share anonymous usage data" is ON in Profile → Privacy.
  *
  * Login, profiles, readings and PAYMENTS no longer use this script — they run on Supabase
- * (project "Tdt-Ginni"): see docs/SETUP-SUPABASE.md and supabase/functions/app-payments.
+ * (project "ginni2"): see docs/SETUP-SUPABASE.md and supabase/functions/tdt-payments.
  *
  * Setup (see docs/SETUP-APPS-SCRIPT.md):
  *   - Create this script from a Google Sheet: Extensions → Apps Script (so it is "bound" to that Sheet).

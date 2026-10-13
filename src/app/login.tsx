@@ -22,7 +22,7 @@ const MIN_PASSWORD = 6;
 
 /**
  * Login / create account / forgot password.
- * Same accounts as Ginni Ki Baatein on the website (Supabase project "Tdt-Ginni").
+ * Same accounts as Ginni Ki Baatein on the website (Supabase project "ginni2", the website's own).
  */
 export default function LoginScreen() {
   const { t } = useLang();
@@ -62,8 +62,9 @@ export default function LoginScreen() {
 
   const validate = (): string => {
     if (mode === 'signup' && name.trim().length < 2) return t('auth.err.name');
+    if (mode === 'reset') return '';
     if (!isEmail(email)) return t('auth.err.invalid-email');
-    if (mode !== 'reset' && password.length < MIN_PASSWORD) return t('auth.err.weak-password', { count: MIN_PASSWORD });
+    if (password.length < MIN_PASSWORD) return t('auth.err.weak-password', { count: MIN_PASSWORD });
     return '';
   };
 
@@ -85,9 +86,7 @@ export default function LoginScreen() {
         tap('success');
         if (r === 'confirm-email') setDone('confirm');
       } else {
-        await resetPassword(email);
-        tap('success');
-        setDone('reset-sent');
+        resetPassword();
       }
     } catch (e) {
       const code = e instanceof AuthError ? e.code : 'unknown';
@@ -170,20 +169,22 @@ export default function LoginScreen() {
                     onSubmitEditing={() => emailRef.current?.focus()}
                   />
                 )}
-                <Field
-                  ref={emailRef}
-                  icon="mail-outline"
-                  label={t('auth.email')}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  textContentType={mode === 'signup' ? 'username' : 'emailAddress'}
-                  returnKeyType={mode === 'reset' ? 'send' : 'next'}
-                  onSubmitEditing={() => (mode === 'reset' ? submit() : passRef.current?.focus())}
-                />
+                {mode !== 'reset' && (
+                  <Field
+                    ref={emailRef}
+                    icon="mail-outline"
+                    label={t('auth.email')}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType={mode === 'signup' ? 'username' : 'emailAddress'}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passRef.current?.focus()}
+                  />
+                )}
                 {mode !== 'reset' && (
                   <Field
                     ref={passRef}
@@ -220,7 +221,7 @@ export default function LoginScreen() {
                   </Animated.View>
                 ) : null}
 
-                <Button label={cta} icon={mode === 'reset' ? 'paper-plane-outline' : 'sparkles'} onPress={submit} loading={busy} />
+                <Button label={cta} icon={mode === 'reset' ? 'open-outline' : 'sparkles'} onPress={submit} loading={busy} />
 
                 {mode === 'reset' && (
                   <Pressable onPress={() => switchMode('login')} hitSlop={8} style={{ alignSelf: 'center' }}>

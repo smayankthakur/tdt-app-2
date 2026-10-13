@@ -3,7 +3,7 @@
 The app is built in the cloud by **EAS** (Expo Application Services) — you do not need Android Studio or a Mac.
 Go through the setup guides first, in this order:
 
-1. [Supabase](SETUP-SUPABASE.md) — already set up; just check the dashboard settings listed there
+1. [Supabase](SETUP-SUPABASE.md) — one-time setup: SQL file, 4 functions, Razorpay secrets
 2. [Razorpay](SETUP-RAZORPAY.md) — already set up with live keys; do the ₹99 test purchase and refund
 3. [Apps Script](SETUP-APPS-SCRIPT.md) — **optional** anonymous usage sheet
 
@@ -175,15 +175,15 @@ Users get it the next time they open the app (sometimes the time after). For the
 
 When **not** to use an update: new library, `app.json` permission/plugin change, or a new `"version"` — make a new build and submit it instead.
 
-A price change needs **both** an update (the shown price) **and** a redeploy of the Supabase function `app-payments`
+A price change needs **both** an update (the shown price) **and** a redeploy of the Supabase functions `tdt-payments` and `tdt-razorpay-webhook`
 (the charged price) — see `SETUP-RAZORPAY.md` → "Changing prices". Server changes in `supabase/functions/` never need a new app build.
 
 ## Launch checklist
 
-- [ ] Supabase settings checked (`SETUP-SUPABASE.md`): password-reset URL, leaked-password protection, email confirmation choice
+- [ ] Supabase settings checked (`SETUP-SUPABASE.md`): SQL ran, 4 functions deployed, Razorpay secrets + webhook added, leaked-password protection
 - [ ] Sign up, log in, log out and **Forgot password?** tested on a real phone
-- [ ] One real ₹99 purchase made and refunded; the row appears in Supabase → `app_payments`
-- [ ] Prices in `src/constants/config.ts` match `supabase/functions/app-payments/index.ts`
+- [ ] One real ₹99 purchase made and refunded; the row appears in Supabase → `tdt_payments`
+- [ ] Prices in `src/constants/config.ts` match `supabase/functions/_tdt/payments.ts`
 - [ ] **Delete account** tested with a spare account
 - [ ] Privacy page live at `/privacy`; store privacy forms filled as in section 7
 - [ ] Review account (email + password) created in the app and written in both stores' review notes

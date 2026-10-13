@@ -1,9 +1,11 @@
-import { Links } from '@/constants/config';
+import { Links, SupabaseKey, SupabaseUrl } from '@/constants/config';
 import { callFunction, supabase } from '@/lib/cloud/supabase';
+import { openInApp } from '@/lib/links';
 
 /**
- * Email + password login on the Ginni Supabase project.
- * Anyone who already has a Ginni Ki Baatein account logs in with the same email and password.
+ * Login = the Ginni Ki Baatein website account (reading.thedivinetarotonline.com): same email and password.
+ * The server function tdt-auth checks the password against the website's accounts, then hands the app a
+ * one-time password for Supabase Auth, which keeps the app logged in (and refreshes the login) on this phone.
  */
 
 /** Short codes the login screen turns into friendly text (strings: auth.err.<code>). */
@@ -39,28 +41,55 @@ function mapError(e: unknown): AuthError {
 
 export const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s.trim());
 
+const AUTH_CODES: Record<string, AuthErrorCode> = {
+  invalid_credentials: 'invalid-credentials',
+  already_registered: 'already-registered',
+  weak_password: 'weak-password',
+  invalid_email: 'invalid-email',
+  rate_limited: 'rate-limited',
+};
+
+/** Calls tdt-auth (no login needed) and returns the one-time app password for Supabase Auth. */
+async function websiteAccount(body: Record<string, string>): Promise<{ email: string; password: string }> {
+  let res: Response;
+  try {
+    res = await fetch(`${SupabaseUrl}/functions/v1/tdt-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SupabaseKey },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AuthError('network');
+  }
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string; email?: string; password?: string } | null;
+  if (!res.ok || !data?.ok || !data.email || !data.password) throw new AuthError(AUTH_CODES[data?.error ?? ''] ?? (res.status === 429 ? 'rate-limited' : 'unknown'));
+  return { email: data.email, password: data.password };
+}
+
+async function startSession(body: Record<string, string>): Promise<void> {
+  // Two phones logging in at the same moment can replace each other's one-time password: try once more.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const acc = await websiteAccount(body);
+    const { error } = await supabase.auth.signInWithPassword(acc);
+    if (!error) return;
+    if (attempt === 1) throw mapError(error);
+  }
+}
+
+/** Log in with the Ginni website email + password. */
 export async function signIn(email: string, password: string): Promise<void> {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-  if (error) throw mapError(error);
+  await startSession({ action: 'login', email: email.trim().toLowerCase(), password });
 }
 
-/** Returns 'signed-in' when the account is ready, or 'confirm-email' when Supabase sent a confirmation link first. */
+/** Creates the account (it works on the Ginni website too) and logs in. */
 export async function signUp(name: string, email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim().toLowerCase(),
-    password,
-    options: { data: { full_name: name.trim(), name: name.trim(), source: 'tdt-app' } },
-  });
-  if (error) throw mapError(error);
-  // With e-mail confirmation on, Supabase hides whether the address already exists: it returns a user with no identities.
-  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw new AuthError('already-registered');
-  return data.session ? 'signed-in' : 'confirm-email';
+  await startSession({ action: 'signup', name: name.trim(), email: email.trim().toLowerCase(), password });
+  return 'signed-in';
 }
 
-/** Sends the "reset your password" e-mail. The link opens Ginni on the web, where the new password is set. */
-export async function resetPassword(email: string): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: Links.ginniWeb });
-  if (error) throw mapError(error);
+/** Passwords belong to the Ginni website account, so they are reset there (opens inside the app). */
+export function resetPassword(): void {
+  openInApp(Links.ginniWeb, 'Ginni Ki Baatein');
 }
 
 /** Signs out on THIS phone only — the website and other phones stay logged in. */
@@ -68,8 +97,8 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
 
-/** Deletes the account on the server (same login as Ginni on the web), then signs out on this phone. */
+/** Deletes the account on the server (it is the Ginni website account too), then signs out on this phone. */
 export async function deleteAccount(): Promise<void> {
-  await callFunction('app-delete-account', {});
+  await callFunction('tdt-delete-account', {});
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }

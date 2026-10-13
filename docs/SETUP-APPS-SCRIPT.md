@@ -84,7 +84,7 @@ Older app versions used Apps Script for payments too. That is **all gone** now �
 3. You can delete the old Script properties (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `FIREBASE_PROJECT_ID`):
    **Project Settings → Script Properties**. Deleting `RAZORPAY_KEY_SECRET` from here is a good idea — the secret
    should live only in Supabase.
-4. Keep the old **Payments** tab as an archive of past sales. New sales are recorded in Supabase → `app_payments`.
+4. Keep the old **Payments** tab as an archive of past sales. New sales are recorded in Supabase → `tdt_payments`.
 
 ## Changing the code later (keep the same URL)
 

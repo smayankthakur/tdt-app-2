@@ -1,31 +1,15 @@
-// Supabase Edge Function: app-payments  (The Divine Tarot mobile app)
-// Razorpay one-time purchases for signed-in users. The Key SECRET never leaves the server.
-//
-//   { action: "config" }                                  → { keyId, products }
-//   { action: "createOrder", productId }                  → { orderId, amount, keyId }
-//   { action: "verifyPayment", productId, razorpay_order_id, razorpay_payment_id, razorpay_signature }
-//   { action: "checkOrder", productId, orderId }          → for bank-page / UPI-app payments: asks Razorpay
-//
-// Unlocks:
-//   ginni_unlimited_30d → app_entitlements + ginni_access.premium_until (so Ginni on the website is unlimited too)
-//   kundli_full_report  → app_entitlements
-// Late payments are also unlocked by the app-razorpay-webhook function.
-//
-// Secrets (already set for the Ginni functions): RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET.
-// Deploy WITH JWT verification ON.
-import { CORS, HttpError, json, requireUser } from "../_shared/common.ts";
-import { assertOrder, capturedPayment, checkoutSignature, fetchOrder, KEY_ID, PRODUCTS, product, razorpay, razorpayConfigured, unlock } from "../_shared/payments.ts";
+// Supabase Edge Function: tdt-payments  (The Divine Tarot mobile app, on the Ginni website project)
+//   { action: "createOrder", productId } · { action: "verifyPayment", … } · { action: "checkOrder", productId, orderId }
+// Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET. Deploy WITH JWT verification.
+import { CORS, HttpError, json, requireUser } from "../_tdt/common.ts";
+import { assertOrder, capturedPayment, checkoutSignature, fetchOrder, KEY_ID, product, razorpay, razorpayConfigured, unlock } from "../_tdt/payments.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
-    if (body.action === "config") {
-      return json({ ok: true, keyId: KEY_ID, products: Object.fromEntries(Object.entries(PRODUCTS).map(([k, v]) => [k, { amount: v.amount, days: v.days }])) });
-    }
     if (!razorpayConfigured()) throw new HttpError(500, "razorpay_not_configured");
     const user = await requireUser(req);
-
     switch (body.action) {
       case "createOrder": {
         const p = product(body.productId);
@@ -33,7 +17,7 @@ Deno.serve(async (req) => {
           amount: p.amount,
           currency: "INR",
           receipt: `tdtapp_${Date.now()}`.slice(0, 40),
-          notes: { productId: body.productId, uid: user.id, source: "tdt-app" },
+          notes: { productId: body.productId, uid: user.id, gid: user.gid, source: "tdt-app" },
         });
         return json({ ok: true, orderId: order.id, amount: order.amount, keyId: KEY_ID });
       }
@@ -56,7 +40,7 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;
-    if (status >= 500) console.error("app-payments", e);
+    if (status >= 500) console.error("tdt-payments", e);
     return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, status);
   }
 });

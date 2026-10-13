@@ -7,7 +7,7 @@ import { AppState, Platform } from 'react-native';
 import { SupabaseKey, SupabaseUrl } from '@/constants/config';
 
 /**
- * Supabase project "Tdt-Ginni" — the same accounts as Ginni Ki Baatein on the web.
+ * Supabase project "ginni2" — the Ginni Ki Baatein website's own project (same accounts as the website).
  * The session is kept on the phone (AsyncStorage) and refreshed while the app is open.
  */
 const isServer = Platform.OS === 'web' && typeof window === 'undefined';

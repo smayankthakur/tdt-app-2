@@ -1,10 +1,10 @@
-// Shared Razorpay + unlock logic for the app's payment functions (app-payments, app-razorpay-webhook).
-import { HttpError, rest } from "./common.ts";
+// Razorpay + unlock logic shared by tdt-payments and tdt-razorpay-webhook.
+import { HttpError, rest, rpc } from "./common.ts";
 
 export const DAY = 86_400_000;
-export const PRODUCTS: Record<string, { amount: number; days: number; name: string; ginni?: boolean }> = {
-  ginni_unlimited_30d: { amount: 19900, days: 30, name: "Ginni Unlimited (30 days)", ginni: true },
-  kundli_full_report: { amount: 9900, days: 3650, name: "Kundli Milan full report" },
+export const PRODUCTS: Record<string, { amount: number; days: number; ginni?: boolean }> = {
+  ginni_unlimited_30d: { amount: 19900, days: 30, ginni: true },
+  kundli_full_report: { amount: 9900, days: 3650 },
 };
 
 export const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "";
@@ -27,8 +27,6 @@ export async function hmacHex(secret: string, message: string) {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
-/** Payment signature from Razorpay Checkout: HMAC(order_id|payment_id, key secret). */
 export const checkoutSignature = (orderId: string, paymentId: string) => hmacHex(KEY_SECRET, `${orderId}|${paymentId}`);
 
 export function product(id: unknown) {
@@ -37,7 +35,6 @@ export function product(id: unknown) {
   return p;
 }
 
-/** The order must be ours: made by the app, same product, same user, right amount. */
 export function assertOrder(order: Record<string, any>, productId: string, uid: string) {
   const p = product(productId);
   if (order?.notes?.productId !== productId || order?.notes?.uid !== uid) throw new HttpError(403, "order_mismatch");
@@ -49,69 +46,65 @@ export async function fetchOrder(orderId: unknown) {
   return await razorpay("GET", `/orders/${orderId}`);
 }
 
-async function currentExpiry(uid: string, productId: string): Promise<number> {
-  let ms = 0;
-  const own = await rest(`app_entitlements?user_id=eq.${uid}&product_id=eq.${productId}&select=expires_at`);
-  if (own?.[0]?.expires_at) ms = Math.max(ms, Date.parse(own[0].expires_at));
-  if (PRODUCTS[productId]?.ginni) {
-    const g = await rest(`ginni_access?user_id=eq.${uid}&select=premium_until`);
-    if (g?.[0]?.premium_until) ms = Math.max(ms, Date.parse(g[0].premium_until));
-  }
-  return ms;
+export async function capturedPayment(order: Record<string, any>) {
+  const list = await razorpay("GET", `/orders/${order.id}/payments`);
+  return (list.items || []).find((x: { status: string; amount: number }) => x.status === "captured" && Number(x.amount) === Number(order.amount)) ?? null;
 }
 
-/**
- * Makes sure the unlock reaches at least `expiresMs`. Safe to run any number of times:
- * it only ever moves an expiry forward, never back.
- */
+async function ginniIdOf(uid: string): Promise<string | null> {
+  const link = await rest(`tdt_accounts?auth_user_id=eq.${uid}&select=ginni_user_id`);
+  return link?.[0]?.ginni_user_id ?? null;
+}
+
+async function currentExpiry(uid: string, productId: string): Promise<number> {
+  if (PRODUCTS[productId]?.ginni) {
+    const gid = await ginniIdOf(uid);
+    const t = gid ? await rpc("tdt_premium_until", { p_gid: gid, p_uid: uid }) : null;
+    return t ? Date.parse(t) || 0 : 0;
+  }
+  const own = await rest(`tdt_entitlements?user_id=eq.${uid}&product_id=eq.${productId}&select=expires_at`);
+  return own?.[0]?.expires_at ? Date.parse(own[0].expires_at) : 0;
+}
+
+/** Only ever moves an expiry forward; safe to run any number of times. */
 async function ensureEntitlement(uid: string, productId: string, expiresMs: number) {
   const iso = new Date(expiresMs).toISOString();
-  const now = new Date().toISOString();
-  const own = await rest(`app_entitlements?user_id=eq.${uid}&product_id=eq.${productId}&select=expires_at`);
+  const own = await rest(`tdt_entitlements?user_id=eq.${uid}&product_id=eq.${productId}&select=expires_at`);
   if (!own?.[0]?.expires_at || Date.parse(own[0].expires_at) < expiresMs) {
-    await rest("app_entitlements?on_conflict=user_id,product_id", {
+    await rest("tdt_entitlements?on_conflict=user_id,product_id", {
       method: "POST",
       prefer: "resolution=merge-duplicates,return=minimal",
-      body: JSON.stringify([{ user_id: uid, product_id: productId, expires_at: iso, updated_at: now }]),
+      body: JSON.stringify([{ user_id: uid, product_id: productId, expires_at: iso, updated_at: new Date().toISOString() }]),
     });
   }
   if (PRODUCTS[productId]?.ginni) {
-    const g = await rest(`ginni_access?user_id=eq.${uid}&select=premium_until`);
-    if (!g?.[0]?.premium_until || Date.parse(g[0].premium_until) < expiresMs) {
-      await rest("ginni_access?on_conflict=user_id", {
-        method: "POST",
-        prefer: "resolution=merge-duplicates,return=minimal",
-        body: JSON.stringify([{ user_id: uid, premium_until: iso, updated_at: now }]),
-      });
+    // Ginni Unlimited bought in the app also unlocks Ginni on the website (same "User" row).
+    const gid = await ginniIdOf(uid);
+    if (gid) {
+      const u = await rest(`User?id=eq.${encodeURIComponent(gid)}&select=subscriptionExpires`);
+      const cur = u?.[0]?.subscriptionExpires ? Date.parse(u[0].subscriptionExpires + "Z") : 0;
+      if (cur < expiresMs) {
+        await rest(`User?id=eq.${encodeURIComponent(gid)}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify({ subscriptionExpires: iso }) });
+      }
     }
   }
 }
 
-/**
- * One paid order = one unlock (app_payments.order_id is the primary key).
- * If an earlier attempt saved the payment but failed before the unlock was written, this run
- * finishes the unlock instead of skipping it.
- */
+/** One paid order = one unlock (tdt_payments.order_id is the primary key); repairs a half-finished earlier unlock. */
 export async function unlock(uid: string, productId: string, orderId: string, paymentId: string) {
   const p = product(productId);
   const fresh = Math.max(Date.now(), await currentExpiry(uid, productId)) + p.days * DAY;
-  const inserted = await rest("app_payments?on_conflict=order_id", {
+  const inserted = await rest("tdt_payments?on_conflict=order_id", {
     method: "POST",
     prefer: "resolution=ignore-duplicates,return=representation",
     body: JSON.stringify([{ order_id: orderId, user_id: uid, product_id: productId, amount_paise: p.amount, payment_id: paymentId, expires_at: new Date(fresh).toISOString() }]),
   });
   let expiresAt = fresh;
   if (!inserted?.length) {
-    const prev = await rest(`app_payments?order_id=eq.${orderId}&select=expires_at,user_id`);
+    const prev = await rest(`tdt_payments?order_id=eq.${orderId}&select=expires_at,user_id`);
     if (prev?.[0]?.user_id && prev[0].user_id !== uid) throw new HttpError(403, "order_mismatch");
     if (prev?.[0]?.expires_at) expiresAt = Date.parse(prev[0].expires_at);
   }
   await ensureEntitlement(uid, productId, expiresAt);
   return { expiresAt };
-}
-
-/** The captured payment of an order, if any. */
-export async function capturedPayment(order: Record<string, any>) {
-  const list = await razorpay("GET", `/orders/${order.id}/payments`);
-  return (list.items || []).find((x: { status: string; amount: number }) => x.status === "captured" && Number(x.amount) === Number(order.amount)) ?? null;
 }

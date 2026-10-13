@@ -66,7 +66,7 @@ We do **not** sell your data, show third-party ads, or track you across other co
 | Google Sheets and Google Apps Script | Usage records only (optional, see 1e and 1f) | Google LLC |
 | thedivinetarotonline.com | Card pictures and website pages opened from the App | [HOSTING PROVIDER] |
 
-Your account data is stored by Supabase in its **Sydney, Australia** region (ap-southeast-2), outside India.
+Your account data is stored by Supabase in its **[REGION — see Supabase → Project Settings → General]** region, which may be outside India.
 Usage records stored by Google may also be on servers outside India. These providers process data for us under their own terms
 and security measures. Links in the App to our booking, courses and support websites are covered by those sites' policies.
 

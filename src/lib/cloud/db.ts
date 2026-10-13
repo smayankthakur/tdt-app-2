@@ -4,11 +4,11 @@ import { mergeEntitlements } from '@/lib/quota';
 import { EMPTY_PROFILE, Storage, type Profile, type SavedReading } from '@/lib/storage';
 
 /**
- * Cloud copies in Supabase (project "Tdt-Ginni"), protected by Row Level Security:
- *   app_profiles      one row per user — the Profile screen
- *   app_readings      saved readings (data = SavedReading)
- *   app_entitlements  purchases made in the app — written only by the app-payments function
- *   ginni_access      Ginni Ki Baatein premium (shared with the website) — read here, written by the server
+ * Cloud copies in Supabase (project "ginni2", the Ginni website's database), protected by Row Level Security:
+ *   tdt_profiles      one row per user — the Profile screen
+ *   tdt_readings      saved readings (data = SavedReading)
+ *   tdt_entitlements  purchases made in the app — written only by the tdt-payments function
+ *   Website Premium and the free-reading count come from the website account via tdt_reading_status()
  * Everything is also kept on the phone, so the app works offline and for guests.
  */
 
@@ -19,7 +19,7 @@ export type ProfileLoad = { ok: true; profile: Profile | null } | { ok: false };
 
 export async function loadProfile(uid: string): Promise<ProfileLoad> {
   try {
-    const { data, error } = await supabase.from('app_profiles').select('*').eq('user_id', uid).maybeSingle();
+    const { data, error } = await supabase.from('tdt_profiles').select('*').eq('user_id', uid).maybeSingle();
     if (error) return { ok: false };
     if (!data) return { ok: true, profile: null };
     const p = { ...EMPTY_PROFILE };
@@ -52,7 +52,7 @@ export function sanitizeProfile(p: Profile): Profile {
 export async function pushProfile(uid: string, profile: Profile): Promise<boolean> {
   try {
     const timeout = new Promise<{ error: unknown }>((resolve) => setTimeout(() => resolve({ error: 'timeout' }), 10_000));
-    const write = supabase.from('app_profiles').upsert({ user_id: uid, ...sanitizeProfile(profile), updated_at: new Date().toISOString() });
+    const write = supabase.from('tdt_profiles').upsert({ user_id: uid, ...sanitizeProfile(profile), updated_at: new Date().toISOString() });
     const { error } = await Promise.race([write, timeout]);
     return !error;
   } catch {
@@ -105,7 +105,7 @@ export async function pushReading(uid: string | null, r: SavedReading): Promise<
   await Storage.addReading(r);
   if (!uid) return;
   try {
-    await supabase.from('app_readings').upsert({ user_id: uid, id: r.id, created_at: new Date(r.createdAt).toISOString(), data: r });
+    await supabase.from('tdt_readings').upsert({ user_id: uid, id: r.id, created_at: new Date(r.createdAt).toISOString(), data: r });
   } catch {
     // uploaded on the next sync
   }
@@ -115,7 +115,7 @@ export async function removeReading(uid: string | null, id: string): Promise<voi
   await Storage.deleteReading(id);
   if (!uid) return;
   supabase
-    .from('app_readings')
+    .from('tdt_readings')
     .delete()
     .eq('user_id', uid)
     .eq('id', id)
@@ -126,14 +126,14 @@ export async function removeReading(uid: string | null, id: string): Promise<voi
 export async function syncReadings(uid: string): Promise<void> {
   try {
     const local = await Storage.getHistory();
-    const { data, error } = await supabase.from('app_readings').select('id,data').eq('user_id', uid).order('created_at', { ascending: false }).limit(200);
+    const { data, error } = await supabase.from('tdt_readings').select('id,data').eq('user_id', uid).order('created_at', { ascending: false }).limit(200);
     if (error) return;
     const remote = (data ?? []).map((row) => row.data as SavedReading).filter((r) => r && r.id);
     const remoteIds = new Set(remote.map((r) => r.id));
     const missing = local.filter((r) => !remoteIds.has(r.id));
     if (missing.length) {
       await supabase
-        .from('app_readings')
+        .from('tdt_readings')
         .upsert(missing.map((r) => ({ user_id: uid, id: r.id, created_at: new Date(r.createdAt).toISOString(), data: r })));
     }
     const merged = new Map<string, SavedReading>();
@@ -144,16 +144,16 @@ export async function syncReadings(uid: string): Promise<void> {
   }
 }
 
-/** Purchases made in the app + Ginni premium bought on the website. */
+/** Purchases made in the app + Ginni Premium from the website account. */
 export async function syncEntitlements(uid: string): Promise<void> {
   try {
     const remote: Record<string, number> = {};
-    const [own, ginni] = await Promise.all([
-      supabase.from('app_entitlements').select('product_id,expires_at').eq('user_id', uid),
-      supabase.from('ginni_access').select('premium_until').eq('user_id', uid).maybeSingle(),
+    const [own, status] = await Promise.all([
+      supabase.from('tdt_entitlements').select('product_id,expires_at').eq('user_id', uid),
+      supabase.rpc('tdt_reading_status'),
     ]);
     for (const row of own.data ?? []) remote[row.product_id] = Date.parse(row.expires_at) || 0;
-    const premium = ginni.data?.premium_until ? Date.parse(ginni.data.premium_until) : 0;
+    const premium = Number((status.data as { premiumUntil?: number } | null)?.premiumUntil) || 0;
     if (premium) remote[Products.ginniUnlimited.id] = Math.max(remote[Products.ginniUnlimited.id] ?? 0, premium);
     await mergeEntitlements(remote);
   } catch {

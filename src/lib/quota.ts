@@ -49,8 +49,8 @@ export async function getQuota(uid?: string | null): Promise<QuotaState> {
       await mergeEntitlements({ [Products.ginniUnlimited.id]: s.premiumUntil });
       return { unlimited: true, left: Infinity };
     }
-    used = s.used;
-    await setCachedUsed(uid, used);
+    await setCachedUsed(uid, Math.max(0, s.used - (s.limit - FREE_READINGS)));
+    return { unlimited: false, left: Math.max(0, s.limit - s.used) };
   }
   return { unlimited: false, left: Math.max(0, FREE_READINGS - used) };
 }

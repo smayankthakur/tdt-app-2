@@ -17,7 +17,7 @@ export function paymentsEnabled(): boolean {
 }
 
 /**
- * Full purchase flow (server = Supabase Edge Function "app-payments", which holds the Razorpay secret):
+ * Full purchase flow (server = Supabase Edge Function "tdt-payments", which holds the Razorpay secret):
  *  1. create a Razorpay Order on the server — the amount is decided there, not by the app
  *  2. open Razorpay checkout with the public Key ID the server returns
  *  3. the server checks the payment signature (or, after a bank page / UPI app, asks Razorpay directly)
@@ -31,7 +31,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
 
   let order: { orderId: string; amount: number; keyId: string };
   try {
-    order = await callFunction('app-payments', { action: 'createOrder', productId: product.id });
+    order = await callFunction('tdt-payments', { action: 'createOrder', productId: product.id });
   } catch (e) {
     return (e as Error).message === 'auth_required' ? 'sign-in-required' : 'failed';
   }
@@ -57,7 +57,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
 
   if (result.status === 'success') {
     try {
-      const v = await callFunction<{ expiresAt: number }>('app-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
+      const v = await callFunction<{ expiresAt: number }>('tdt-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
       await grantEntitlement(product.id, product.days, v.expiresAt);
       await Storage.removePendingOrder(order.orderId);
       return 'success';
@@ -80,7 +80,7 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
   for (const wait of waits) {
     if (wait) await new Promise((r) => setTimeout(r, wait));
     try {
-      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('app-payments', { action: 'checkOrder', orderId, productId: product.id });
+      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('tdt-payments', { action: 'checkOrder', orderId, productId: product.id });
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
         await Storage.removePendingOrder(orderId);
@@ -114,7 +114,7 @@ export async function recheckPendingOrders(uid: string): Promise<boolean> {
       continue;
     }
     try {
-      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('app-payments', { action: 'checkOrder', orderId: o.orderId, productId: o.productId });
+      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('tdt-payments', { action: 'checkOrder', orderId: o.orderId, productId: o.productId });
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
         await Storage.removePendingOrder(o.orderId);

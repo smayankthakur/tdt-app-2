@@ -41,11 +41,12 @@ export function cardImageUrl(cardName: string): string {
 }
 
 /**
- * Supabase project "Tdt-Ginni" — the SAME login as Ginni Ki Baatein on the web.
- * Both values are public by design (Row Level Security protects the data); .env can override them.
+ * Supabase project "ginni2" — the database of Ginni Ki Baatein (reading.thedivinetarotonline.com).
+ * App login = the website account (same email + password). Both values are public by design
+ * (Row Level Security protects the data); .env can override them.
  */
-export const SupabaseUrl = env('EXPO_PUBLIC_SUPABASE_URL', 'https://agwpfisykktphrrmnnzu.supabase.co');
-export const SupabaseKey = env('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_m0JfmCymyMgWvnkFz70T2Q_X5F7RWUn');
+export const SupabaseUrl = env('EXPO_PUBLIC_SUPABASE_URL', 'https://hnaggjopklxcgzxsyswc.supabase.co');
+export const SupabaseKey = env('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_vFf2fDCVPgDPJ78eHM6F9w_jyqN1VVu');
 
 /** Testimonials managed in the admin panel (Firebase project the-divine-tarot-2-project, public read). */
 export const TestimonialsUrl =
@@ -54,7 +55,7 @@ export const TestimonialsUrl =
 /** Optional: Google Apps Script web-app URL for the consent-based usage sheet (see docs/SETUP-APPS-SCRIPT.md). */
 export const AppsScriptUrl = env('EXPO_PUBLIC_APPS_SCRIPT_URL');
 
-/** Paid products — prices in rupees. The server price list is in supabase/functions/app-payments (in paise). */
+/** Paid products — prices in rupees. The server price list is in supabase/functions/_tdt/payments.ts (in paise). */
 export const Products = {
   ginniUnlimited: {
     id: 'ginni_unlimited_30d',
@@ -73,7 +74,7 @@ export const Products = {
 } as const;
 export type ProductId = (typeof Products)[keyof typeof Products]['id'];
 
-/** Free Ginni readings per account, for life (the server limit is in the app_use_reading() database function). */
+/** Free Ginni readings per account, for life — the website's own limit (3 + any referral bonus readings), checked on the server. */
 export const FREE_READINGS = 3;
 
 /**

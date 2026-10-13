@@ -12,26 +12,26 @@ What users can buy:
 
 **Buying needs a login** (email + password), so the purchase follows the user to other phones.
 
-> **This is already set up and working — with LIVE keys. App payments are real money.**
-> Read "How it works" and "Testing", then keep this page for support questions.
+> **App payments are real money (LIVE keys).** The payment functions run in the Ginni website's Supabase project
+> **ginni2** (`hnaggjopklxcgzxsyswc`). One-time setup: add the two keys below as function secrets, then set up the webhook.
 
 ---
 
 ## How it works
 
-The payments run on a small server program in Supabase, the Edge Function **`app-payments`**
-(code: `supabase/functions/app-payments/index.ts`, already deployed). It does three things:
+The payments run on a small server program in Supabase, the Edge Function **`tdt-payments`**
+(code: `supabase/functions/tdt-payments/index.ts` and `supabase/functions/_tdt/payments.ts`). It does three things:
 
 1. **`createOrder`** — creates the Razorpay order. The price is decided here, so nobody can change it on their phone.
 2. **`verifyPayment`** — checks Razorpay's payment signature with the secret key, then unlocks the purchase for the user.
 3. **`checkOrder`** — for payments that finish on a bank page or in a UPI app: asks Razorpay directly whether the order was paid.
 
-Each paid order is saved once in the Supabase table **`app_payments`**, so one payment can never unlock twice.
+Each paid order is saved once in the Supabase table **`tdt_payments`**, so one payment can never unlock twice.
 
 ## Where the keys are
 
-Razorpay has **two keys**. Both are **already stored** in the Supabase project as function secrets
-(the same ones the Ginni Ki Baatein website uses):
+Razorpay has **two keys**. **You** add both in the Supabase project **ginni2** as function secrets
+(use the same live keys as the Ginni Ki Baatein website):
 
 | Secret | Where it lives |
 |---|---|
@@ -83,7 +83,7 @@ would also switch the **Ginni website** to test payments. So the simple, safe wa
 2. Pay with your own UPI or card.
 3. Check:
    - [ ] The app shows the plan in **Profile → Your plan**.
-   - [ ] Supabase Dashboard → **Table Editor → `app_payments`** has a new row (order ID, product, amount in paise, payment ID).
+   - [ ] Supabase Dashboard → **Table Editor → `tdt_payments`** has a new row (order ID, product, amount in paise, payment ID).
    - [ ] Razorpay Dashboard (Live Mode) → **Transactions → Payments** shows the payment as **Captured**.
 4. Refund it: Razorpay Dashboard → **Transactions → Payments** → open the payment → **Refund**.
 5. Also try **cancelling** the payment screen once — nothing should unlock.
@@ -92,7 +92,7 @@ would also switch the **Ginni website** to test payments. So the simple, safe wa
 
 - **Netbanking** and **cards that ask for an OTP** open their bank page inside the same payment screen. When it finishes,
   Razorpay returns to `https://thedivinetarotonline.com/?tdt_payment_return=1`. The app catches that address
-  (nobody actually lands on the website), closes the screen, and asks the server (**`app-payments` → `checkOrder`**)
+  (nobody actually lands on the website), closes the screen, and asks the server (**`tdt-payments` → `checkOrder`**)
   whether the order was paid. It tries a few times, because banks can take a few seconds.
 - **UPI apps** (PhonePe, Google Pay, Paytm…): the UPI app opens. When the user comes back and closes the payment screen,
   the app checks the order once with `checkOrder`.
@@ -107,17 +107,17 @@ would also switch the **Ginni website** to test payments. So the simple, safe wa
 
 1. Think of a long random password for the webhook (30+ letters and numbers). This is the **webhook secret**.
 2. Razorpay Dashboard → **Accounts & Settings → Webhooks → + Add New Webhook**:
-   - **Webhook URL:** `https://agwpfisykktphrrmnnzu.supabase.co/functions/v1/app-razorpay-webhook`
+   - **Webhook URL:** `https://hnaggjopklxcgzxsyswc.supabase.co/functions/v1/tdt-razorpay-webhook`
    - **Secret:** the password from step 1
    - **Active events:** tick **payment.captured**
    - Save. (Make sure the toggle at the top is on **Live Mode**.)
 3. Supabase → **Edge Functions → Secrets → Add new secret**:
-   - **Name:** `APP_RAZORPAY_WEBHOOK_SECRET`
+   - **Name:** `TDT_RAZORPAY_WEBHOOK_SECRET`
    - **Value:** the same password from step 1
-4. Check: after your test ₹99 purchase, Supabase → **Edge Functions → app-razorpay-webhook → Logs** should show a
+4. Check: after your test ₹99 purchase, Supabase → **Edge Functions → tdt-razorpay-webhook → Logs** should show a
    call with status 200. Ginni website payments also reach this webhook; they're ignored safely.
 
-Ginni's own subscription webhook (`razorpay-webhook`) stays as it is — this is a separate one just for the app.
+The website's own Razorpay webhook (if any) stays as it is — this is a separate one just for the app.
 
 If Razorpay ever shows **"callback URL not allowed"**, add **thedivinetarotonline.com** under
 **Account & Settings → Website and app details** in the Razorpay Dashboard.
@@ -132,10 +132,10 @@ If a payment shows **Authorized** but not **Captured**, go to **Account & Settin
 - Settlements (money to your bank) follow Razorpay's schedule — see **Settlements** in the Razorpay Dashboard.
 - Refunds: **Transactions → Payments** → open the payment → **Refund**. A refund does **not** automatically
   remove the unlock in the app. (Ginni Unlimited expires on its own after 30 days.)
-- **Your sales record** = Supabase **Table Editor → `app_payments`** + the Razorpay Dashboard.
-  Keep them for accounts/GST. `app_payments` has: `order_id`, `user_id`, `product_id`, `amount_paise`
+- **Your sales record** = Supabase **Table Editor → `tdt_payments`** + the Razorpay Dashboard.
+  Keep them for accounts/GST. `tdt_payments` has: `order_id`, `user_id`, `product_id`, `amount_paise`
   (₹ × 100), `payment_id`, `expires_at`, `created_at`.
-- If a user deletes their account, their `app_payments` rows stay (with an empty `user_id`) as the sales record.
+- If a user deletes their account, their `tdt_payments` rows stay (with an empty `user_id`) as the sales record.
 
 ## "I paid but it is not unlocked"
 
@@ -144,14 +144,14 @@ on the server straight away. So this should be very rare — check first that th
 
 1. Ask the user for the **email** they log in with and the **Razorpay payment ID** (in their Razorpay SMS/email).
 2. In the Razorpay Dashboard, find the payment and confirm it is **Captured**. Note its **Order ID** (`order_…`).
-3. In Supabase → **Table Editor → `app_payments`**, search for that Order ID.
+3. In Supabase → **Table Editor → `tdt_payments`**, search for that Order ID.
    - **If it is there:** the unlock is saved. Ask the user to log out and log in again (or close and reopen the app) with the same email.
-   - **If it is not there:** open Supabase → **Edge Functions → app-razorpay-webhook → Logs** and **app-payments → Logs**
+   - **If it is not there:** open Supabase → **Edge Functions → tdt-razorpay-webhook → Logs** and **tdt-payments → Logs**
      and look for an error at that time.
      Then either **refund** the payment, or ask your developer to add the unlock by hand
-     (a row in `app_entitlements` for that user and product — and, for Ginni Unlimited, `premium_until` in `ginni_access` —
-     plus a matching row in `app_payments`).
-4. To find the user's ID: Supabase → **Authentication → Users** → search by email.
+     (a row in `tdt_entitlements` for that user and product — and, for Ginni Unlimited, `subscriptionExpires` in `User` —
+     plus a matching row in `tdt_payments`).
+4. To find the user's app ID: Supabase → **Authentication → Users** → search by email (their website row is in Table Editor → `User`).
 
 ## Changing prices
 
@@ -160,14 +160,13 @@ Prices are written in **two** places and must match:
 | File | Ginni Unlimited | Kundli full report |
 |---|---|---|
 | `src/constants/config.ts` → `Products` (rupees — what the app **shows**) | `price: 199` | `price: 99` |
-| `supabase/functions/_shared/payments.ts` → `PRODUCTS` (paise = rupees × 100 — what is **charged**) | `amount: 19900` | `amount: 9900` |
+| `supabase/functions/_tdt/payments.ts` → `PRODUCTS` (paise = rupees × 100 — what is **charged**) | `amount: 19900` | `amount: 9900` |
 
 1. Change both files.
 2. Redeploy the function (needs `npx supabase login` once on your computer):
 
    ```bash
-   npx supabase functions deploy app-payments --project-ref agwpfisykktphrrmnnzu
-   npx supabase functions deploy app-razorpay-webhook --project-ref agwpfisykktphrrmnnzu
+   npx supabase functions deploy tdt-payments tdt-razorpay-webhook --project-ref hnaggjopklxcgzxsyswc
    ```
 
 3. Publish an app update for the new shown price (an over-the-air update is enough — see `BUILD-AND-PUBLISH.md`).
@@ -180,7 +179,7 @@ If they don't match, the shown price and the charged price differ — always cha
 |---|---|
 | No paywall / Pay button appears | The `StorePolicy` switch is off for that platform, or the app cannot reach Supabase |
 | "Please log in first so your purchase is saved to your account." | Normal: purchases need an account. Log in or create one |
-| Payment fails at once | Supabase → **Edge Functions → app-payments → Logs**. `razorpay_401` means the keys in **Edge Functions → Secrets** are wrong |
-| `order_amount_mismatch` in the logs | The price in `app-payments` was changed after the order was made; the user should try again |
+| Payment fails at once | Supabase → **Edge Functions → tdt-payments → Logs**. `razorpay_401` means the keys in **Edge Functions → Secrets** are wrong |
+| `order_amount_mismatch` in the logs | The price in `tdt-payments` was changed after the order was made; the user should try again |
 | Paid, but the screen says it failed | See "I paid but it is not unlocked" above |
 | UPI app does not open on phone | Make sure the UPI app is installed; try "Pay by UPI ID" instead |

@@ -14,11 +14,11 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 | **Profile** | "Your Divine Tarot account" card (Log in / Create account — email + password, same account as Ginni Ki Baatein on the website), profile details, My readings, Card library, daily reminder, language (English / हिन्दी / Hinglish), privacy switches, Delete account |
 
 - Without login the app runs in **guest mode** (everything except Ginni readings); data is saved on the phone.
-- Login is **email + password** on **Supabase** (project "Tdt-Ginni") — the **same accounts as Ginni Ki Baatein** on
+- Login is **email + password** on **Supabase** (project "ginni2", the website's own) — the **same accounts as Ginni Ki Baatein** on
   `reading.thedivinetarotonline.com`. With login, the profile, saved readings and purchases follow the user to other devices.
-  Ginni readings need a login: every account gets 3 free readings for life (counted on the server), then Ginni Unlimited. Ginni website Premium users get unlimited readings in the app.
-- Payments use **Razorpay** (**live** keys — real money). The Supabase server function **`app-payments`** creates each order,
-  checks each payment and records it in the `app_payments` table. Buying needs a login.
+  Ginni readings need a login: every account gets 3 free readings for life — the website's own counter, shared with the website — then Ginni Unlimited. Ginni website Premium users get unlimited readings in the app.
+- Payments use **Razorpay** (**live** keys — real money). The Supabase server function **`tdt-payments`** creates each order,
+  checks each payment and records it in the `tdt_payments` table. Buying needs a login.
 - **Google Apps Script** is optional and only keeps an anonymous, consent-based usage sheet.
 - Home testimonials are read (public, read-only) from the admin panel's Firebase project — nothing to set up in the app.
 - **Everything opens inside the app — never in Chrome or Safari.** All `*.thedivinetarotonline.com` sites, Razorpay payment pages (rzp.io links, checkout, bank and card-OTP pages), course enrol links, support and social profiles open on the app's own browser screen (`src/app/web.tsx`). Links that try to open a new tab, a pop-up or "open in Chrome" stay on that screen too. Only UPI apps, phone calls, email, WhatsApp and the Play Store hand over to the phone. Full list of sites and rules: [docs/IN-APP-LINKS.md](docs/IN-APP-LINKS.md).
@@ -26,7 +26,7 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 
 ## Setup guides — do them in this order
 
-1. [Supabase](docs/SETUP-SUPABASE.md) — login, profiles, saved readings, purchases. **Already set up** — just check the dashboard settings
+1. [Supabase](docs/SETUP-SUPABASE.md) — login, profiles, saved readings, purchases. **One-time setup:** run one SQL file, deploy 4 functions, add the Razorpay secrets
 2. [Razorpay](docs/SETUP-RAZORPAY.md) — how payments work, testing, refunds, "paid but not unlocked", prices, store payment rules
 3. [Apps Script](docs/SETUP-APPS-SCRIPT.md) — **optional** anonymous usage sheet
 4. [Build and publish](docs/BUILD-AND-PUBLISH.md) — EAS builds, Play Store, App Store, web, over-the-air updates
@@ -37,7 +37,7 @@ Also: [Privacy policy text](docs/PRIVACY-POLICY.md) for the website's `/privacy`
 
 | I want to change… | File |
 |---|---|
-| Prices, products, free readings | `src/constants/config.ts` (`Products`, `FREE_READINGS`; the server limit is in the `app_use_reading()` database function) **and** `supabase/functions/_shared/payments.ts` (`PRODUCTS`, in paise — then redeploy `app-payments` and `app-razorpay-webhook`) |
+| Prices, products, free readings | `src/constants/config.ts` (`Products`, `FREE_READINGS`; the server limit is in the `tdt_use_reading()` database function) **and** `supabase/functions/_tdt/payments.ts` (`PRODUCTS`, in paise — then redeploy `tdt-payments` and `tdt-razorpay-webhook`) |
 | Turn Razorpay off on Android / iPhone / web, hide course prices + Enrol links, hide Home's Personal Reading shortcut | `src/constants/config.ts` → `StorePolicy` |
 | Website, social and booking links | `src/constants/config.ts` → `Links` |
 | Supabase address and public key (built-in defaults), optional Apps Script URL | `src/constants/config.ts`; override in `.env` (copy of `.env.example`) / EAS environment variables |
