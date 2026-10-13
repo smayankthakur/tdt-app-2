@@ -8,7 +8,7 @@ What users can buy:
 
 | Product | Price | What it unlocks |
 |---|---|---|
-| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (every account gets 3 free readings for life). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
+| Ginni Unlimited | ₹199 | Unlimited Ginni readings for 30 days (the app has **no free readings** — Ginni needs Ginni Unlimited or website Premium). **Also unlocks Ginni Ki Baatein on the website** for the same 30 days |
 | Kundli full report | ₹99 | Full 8-koota Kundli Milan reports |
 | Courses (5) | ₹10,000 – ₹25,000 | Enrolment. The order notes carry the course, name and email; the team sends the course login by email (see "Course enrolments" below) |
 | Personal Reading | ₹5,500 offer (₹8,500) / ₹17,000 urgent | Paid to the **booking website's** Razorpay setup through its app routes, not through Supabase — see "Personal Reading" below |

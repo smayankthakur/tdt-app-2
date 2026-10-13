@@ -8,7 +8,7 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 | Tab | What it does |
 |---|---|
 | **Home** | Card of the Day, quick links (incl. Personal Reading booking), testimonials from the admin panel (hidden if there are none) |
-| **Reading** — *Ginni Ki Baatein* | Private tarot chat: type a question, pick cards from the fan, get the answer. **Login required.** 3 free readings per account (for life); then **Ginni Unlimited** (₹199 / 30 days) |
+| **Reading** — *Ginni Ki Baatein* | Private tarot chat: type a question, pick cards from the fan, get the answer. **Login required.** No free readings — **Ginni Unlimited** (₹199 / 30 days) or Ginni Premium from the website |
 | **Courses** | The courses from learn.thedivinetarotonline.com, with "Enrol now" links to the website |
 | **Kundli** | Kundli Milan (8-koota, 36 gunas), worked out on the phone. **Full report** ₹99 |
 | **Profile** | "Your Divine Tarot account" card (Log in / Create account — email + password, same account as Ginni Ki Baatein on the website), profile details, My readings, Card library, daily reminder, language (English / हिन्दी / Hinglish), privacy switches, Delete account |
@@ -16,7 +16,7 @@ Companion app for [thedivinetarotonline.com](https://thedivinetarotonline.com/),
 - Without login the app runs in **guest mode** (everything except Ginni readings); data is saved on the phone.
 - Login is **email + password** on **Supabase** (project "ginni2", the website's own) — the **same accounts as Ginni Ki Baatein** on
   `reading.thedivinetarotonline.com`. With login, the profile, saved readings and purchases follow the user to other devices.
-  Ginni readings need a login: every account gets 3 free readings for life — the website's own counter, shared with the website — then Ginni Unlimited. Ginni website Premium users get unlimited readings in the app.
+  Ginni readings need a login and Ginni Unlimited (no free readings in the app). Ginni website Premium users get unlimited readings in the app.
 - Payments use **Razorpay** (**live** keys — real money). The Supabase server function **`tdt-payments`** creates each order,
   checks each payment and records it in the `tdt_payments` table. Buying needs a login.
 - **Google Apps Script** is optional and only keeps an anonymous, consent-based usage sheet.

@@ -9,7 +9,7 @@ backends the websites use, so bookings, tickets, accounts and payments end up in
 | `/about` | **Profile → About** (`src/app/about.tsx`, text in `src/data/about.ts`) | — |
 | `/privacy` | **Profile → Privacy policy** (`src/app/privacy.tsx`, text in `src/data/legal.ts`) | — |
 | `/kundli-milan` | **Kundli** tab (worked out on the phone) | — |
-| `reading.thedivinetarotonline.com` (Ginni Ki Baatein) | **Reading** tab — same account, same 3 free readings for life, same Premium | Supabase project ginni2 (`tdt-auth`, `tdt_reading_status`, `tdt_use_reading`) |
+| `reading.thedivinetarotonline.com` (Ginni Ki Baatein) | **Reading** tab — same account and same Premium; no free readings in the app | Supabase project ginni2 (`tdt-auth`, `tdt_reading_status`, `tdt_use_reading`) |
 | Ginni "Forgot password" | **Log in → Forgot password?** (native form) | `reading.…/api/auth/forgot-password` — the website emails the reset link |
 | `learn.thedivinetarotonline.com` | **Courses** tab → course → **Enrol — pay ₹…** (Razorpay's native payment sheet) | Supabase `tdt-payments` (course products) |
 | `booking.thedivinetarotonline.com` | **Personal Reading** screen (`src/app/booking/`) — prices, next free slot, pay, 3-step form, slot + Google Meet link | Booking site's app routes `/api/app/order`, `/api/app/verify` + `/api/booking`, `/api/slots`, `/api/form` |

@@ -8,7 +8,7 @@ import { EMPTY_PROFILE, Storage, type Profile, type SavedReading } from '@/lib/s
  *   tdt_profiles      one row per user — the Profile screen
  *   tdt_readings      saved readings (data = SavedReading)
  *   tdt_entitlements  purchases made in the app — written only by the tdt-payments function
- *   Website Premium and the free-reading count come from the website account via tdt_reading_status()
+ *   Website Premium comes from the website account via tdt_reading_status()
  * Everything is also kept on the phone, so the app works offline and for guests.
  */
 

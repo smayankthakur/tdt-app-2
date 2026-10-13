@@ -91,8 +91,11 @@ export const Products = {
 } as const;
 export type ProductId = (typeof Products)[keyof typeof Products]['id'];
 
-/** Free Ginni readings per account, for life — the website's own limit (3 + any referral bonus readings), checked on the server. */
-export const FREE_READINGS = 3;
+/**
+ * Free Ginni readings per account in the app: none — readings need Ginni Unlimited (bought in the app) or
+ * Ginni Premium from the website. Enforced on the server (tdt_use_reading). The website keeps its own free readings.
+ */
+export const FREE_READINGS = 0;
 
 /**
  * Store payment switches. The business chose Razorpay everywhere (see launch guide,

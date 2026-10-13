@@ -10,7 +10,8 @@ The app uses the **Ginni Ki Baatein website's own Supabase project** (`reading.t
 
 **One account works in both places.** The app logs in against the website's own `"User"` table, so a user who already
 uses Ginni on the website logs in to the app with the **same email and password**, and an account made in the app
-works on the website too. The **3 free readings for life** and **Ginni Premium** are shared with the website as well.
+works on the website too. **Ginni Premium** is shared with the website as well. The app gives **no free readings**:
+Ginni needs Ginni Unlimited (bought in the app) or Ginni Premium from the website.
 
 ---
 
@@ -81,8 +82,9 @@ Dashboard → **Edge Functions → Secrets** → add:
 
 ### Shared with the website
 
-- **Free readings:** the website's own lifetime counter `"User"."readingsUsed"` — 3 for life, plus any referral
-  `bonusReadings`. A reading used in the app counts on the website, and the other way round.
+- **Free readings:** none in the app (since 13 Oct 2026, migration `20261013200000_tdt_no_free_readings.sql`). The website
+  keeps its own free readings (`"User"."readingsUsed"`, 3 + `bonusReadings`); the app neither uses nor changes them.
+  To give the app free readings again, change `tdt_reading_status()` / `tdt_use_reading()` and `FREE_READINGS`.
 - **Premium:** active if `"User"."subscriptionExpires"` or `"subscriptionEndsAt"` is in the future, or the user bought
   Ginni Unlimited in the app. Buying **Ginni Unlimited** in the app (₹199 / 30 days) moves `subscriptionExpires`
   forward, so it unlocks the website too.
@@ -130,7 +132,7 @@ The project URL and publishable key are built into `src/constants/config.ts` (pu
 
 - **Users:** Table Editor → `User` (website and app together). **Authentication → Users** only lists people who
   have logged in to the app.
-- **Extra free readings for someone:** Table Editor → `User` → their row → raise `bonusReadings` (or lower `readingsUsed`).
+- **Give someone Ginni in the app for free:** Table Editor → `User` → their row → set `subscriptionExpires` to the end date.
 - **Sales from the app:** Table Editor → `tdt_payments`, plus the Razorpay Dashboard.
 
 ## Changing the server functions

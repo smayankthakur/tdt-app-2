@@ -3,9 +3,8 @@ import { serverUsage, spendReadingOnServer } from '@/lib/cloud/ginni';
 import { Storage } from '@/lib/storage';
 
 /**
- * Ginni readings need a login. Every account gets FREE_READINGS (3) free readings for life,
- * counted on the server so reinstalling the app or changing phones doesn't reset them.
- * After that, Ginni Unlimited (bought in the app, or Ginni premium on the website) is needed.
+ * Ginni readings need a login and Ginni Unlimited (bought in the app) or Ginni Premium from the website.
+ * The app gives FREE_READINGS (0) free readings; the server (tdt_use_reading) decides, so it can't be bypassed.
  */
 
 /** True if the product is active (not expired). */
@@ -30,29 +29,17 @@ export async function mergeEntitlements(remote: Record<string, number>): Promise
 
 export type QuotaState = { unlimited: boolean; left: number };
 
-// Last count seen from the server, per account (shown while offline).
-const cacheKey = (uid: string) => `lifetime:${uid}`;
-async function cachedUsed(uid: string): Promise<number> {
-  const q = await Storage.getQuota();
-  return q.date === cacheKey(uid) ? q.used : 0;
-}
-const setCachedUsed = (uid: string, used: number) => Storage.setQuota({ date: cacheKey(uid), used });
-
 /** Read-only look at the allowance (does not use up a reading). Logged-out users have none. */
 export async function getQuota(uid?: string | null): Promise<QuotaState> {
   if (!uid) return { unlimited: false, left: 0 };
   if (await hasEntitlement(Products.ginniUnlimited.id)) return { unlimited: true, left: Infinity };
-  let used = await cachedUsed(uid);
   const s = await serverUsage(uid);
-  if (s) {
-    if (s.premiumUntil > Date.now()) {
-      await mergeEntitlements({ [Products.ginniUnlimited.id]: s.premiumUntil });
-      return { unlimited: true, left: Infinity };
-    }
-    await setCachedUsed(uid, Math.max(0, s.used - (s.limit - FREE_READINGS)));
-    return { unlimited: false, left: Math.max(0, s.limit - s.used) };
+  if (s && s.premiumUntil > Date.now()) {
+    // Ginni Premium bought on the website
+    await mergeEntitlements({ [Products.ginniUnlimited.id]: s.premiumUntil });
+    return { unlimited: true, left: Infinity };
   }
-  return { unlimited: false, left: Math.max(0, FREE_READINGS - used) };
+  return { unlimited: false, left: s ? Math.max(0, s.limit - s.used) : FREE_READINGS };
 }
 
 export type ConsumeResult = 'ok' | 'limit' | 'offline';
@@ -62,10 +49,9 @@ export async function consumeReading(uid?: string | null): Promise<ConsumeResult
   if (!uid) return 'limit';
   const r = await spendReadingOnServer();
   if (!r) {
-    // Offline: an active Ginni Unlimited still works; free readings need the server to count them.
+    // Offline: an active Ginni Unlimited still works; anything else needs the server.
     return (await hasEntitlement(Products.ginniUnlimited.id)) ? 'ok' : 'offline';
   }
   if (r.premiumUntil && r.premiumUntil > Date.now()) await mergeEntitlements({ [Products.ginniUnlimited.id]: r.premiumUntil });
-  if (!r.premium && typeof r.remaining === 'number') await setCachedUsed(uid, FREE_READINGS - r.remaining);
   return r.allowed ? 'ok' : 'limit';
 }

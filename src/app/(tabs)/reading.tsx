@@ -10,7 +10,7 @@ import { CardFan } from '@/components/card-fan';
 import { Paywall } from '@/components/paywall';
 import { CardFront, FlipCard } from '@/components/tarot-card';
 import { Button, tap } from '@/components/ui';
-import { FREE_READINGS, Products } from '@/constants/config';
+import { Products } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/constants/theme';
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
@@ -113,7 +113,7 @@ function ReadingChat() {
     const ids = picked.map((i) => drawing.deck[i]);
     setDrawing(null);
     setTimeout(async () => {
-      // Counted here, on the server (3 free readings per account for life)
+      // Checked here, on the server: only Ginni Unlimited / website Premium can read (no free readings)
       const used = await consumeReading(uidNow);
       if (used === 'offline') {
         push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
@@ -208,7 +208,7 @@ function ReadingChat() {
 function LoginGate() {
   const { t } = useLang();
   const perks: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
-    ['gift-outline', t('reading.gatePerkFree', { count: FREE_READINGS })],
+    ['gift-outline', t('reading.gatePerkFree')],
     ['bookmark-outline', t('reading.gatePerkSaved')],
     ['infinite-outline', t('reading.gatePerkShared')],
   ];
@@ -220,7 +220,7 @@ function LoginGate() {
             <Text style={{ fontSize: 44 }}>🔮</Text>
           </LinearGradient>
           <Text style={styles.gateTitle}>{t('reading.gateTitle')}</Text>
-          <Text style={styles.gateBody}>{t('reading.gateBody', { count: FREE_READINGS })}</Text>
+          <Text style={styles.gateBody}>{t('reading.gateBody')}</Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(120)} style={styles.gateCard}>
           {perks.map(([icon, text]) => (

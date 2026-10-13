@@ -2,14 +2,14 @@ import { dropStaleLogin, supabase } from '@/lib/cloud/supabase';
 
 /**
  * Readings on the server, shared with Ginni Ki Baatein on the website (same account):
- *  - free readings: the website's own lifetime counter (3, plus any referral bonus readings)
+ *  - free readings: none in the app (the website keeps its own)
  *  - Premium: the website subscription, or Ginni Unlimited bought in the app
  * Database functions tdt_reading_status() and tdt_use_reading() (project "ginni2").
  */
 
 const isAuthError = (e: { code?: string; message?: string }) => e.code === '28000' || /auth_required|jwt/i.test(e.message ?? '');
 
-/** Free readings used, the limit, and Premium end — or null when offline. */
+/** Free readings used, the limit (0 in the app), and Premium end — or null when offline. */
 export async function serverUsage(_uid: string): Promise<{ used: number; limit: number; premiumUntil: number } | null> {
   try {
     const { data, error } = await supabase.rpc('tdt_reading_status');
