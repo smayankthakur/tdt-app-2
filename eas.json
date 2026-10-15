@@ -27,10 +27,7 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "environment": "production",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      }
+      "environment": "production"
     }
   },
   "submit": {

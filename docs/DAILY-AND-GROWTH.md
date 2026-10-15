@@ -22,9 +22,7 @@ What brings people back every day, what helps them bring friends, and how you se
 ## Crash reports (Sentry)
 
 - Project **tdt-app** in Sentry organisation **sitelytc-digital-media** (sentry.io). Only release builds report; no name, email or IP is sent.
-- **To get readable stack traces** (once): Sentry → Settings → Auth Tokens → create a token with `project:releases` and `org:read` →
-  in EAS: `npx eas env:create --name SENTRY_AUTH_TOKEN --value <token> --environment production --visibility secret` →
-  then delete the `SENTRY_DISABLE_AUTO_UPLOAD` line from the `production` profile in `eas.json`. Until then builds work, but traces show minified code.
+- **Readable stack traces:** `SENTRY_AUTH_TOKEN` is an EAS secret (production environment), so production builds upload source maps. Development and preview builds skip the upload (`SENTRY_DISABLE_AUTO_UPLOAD` in `eas.json`). If the token is ever revoked, make a new one in Sentry → Settings → Organization Tokens and replace it with `eas env:update`.
 - Recommended: Sentry → Project **tdt-app** → Settings → Security & Privacy → turn on **Prevent Storing of IP Addresses**.
 
 ## Funnel numbers
