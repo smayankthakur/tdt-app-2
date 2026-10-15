@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurView } from 'expo-blur';
+import * as Device from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, type RefObject } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +20,12 @@ type Props = TabBarProps & {
   /** Android: the BlurTargetView wrapping the tab screens (real blur needs it; iOS and web ignore it) */
   blurTarget?: RefObject<View | null>;
 };
+
+/**
+ * Budget Android phones: a live blur re-renders the screen behind the bar every frame, so they get a plain
+ * translucent fill instead. Same test as the starfield's LITE mode (src/components/starfield.tsx) — keep them in sync.
+ */
+const LITE = Platform.OS === 'android' && ((Device.totalMemory ?? 8e9) < 3.2e9 || (Device.deviceYearClass ?? 2022) < 2019);
 
 const ICONS: Record<string, [IconName, IconName]> = {
   index: ['home-outline', 'home'],
@@ -73,14 +80,18 @@ export function GlassTabBar({ state, descriptors, navigation, blurTarget }: Prop
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View style={styles.shadow}>
         <View style={styles.bar}>
-          <BlurView
-            intensity={55}
-            tint="dark"
-            blurTarget={blurTarget}
-            blurMethod="dimezisBlurViewSdk31Plus"
-            blurReductionFactor={3}
-            style={StyleSheet.absoluteFill}
-          />
+          {LITE ? (
+            <View style={[StyleSheet.absoluteFill, styles.liteFill]} />
+          ) : (
+            <BlurView
+              intensity={55}
+              tint="dark"
+              blurTarget={blurTarget}
+              blurMethod="dimezisBlurViewSdk31Plus"
+              blurReductionFactor={3}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           {/* frosted glass: a faint violet tint + a white sheen that fades downwards */}
           <View style={[StyleSheet.absoluteFill, styles.tint]} />
           <LinearGradient
@@ -141,6 +152,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   tint: { backgroundColor: 'rgba(28,16,44,0.32)' },
+  liteFill: { backgroundColor: 'rgba(14,9,22,0.88)' },
   highlight: { position: 'absolute', top: 0, left: 24, right: 24, height: 1 },
   item: { flex: 1, alignItems: 'center', gap: 2 },
   iconWrap: { width: 46, height: 40, alignItems: 'center', justifyContent: 'center' },

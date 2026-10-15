@@ -95,7 +95,7 @@ export default function BookingFormScreen() {
   }, [bid, profile, user]);
 
   const concernOptions = useMemo(
-    () => [...CONCERNS.map((c) => ({ value: c.text, label: c.text, icon: c.icon })), { value: 'Other', label: t('booking.other'), icon: '✍️' }],
+    () => [...CONCERNS.map((c) => ({ value: c.text, label: c.label, icon: c.icon })), { value: 'Other', label: t('booking.other'), icon: '✍️' }],
     [t],
   );
 

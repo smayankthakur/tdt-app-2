@@ -76,14 +76,24 @@ export async function revealToday(): Promise<{ draw: DailyDraw; streak: Streak }
   return { draw, streak };
 }
 
-/** "Cards Ka Message": three cards shared by everyone for the current ISO week. */
+/** ISO-8601 week of the local date: weeks start on Monday; week 1 holds the year's first Thursday. */
+export function isoWeek(d: Date): { year: number; week: number } {
+  // work on the calendar date in UTC so DST shifts can't move a day
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = t.getUTCDay() || 7; // Mon = 1 … Sun = 7
+  t.setUTCDate(t.getUTCDate() + 4 - dow); // the Thursday of this week decides its year
+  const year = t.getUTCFullYear();
+  const week = Math.ceil(((t.getTime() - Date.UTC(year, 0, 1)) / 86_400_000 + 1) / 7);
+  return { year, week };
+}
+
+/** "Cards Ka Message": three cards shared by everyone for the current ISO week (changes on Monday). */
 export function weeklyTrio(d: Date = new Date()): string[] {
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  const week = Math.floor((d.getTime() - jan1.getTime()) / (7 * 86_400_000));
+  const { year, week } = isoWeek(d);
   const ids: string[] = [];
   let i = 0;
   while (ids.length < 3) {
-    const c = DECK[hash(`week:${d.getFullYear()}:${week}:${i++}`) % DECK.length];
+    const c = DECK[hash(`week:${year}:${week}:${i++}`) % DECK.length];
     if (!ids.includes(c.id)) ids.push(c.id);
   }
   return ids;

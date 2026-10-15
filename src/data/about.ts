@@ -53,12 +53,12 @@ const en: About = {
 };
 
 const hi: About = {
-  title: 'द डिवाइन टैरो के बारे में',
+  title: 'The Divine Tarot के बारे में',
   subtitle: 'स्पष्टता, सुकून और बदलाव के लिए एक पवित्र जगह।',
   intro:
     'मैं भारती सिंह हूँ। दस साल से ज़्यादा समय से मुझे हज़ारों लोगों को उनकी ज़िंदगी के सबसे उलझन भरे पलों में राह दिखाने का सौभाग्य मिला है। जो एक निजी पुकार के रूप में शुरू हुआ, वह एक मिशन बन गया — टैरो के प्राचीन ज्ञान को हर उस इंसान के लिए आसान, अपनापन भरा और गहराई से बदलने वाला बनाना जो रोशनी ढूँढ रहा है।',
   badges: [
-    ['भारत की नंबर 1 साइकिक टैरो रीडर', 'अपनी सटीक अंतर्ज्ञान के लिए देश भर में पहचानी जाती हैं'],
+    ['भारत की नंबर 1 साइकिक टैरो रीडर', 'अपनी सटीक रीडिंग और गहरी अंतर्दृष्टि के लिए देश भर में जानी जाती हैं'],
     ['7 लाख+ यूट्यूब परिवार', 'साथ मिलकर आगे बढ़ते लोगों का परिवार'],
   ],
   philosophyTitle: 'यह जगह क्यों है',
@@ -80,7 +80,7 @@ const hi: About = {
     'जिन जवाबों को आप ढूँढ रहे हैं, वे पहले से आपके भीतर हैं। इस जगह को एक आईना समझिए — जो आपको वही स्पष्टता, ताक़त और दिव्य ज्ञान दिखाता है जो हमेशा से आपका है। आप जितना सोचते हैं, उससे कहीं ज़्यादा शक्तिशाली हैं।',
   ctaTitle: 'अपनी शक्ति को पहचानें',
   faq: [
-    ['द डिवाइन टैरो क्या है?', 'भारती सिंह का टैरो मार्गदर्शन — ऐप और वेबसाइट पर गिन्नी की बातें रीडिंग, कोर्स, कुंडली मिलान और पर्सनल रीडिंग।'],
+    ['The Divine Tarot क्या है?', 'भारती सिंह का टैरो मार्गदर्शन — ऐप और वेबसाइट पर Ginni Ki Baatein रीडिंग, कोर्स, कुंडली मिलान और पर्सनल रीडिंग।'],
     ['कौन-सी भाषाएँ?', 'अंग्रेज़ी, हिंदी और हिंग्लिश।'],
     ['क्या यह निजी है?', 'हाँ। आपके सवाल और जानकारी पूरी तरह गोपनीय रहते हैं।'],
     ['क्या टैरो भविष्य बता सकता है?', 'रीडिंग आपके आसपास की ऊर्जा दिखाती है और साफ़ मन से फ़ैसला लेने में मदद करती है। यह मार्गदर्शन है, तय भविष्यवाणी नहीं — फ़ैसला हमेशा आपका है।'],
@@ -113,11 +113,11 @@ const hinglish: About = {
   ],
   closing:
     'Jin answers ko tum dhoondh rahe ho, woh pehle se tumhare andar hain. Is space ko ek mirror samjho — jo woh clarity, strength aur divine wisdom wapas dikhata hai jo hamesha se tumhara birthright hai. Tum jitna sochte ho usse kahin zyada powerful ho.',
-  ctaTitle: 'Apni Power Mein Kadam Rakho',
+  ctaTitle: 'Apni Asli Power Ko Pehchano',
   faq: [
     ['The Divine Tarot kya hai?', 'Bharti Singh ka tarot guidance — app aur website pe Ginni Ki Baatein readings, courses, Kundli Milan aur one-to-one Personal Readings.'],
     ['Kaun si languages?', 'English, Hindi aur Hinglish.'],
-    ['Kya yeh private hai?', 'Haan. Tumhare sawal aur details poori tarah confidential rehte hain.'],
+    ['Kya yeh private hai?', 'Haan. Tumhare sawaal aur details poori tarah confidential rehte hain.'],
     ['Kya tarot future bata sakta hai?', 'Reading tumhare aas-paas ki energies dikhati hai aur clarity se decide karne mein help karti hai. Yeh guidance hai, fixed prediction nahi — free will hamesha tumhari hai.'],
   ],
 };

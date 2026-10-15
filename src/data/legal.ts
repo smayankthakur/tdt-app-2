@@ -16,7 +16,7 @@ export const PRIVACY: { h: string; p: string[] }[] = [
   {
     h: '1. Information we collect',
     p: [
-      'Account: if you create an account or log in, your email address, your name and your password. The password is stored only in scrambled ("hashed") form — nobody can read it. The account is the same as Ginni Ki Baatein on our website (reading.thedivinetarotonline.com), so your Ginni Premium is shared between the App and that website.',
+      'Account: if you create an account or log in, your email address, your name and your password. The password is stored only in scrambled ("hashed") form — nobody can read it. The account is the same as Ginni Ki Baatein on our website (reading.thedivinetarotonline.com), and Ginni Unlimited (bought in the App) and Ginni Premium (bought on the website) both work in the App and on that website.',
       'Profile details you choose to enter (all optional): gender, date, time and place of birth, marital status, occupation and a profile photo. They are used to personalise your readings.',
       'Saved readings: the question you typed, the topic, the cards drawn and the date. If you are logged in they are saved to your account so they appear on your other phones.',
       'Purchases: which product you bought, the amount, the date, the Razorpay order and payment IDs, and until when it is active. We never see or store your card, UPI or bank details — Razorpay handles those.',

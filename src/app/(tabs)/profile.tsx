@@ -4,8 +4,8 @@ import { Image } from 'expo-image';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
@@ -43,19 +43,26 @@ export default function ProfileScreen() {
   const [toast, setToast] = useState('');
   const [reminder, setReminder] = useState<ReminderSettings | null>(null);
   const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
-  const [active, setActive] = useState<[string, number][]>([]);
+  /** [productId, expiry, one-time purchase] */
+  const [active, setActive] = useState<[string, number, boolean][]>([]);
   const [notify, setNotify] = useState<NotifySettings | null>(null);
   const [badges, setBadges] = useState<number[]>([]);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [owner, setOwner] = useState(false);
+  // Kept with the uid they belong to, so a sign-out / account switch never shows the previous account's code or admin row.
+  const [account, setAccount] = useState<{ uid: string; inviteCode: string | null; owner: boolean } | null>(null);
+  const mine = !!user && account?.uid === user.uid;
+  const inviteCode = mine ? account.inviteCode : null;
+  const owner = mine && account.owner;
   const params = useLocalSearchParams<{ edit?: string }>();
 
-  useEffect(() => {
-    Storage.getReminder().then(setReminder);
-    Storage.getPrivacy().then(setPrivacy);
-    Storage.getNotify().then(setNotify);
-    Storage.getBadges().then(setBadges);
-  }, []);
+  // Re-read on every visit: Home can turn the reminder on and earn badges while this tab stays mounted.
+  useFocusEffect(
+    useCallback(() => {
+      Storage.getReminder().then(setReminder);
+      Storage.getPrivacy().then(setPrivacy);
+      Storage.getNotify().then(setNotify);
+      Storage.getBadges().then(setBadges);
+    }, []),
+  );
   // "Add birth details" on Home opens the editor directly (state adjusted while rendering, param cleared after)
   const [editParam, setEditParam] = useState<string | undefined>(undefined);
   if (params.edit !== editParam) {
@@ -69,10 +76,12 @@ export default function ProfileScreen() {
     if (params.edit === '1') router.setParams({ edit: undefined });
   }, [params.edit]);
   useEffect(() => {
-    if (user) {
-      myInviteCode().then(setInviteCode);
-      isAdmin().then(setOwner);
-    }
+    if (!user) return;
+    let alive = true;
+    Promise.all([myInviteCode(), isAdmin()]).then(([code, admin]) => alive && setAccount({ uid: user.uid, inviteCode: code, owner: admin }));
+    return () => {
+      alive = false;
+    };
   }, [user]);
   const shareInvite = async () => {
     track('invite_share');
@@ -86,7 +95,12 @@ export default function ProfileScreen() {
   useEffect(() => {
     Storage.getEntitlements().then((e: Entitlements) => {
       const now = Date.now();
-      setActive(Object.entries(e).filter(([, until]) => until > now));
+      // A one-time purchase (e.g. the Kundli report) is stored with a very long expiry; subscriptions run ≤ a year.
+      const oneTime = (id: string, until: number) => {
+        const days = Object.values(Products).find((p) => p.id === id)?.days;
+        return days !== undefined ? days > 366 : until - now > 5 * 365 * 86_400_000;
+      };
+      setActive(Object.entries(e).filter(([, until]) => until > now).map(([id, until]): [string, number, boolean] => [id, until, oneTime(id, until)]));
     });
   }, [version]);
 
@@ -368,7 +382,7 @@ export default function ProfileScreen() {
 
       {/* Invite friends (no reward — the code just records who invited whom) */}
       <Card style={{ gap: Spacing.sm }}>
-        <Text style={styles.h}>🎁 {t('invite.title')}</Text>
+        <Text style={styles.h}>💌 {t('invite.title')}</Text>
         <Text style={styles.small}>{t('invite.sub')}</Text>
         {user && inviteCode ? (
           <View style={styles.codeBox}>
@@ -387,12 +401,14 @@ export default function ProfileScreen() {
         {active.length === 0 ? (
           <Body muted>{t('profile.planFree')}</Body>
         ) : (
-          active.map(([id, until]) => (
+          active.map(([id, until, oneTime]) => (
             <Body key={id}>
               ✨{' '}
               {id.startsWith('course_')
                 ? `${productName(id)} — ${t('courses.enrolled')}`
-                : t('profile.planUntil', { name: productName(id), date: new Date(until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })}
+                : oneTime
+                  ? `${productName(id)} ✓` // bought once, kept: no "active until 2036"
+                  : t('profile.planUntil', { name: productName(id), date: new Date(until).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })}
             </Body>
           ))
         )}

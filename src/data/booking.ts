@@ -1,21 +1,21 @@
 /**
  * Personal Reading content — copied from booking.thedivinetarotonline.com (components/Landing.tsx and
- * components/ReadingForm.tsx). The concern texts are sent to the booking server as they are, so keep them
- * exactly the same as the website's.
+ * components/ReadingForm.tsx). `text` is sent to the booking server as it is, so keep it byte-for-byte the
+ * same as the website's (typos included). `label` is the cleaned-up text shown on the chip.
  */
-export const CONCERNS: { icon: string; text: string }[] = [
-  { icon: '💍', text: 'Aapki Shaadi nahi horahi?' },
-  { icon: '💼', text: 'Career ko lekar Tension hai' },
-  { icon: '🔀', text: 'Third Party situation main stuck hai' },
-  { icon: '💭', text: 'Partner ki current feelings or actions jaanne hai' },
-  { icon: '🤝', text: 'Partner ke sath reunion ya reconcilation ka pata lagana hai' },
-  { icon: '🕉️', text: 'Apni Spritual Journey Jaanni haii' },
-  { icon: '🧭', text: 'Aapna Life Purpose Jaanna hai' },
-  { icon: '💰', text: 'Financial tension bohot hai' },
-  { icon: '🧿', text: 'Black magic ka Doubt hai' },
-  { icon: '🩺', text: 'Health ko lekar pareshan hai' },
-  { icon: '👶', text: 'Bacha kab hoga?' },
-  { icon: '❤️', text: 'Current Ya Ex Partner se Shaadi hogi?' },
+export const CONCERNS: { icon: string; text: string; label: string }[] = [
+  { icon: '💍', text: 'Aapki Shaadi nahi horahi?', label: 'Shaadi nahi ho rahi?' },
+  { icon: '💼', text: 'Career ko lekar Tension hai', label: 'Career ko lekar tension hai' },
+  { icon: '🔀', text: 'Third Party situation main stuck hai', label: 'Third-party situation mein phanse hain' },
+  { icon: '💭', text: 'Partner ki current feelings or actions jaanne hai', label: 'Partner ki abhi ki feelings aur actions jaanni hain' },
+  { icon: '🤝', text: 'Partner ke sath reunion ya reconcilation ka pata lagana hai', label: 'Partner ke saath reunion ya patch-up hoga ya nahi' },
+  { icon: '🕉️', text: 'Apni Spritual Journey Jaanni haii', label: 'Apni spiritual journey jaanni hai' },
+  { icon: '🧭', text: 'Aapna Life Purpose Jaanna hai', label: 'Apna life purpose jaanna hai' },
+  { icon: '💰', text: 'Financial tension bohot hai', label: 'Paison ki tension bahut hai' },
+  { icon: '🧿', text: 'Black magic ka Doubt hai', label: 'Black magic ka shak hai' },
+  { icon: '🩺', text: 'Health ko lekar pareshan hai', label: 'Health ko lekar pareshaan hain' },
+  { icon: '👶', text: 'Bacha kab hoga?', label: 'Baccha kab hoga?' },
+  { icon: '❤️', text: 'Current Ya Ex Partner se Shaadi hogi?', label: 'Current ya ex partner se shaadi hogi?' },
 ];
 
 /** Full terms & conditions (English, as on the booking website). {urgent}/{price}/{regular}/{until} are filled in. */

@@ -17,7 +17,7 @@ export default function CardDetail() {
   if (!card) {
     return (
       <Screen edges={[]}>
-        <Body>Card not found.</Body>
+        <Body>{t('common.cardNotFound')}</Body>
       </Screen>
     );
   }

@@ -23,7 +23,8 @@ export function buildReading(intent: Intent, cardIds: string[], lang: Lang): Rea
   const cards = cardIds.map((id, i) => ({
     cardId: id,
     position: intent.positions[i] ?? 'card',
-    text: kbText(id, intent.field === 'advice' ? 'message' : intent.field, lang),
+    // 'advice' and 'timing' have their own lines below, so the card itself gives its message (no text twice)
+    text: kbText(id, intent.field === 'advice' || intent.field === 'timing' ? 'message' : intent.field, lang),
   }));
   const last = cardIds[cardIds.length - 1];
   const verdict = intent.id === 'yesno' ? kbFor(cardIds[0])?.yes_no : undefined;

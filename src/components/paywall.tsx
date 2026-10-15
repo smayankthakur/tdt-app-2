@@ -10,12 +10,30 @@ import { track } from '@/lib/events';
 import { paymentsEnabled, purchase, type Product } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
 
-/** Reusable paywall card — Razorpay checkout for one product. */
-export function Paywall({ product, title, body, cta, onUnlocked }: { product: Product; title: string; body: string; cta: string; onUnlocked: () => void }) {
+/**
+ * Reusable paywall card — Razorpay checkout for one product.
+ * After a successful payment (or when `active` is already true) the Buy button is gone, so nobody pays twice.
+ */
+export function Paywall({
+  product,
+  title,
+  body,
+  cta,
+  onUnlocked,
+  active = false,
+}: {
+  product: Product;
+  title: string;
+  body: string;
+  cta: string;
+  onUnlocked: () => void;
+  active?: boolean;
+}) {
   const { t } = useLang();
   const { user, profile, refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   useEffect(() => {
     if (paymentsEnabled()) track('paywall_view', { product: product.id });
   }, [product.id]);
@@ -27,9 +45,13 @@ export function Paywall({ product, title, body, cta, onUnlocked }: { product: Pr
     setBusy(false);
     if (r === 'success') {
       tap('success');
+      setDone(true);
       setMsg(t('paywall.success'));
       refresh();
       onUnlocked();
+    } else if (r === 'pending') {
+      setDone(true); // money may be taken: never offer to pay again here
+      setMsg(t('paywall.pending'));
     } else if (r === 'sign-in-required') {
       setMsg(t('paywall.signInFirst'));
       router.push('/login');
@@ -41,6 +63,18 @@ export function Paywall({ product, title, body, cta, onUnlocked }: { product: Pr
   // Payments switched off for this platform (StorePolicy) or not configured: show nothing.
   if (!paymentsEnabled()) return null;
 
+  if (active && !msg) {
+    return (
+      <Card style={styles.card}>
+        <View style={styles.head}>
+          <Ionicons name="checkmark-circle" size={18} color={Colors.gold} />
+          <Text style={styles.title}>{title}</Text>
+        </View>
+        <Text style={styles.msg}>{t('paywall.active')}</Text>
+      </Card>
+    );
+  }
+
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -48,9 +82,9 @@ export function Paywall({ product, title, body, cta, onUnlocked }: { product: Pr
         <Text style={styles.title}>{title}</Text>
       </View>
       <Body muted>{body}</Body>
-      <Button label={cta} icon="sparkles" onPress={buy} loading={busy} />
+      {!done && !active && <Button label={cta} icon="sparkles" onPress={buy} loading={busy} />}
       {msg && <Text style={styles.msg}>{msg}</Text>}
-      <Text style={styles.secure}>🔒 Razorpay · UPI · Cards · Netbanking</Text>
+      {!done && !active && <Text style={styles.secure}>🔒 Razorpay · UPI · Cards · Netbanking</Text>}
     </Card>
   );
 }

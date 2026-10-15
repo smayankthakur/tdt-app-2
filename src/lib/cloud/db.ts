@@ -153,9 +153,10 @@ export async function syncEntitlements(uid: string): Promise<void> {
       supabase.rpc('tdt_reading_status'),
     ]);
     for (const row of own.data ?? []) remote[row.product_id] = Date.parse(row.expires_at) || 0;
-    const premium = Number((status.data as { premiumUntil?: number } | null)?.premiumUntil) || 0;
-    if (premium) remote[Products.ginniUnlimited.id] = Math.max(remote[Products.ginniUnlimited.id] ?? 0, premium);
-    await mergeEntitlements(remote);
+    // Ginni access follows the server's answer exactly (website Premium + app purchases, which can end early)
+    const ginni = status.error ? undefined : Number((status.data as { premiumUntil?: number } | null)?.premiumUntil) || 0;
+    delete remote[Products.ginniUnlimited.id];
+    await mergeEntitlements(remote, ginni);
   } catch {
     // ignore
   }
@@ -168,7 +169,9 @@ type FsValue = { stringValue?: string; integerValue?: string; doubleValue?: numb
 /** Testimonials managed by the client in the admin panel (Firestore REST, public read). Empty → the carousel hides. */
 export async function loadTestimonials(): Promise<Testimonial[]> {
   try {
-    const res = await fetch(TestimonialsUrl);
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12_000); // slow networks: give up instead of spinning forever
+    const res = await fetch(TestimonialsUrl, { signal: ctl.signal }).finally(() => clearTimeout(timer));
     if (!res.ok) return [];
     const json = (await res.json()) as { documents?: { name: string; fields?: Record<string, FsValue> }[] };
     return (json.documents ?? [])

@@ -17,7 +17,8 @@ export function courseProduct(c: Course): Product {
 }
 
 const allProducts = (): Product[] => [...Object.values(Products), ...COURSES.map(courseProduct)];
-export type PurchaseOutcome = 'success' | 'cancelled' | 'failed' | 'not-configured' | 'sign-in-required';
+/** 'pending' = Razorpay said paid but the server couldn't confirm it yet; it unlocks on its own later (never pay twice). */
+export type PurchaseOutcome = 'success' | 'cancelled' | 'failed' | 'pending' | 'not-configured' | 'sign-in-required';
 
 export function paymentsEnabled(): boolean {
   if (!cloudReady) return false;
@@ -88,6 +89,9 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
   }
   track('payment_failed', { product: product.id, outcome: result.status });
   if (result.status === 'cancelled') return 'cancelled';
+  // Razorpay reported success, or the user came back from a bank page: the money may be taken. The pending
+  // order is re-checked when the app opens / comes back, and the webhook unlocks it on the server.
+  if (result.status === 'success' || result.status === 'returned') return 'pending';
   return 'failed';
 }
 

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ErrorNote, WebsiteFallback } from '@/components/form';
@@ -46,7 +46,8 @@ export default function BookingScreenRoute() {
 function BookingScreen() {
   const { t } = useLang();
   const { user, profile } = useSession();
-  const [slots, setSlots] = useState<Record<Tier, Slot | null | undefined>>({ standard: undefined, urgent: undefined });
+  // undefined = checking, null = the server said no free slot, 'error' = couldn't ask (offline / timeout) — paying stays possible
+  const [slots, setSlots] = useState<Record<Tier, Slot | null | undefined | 'error'>>({ standard: undefined, urgent: undefined });
   const [mine, setMine] = useState<SavedBooking[]>([]);
   const [busy, setBusy] = useState<Tier | null>(null);
   const [error, setError] = useState('');
@@ -60,7 +61,7 @@ function BookingScreen() {
     (['standard', 'urgent'] as const).forEach((tier) =>
       nextSlot(tier)
         .then((r) => setSlots((s) => ({ ...s, [tier]: r.available ? r.next : null })))
-        .catch(() => setSlots((s) => ({ ...s, [tier]: null }))),
+        .catch((e) => setSlots((s) => ({ ...s, [tier]: e instanceof BookingError && e.code === 'no_slots' ? null : 'error' }))),
     );
   }, []);
 
@@ -70,12 +71,17 @@ function BookingScreen() {
     setMine(await refreshBookings());
   }, []);
 
-  useEffect(loadSlots, [loadSlots]);
+  // Slots are (re)checked on focus and when the app returns to the foreground, so a failed check retries by itself.
   useFocusEffect(
     useCallback(() => {
+      loadSlots();
       loadMine();
-    }, [loadMine]),
+    }, [loadSlots, loadMine]),
   );
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && loadSlots());
+    return () => sub.remove();
+  }, [loadSlots]);
 
   const errorText = (e: unknown) => {
     const code = e instanceof BookingError ? e.code : 'server';
@@ -144,6 +150,7 @@ function BookingScreen() {
   const slotLine = (tier: Tier) => {
     const s = slots[tier];
     if (s === undefined) return t('booking.checking');
+    if (s === 'error') return t('booking.errNetwork');
     if (!s) return t('booking.noSlot');
     return t('booking.nextFree', { when: `${formatSlotDate(s.date)}, ${formatSlotTime(s.time)}` });
   };
@@ -225,7 +232,7 @@ function BookingScreen() {
         {[t('booking.standardWhen'), t('booking.people'), t('booking.formAfter'), t('booking.noRefund')].map((x) => (
           <Bullet key={x} text={x} />
         ))}
-        <Text style={styles.slot}>{slotLine('standard')}</Text>
+        <SlotLine text={slotLine('standard')} failed={slots.standard === 'error'} onRetry={loadSlots} />
         <Button label={t('booking.pay', { price: formatINR(standardPrice) })} icon="sparkles" onPress={() => book('standard')} loading={busy === 'standard'} disabled={!!busy || slots.standard === null} />
       </Card>
 
@@ -237,7 +244,7 @@ function BookingScreen() {
         {[t('booking.urgentWhen'), t('booking.people'), t('booking.formAfter'), t('booking.noRefund')].map((x) => (
           <Bullet key={x} text={x} />
         ))}
-        <Text style={styles.slot}>{slotLine('urgent')}</Text>
+        <SlotLine text={slotLine('urgent')} failed={slots.urgent === 'error'} onRetry={loadSlots} />
         <Button label={t('booking.pay', { price: formatINR(BookingPrices.urgent) })} icon="flash" onPress={() => book('urgent')} loading={busy === 'urgent'} disabled={!!busy || slots.urgent === null} />
       </Card>
 
@@ -267,6 +274,26 @@ function BookingScreen() {
 
       <Button variant="ghost" label={t('booking.whatsapp', { number: wa })} icon="logo-whatsapp" onPress={openWhatsApp} />
     </Screen>
+  );
+}
+
+/** The next-free-slot line; after a failed check it offers a retry (paying still works — the server picks the slot). */
+function SlotLine({ text, failed, onRetry }: { text: string; failed: boolean; onRetry: () => void }) {
+  const { t } = useLang();
+  if (!failed) return <Text style={styles.slot}>{text}</Text>;
+  return (
+    <View style={styles.slotRow}>
+      <Text style={[styles.slot, { flex: 1, color: Colors.textMuted }]}>{text}</Text>
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => {
+          tap();
+          onRetry();
+        }}>
+        <Text style={[styles.slot, styles.link]}>{t('common.retry')}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -303,6 +330,7 @@ const styles = StyleSheet.create({
   bullet: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
   bulletText: { flex: 1, fontFamily: Fonts.body, fontSize: 14, lineHeight: 20, color: Colors.textMuted },
   slot: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: Colors.goldSoft, marginTop: 4 },
+  slotRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   termsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4 },
   link: { fontFamily: Fonts.bodySemi, fontSize: 14, color: Colors.gold },
   term: { fontFamily: Fonts.body, fontSize: 13, lineHeight: 19, color: Colors.textMuted },

@@ -30,6 +30,7 @@ async function approxCity(): Promise<{ city?: string; region?: string; country?:
   }
 }
 
+/** `uid` is accepted for call-site compatibility but never sent. */
 export async function logSession(opts: { uid?: string | null; lang: string }): Promise<void> {
   if (sent || !appsScriptConfigured) return;
   const privacy = await Storage.getPrivacy();
@@ -45,7 +46,7 @@ export async function logSession(opts: { uid?: string | null; lang: string }): P
       model: Device.modelName ?? '',
       appVersion: Application.nativeApplicationVersion ?? 'web',
       lang: opts.lang,
-      uid: opts.uid ?? '',
+      // no account id: the setting promises *anonymous* usage data
       ...loc,
     });
   } catch {

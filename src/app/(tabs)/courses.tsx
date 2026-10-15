@@ -59,6 +59,7 @@ export default function CoursesScreen() {
       router.push('/login');
     } else if (r === 'cancelled') setMsg(t('paywall.cancelled'));
     else if (r === 'not-configured') setMsg(t('paywall.notConfigured'));
+    else if (r === 'pending') setMsg(t('paywall.pending'));
     else setMsg(t('paywall.failed'));
   };
   const contentW = Math.min(width, 900) - Spacing.lg * 2;

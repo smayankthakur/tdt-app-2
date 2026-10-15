@@ -157,16 +157,25 @@ export function DateField({ label, value, onChange }: { label: string; value: st
   const [open, setOpen] = useState(false);
   const thisYear = new Date().getFullYear();
   const years = useMemo(() => Array.from({ length: 101 }, (_, i) => String(thisYear - 100 + i)), [thisYear]);
-  const init = value ? value.split('-').map(Number) : [1995, 1, 1];
+  const parse = (v: string) => (v ? v.split('-').map(Number) : [1995, 1, 1]);
+  const init = parse(value);
   const [y, setY] = useState(init[0]);
   const [m, setM] = useState(init[1]);
   const [d, setD] = useState(init[2]);
   const daysIn = new Date(y, m, 0).getDate();
   const days = useMemo(() => Array.from({ length: daysIn }, (_, i) => String(i + 1)), [daysIn]);
+  // The value can arrive after mount (saved Kundli couple, profile prefill): start the wheels from it on every open.
+  const show = () => {
+    const [vy, vm, vd] = parse(value);
+    setY(vy);
+    setM(vm);
+    setD(vd);
+    setOpen(true);
+  };
 
   return (
     <>
-      <FieldButton label={label} value={formatDate(value)} placeholder="DD MMM YYYY" icon="calendar-outline" onPress={() => setOpen(true)} />
+      <FieldButton label={label} value={formatDate(value)} placeholder="DD MMM YYYY" icon="calendar-outline" onPress={show} />
       <Sheet visible={open} onClose={() => setOpen(false)} title={label}>
         <View style={styles.wheels}>
           <Wheel items={days} index={Math.min(d, daysIn) - 1} onChange={(i) => setD(i + 1)} width={64} />
@@ -189,16 +198,25 @@ export function DateField({ label, value, onChange }: { label: string; value: st
 export function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (hm: string) => void }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
-  const [H, Mi] = value ? value.split(':').map(Number) : [12, 0];
+  const parse = (v: string) => (v ? v.split(':').map(Number) : [12, 0]);
+  const [H, Mi] = parse(value);
   const [h12, setH12] = useState(H % 12 === 0 ? 12 : H % 12);
   const [min, setMin] = useState(Mi);
   const [pm, setPm] = useState(H >= 12);
   const hours = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i + 1)), []);
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => pad(i)), []);
+  // The value can arrive after mount (saved Kundli couple, profile prefill): start the wheels from it on every open.
+  const show = () => {
+    const [vh, vm] = parse(value);
+    setH12(vh % 12 === 0 ? 12 : vh % 12);
+    setMin(vm);
+    setPm(vh >= 12);
+    setOpen(true);
+  };
 
   return (
     <>
-      <FieldButton label={label} value={formatTime(value)} placeholder="--:-- --" icon="time-outline" onPress={() => setOpen(true)} />
+      <FieldButton label={label} value={formatTime(value)} placeholder="--:-- --" icon="time-outline" onPress={show} />
       <Sheet visible={open} onClose={() => setOpen(false)} title={label}>
         <View style={styles.wheels}>
           <Wheel items={hours} index={h12 - 1} onChange={(i) => setH12(i + 1)} width={64} />

@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AppState, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CountUp, useStarRefresh } from '@/components/effects';
 import { Sheet } from '@/components/pickers';
@@ -15,7 +15,7 @@ import { SiteImages, StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, weeklyTrio } from '@/lib/daily';
+import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, todayKey, weeklyTrio } from '@/lib/daily';
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { openSocial } from '@/lib/links';
@@ -23,6 +23,23 @@ import { notificationsAvailable, requestNotificationPermission, syncNotification
 import { shareStory } from '@/lib/share';
 import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
 import { useToday } from '@/lib/today';
+
+/** Testimonials are fetched once per app session (shared across remounts); pull-to-refresh fetches them again. */
+let testimonialsOnce: Promise<Testimonial[]> | null = null;
+
+/** Resolves with `fallback` if `p` fails or takes longer than `ms` (a pull-to-refresh must never spin forever). */
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p.catch(() => fallback), new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+}
+
+/** The session's testimonials; `force` fetches again (keeping the previous list if that fails or times out). */
+function reviews(force = false): Promise<Testimonial[]> {
+  if (!testimonialsOnce || force) {
+    const before = testimonialsOnce ?? Promise.resolve([]);
+    testimonialsOnce = withTimeout<Testimonial[] | null>(loadTestimonials(), 12_000, null).then((v) => v ?? before);
+  }
+  return testimonialsOnce;
+}
 
 export default function HomeScreen() {
   const { t, lang } = useLang();
@@ -39,27 +56,67 @@ export default function HomeScreen() {
   const trio = weeklyTrio();
   const today = useToday();
 
-  const load = useCallback(async () => {
+  // Card of the day + streak. Home stays mounted under the other tabs, so this also runs when the app comes back
+  // to the foreground and when the date changes (see below) — not only on tab focus.
+  const loadDaily = useCallback(async () => {
     setDaily(await getTodaysDraw());
     setStreak(await getStreak());
-    today.refresh();
-    setTestimonials(await loadTestimonials());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const refreshNow = today.refresh;
+  const load = useCallback(async () => {
+    await loadDaily();
+    refreshNow();
+  }, [loadDaily, refreshNow]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
+  // Testimonials: once per app session, not on every focus (pull-to-refresh fetches them again).
+  useEffect(() => {
+    let alive = true;
+    reviews().then((list) => alive && setTestimonials(list));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
-  const { control, banner } = useStarRefresh(load);
+  // Back from the background: re-read the clock (a new day gives a new card and a reset-aware streak).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && refreshNow());
+    return () => sub.remove();
+  }, [refreshNow]);
+  // today.now ticks every minute while open: reload the card and streak when the local date changes (midnight).
+  const dayKey = todayKey(today.now);
+  const firstDay = useRef(dayKey);
+  useEffect(() => {
+    if (dayKey === firstDay.current) return;
+    firstDay.current = dayKey;
+    loadDaily();
+  }, [dayKey, loadDaily]);
+
+  const pullRefresh = useCallback(async () => {
+    await Promise.all([load(), reviews(true).then(setTestimonials)]);
+  }, [load]);
+
+  const { control, banner } = useStarRefresh(pullRefresh);
   const dailyCard = daily ? getCard(daily.cardId) : undefined;
   const contentW = Math.min(width, 640) - Spacing.lg * 2; // card trio + testimonials
 
   const reveal = async () => {
-    if (!daily || daily.revealed) {
-      if (dailyCard) router.push(`/card/${dailyCard.id}`);
+    // The screen may still show yesterday's card (e.g. open since before midnight): load today's first, so the card
+    // that flips is the one that gets saved, and the streak is counted from today.
+    if (!daily || daily.date !== todayKey()) {
+      const wasRevealed = !!daily?.revealed;
+      await loadDaily();
+      if (wasRevealed) return; // show today's face-down card; the next tap reveals it
+    }
+    const current = await getTodaysDraw();
+    if (current.revealed) {
+      setDaily(current);
+      router.push(`/card/${current.cardId}`);
       return;
     }
     tap('success');

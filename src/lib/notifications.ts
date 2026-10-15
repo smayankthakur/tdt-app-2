@@ -162,12 +162,40 @@ async function doSync(): Promise<void> {
   }
 }
 
+// The same tap can be reported twice (launch response + listener): handle each one once.
+let handledTap = '';
+function takeTap(r: Any): string | null {
+  const url = r?.notification?.request?.content?.data?.url;
+  const key = `${r?.notification?.request?.identifier ?? ''}|${r?.notification?.date ?? ''}`;
+  if (!r || key === handledTap) return null;
+  handledTap = key;
+  try {
+    N.clearLastNotificationResponse?.(); // so it doesn't fire again
+  } catch {
+    // ignore
+  }
+  return typeof url === 'string' ? url : null;
+}
+
+/**
+ * The notification tap that opened the app from fully closed (it arrives before any listener is added).
+ * Returns its target once, then clears it; null when there is none.
+ */
+export function takeLaunchNotificationUrl(): string | null {
+  if (!N?.getLastNotificationResponse) return null;
+  try {
+    return takeTap(N.getLastNotificationResponse());
+  } catch {
+    return null;
+  }
+}
+
 /** Subscribe to notification taps; returns an unsubscribe function. */
 export function onNotificationTap(cb: (url: string) => void): () => void {
   if (!N) return () => {};
   const sub = N.addNotificationResponseReceivedListener((r: Any) => {
-    const url = r?.notification?.request?.content?.data?.url;
-    if (typeof url === 'string') cb(url);
+    const url = takeTap(r);
+    if (url) cb(url);
   });
   return () => sub.remove();
 }

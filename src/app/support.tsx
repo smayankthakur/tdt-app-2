@@ -14,6 +14,7 @@ import { useSession } from '@/lib/session';
 
 const ISSUES = ['login_after_sub', 'billing', 'technical', 'other'] as const;
 const MAX_SHOT = 1_600_000; // characters per screenshot — two must fit in the support desk's ~4.5 MB request limit
+const SEND_TIMEOUT = 15_000; // ms
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
 /**
@@ -55,19 +56,25 @@ function SupportScreen() {
     }
     setError('');
     setBusy(true);
+    // A stalled connection must not leave the button spinning forever.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT);
     try {
       const res = await fetch(SupportApi, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), issue, description: description.trim(), paymentScreenshot, errorScreenshot }),
+        signal: ctrl.signal,
       });
       const data = (await res.json().catch(() => null)) as { status?: string } | null;
       if (!res.ok || data?.status !== 'success') throw new Error('failed');
       tap('success');
       setSent(true);
     } catch {
+      // offline, timed out or rejected by the desk — the form stays filled so the user can just tap Send again
       setError(t('support.failed'));
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   };

@@ -14,7 +14,7 @@ import { Colors, Fonts } from '@/constants/theme';
 import i18n, { loadSavedLanguage } from '@/i18n';
 import { initCrashReporting, wrapRoot } from '@/lib/crash';
 import { startEvents } from '@/lib/events';
-import { onNotificationTap, syncNotifications } from '@/lib/notifications';
+import { onNotificationTap, syncNotifications, takeLaunchNotificationUrl } from '@/lib/notifications';
 import { CheckoutHost } from '@/lib/payments/checkout';
 import { SessionProvider } from '@/lib/session';
 
@@ -59,13 +59,19 @@ function RootLayout() {
   // while fonts load) throws "Attempted to navigate before mounting the Root Layout".
   useEffect(() => {
     if (!ready) return;
-    return onNotificationTap((url) => {
+    // Retried a few times: right after a cold start the navigator may not be ready on the first try
+    const go = (url: string, tries = 0) => {
       try {
         router.navigate(url as '/');
       } catch {
-        // ignore
+        if (tries < 5) setTimeout(() => go(url, tries + 1), 300);
       }
-    });
+    };
+    // A tap that cold-started the app happened before this listener existed: open its target now (taken once,
+    // then cleared). Deferred a tick so the navigator below has finished mounting.
+    const launch = takeLaunchNotificationUrl();
+    if (launch) setTimeout(() => go(launch), 0);
+    return onNotificationTap(go);
   }, [ready]);
 
   // Re-plan local notifications (festival dates, streak) on start, on return to the app and on a language change.

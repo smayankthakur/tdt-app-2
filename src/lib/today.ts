@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { InteractionManager } from 'react-native';
 
 import type { City } from '@/data/cities';
@@ -68,8 +68,20 @@ export type MoonState = { moon: BirthMoon | null; needsTime: boolean };
 
 /** The user's birth Moon: a sign they picked by hand wins, else worked out from the profile. */
 export function useBirthMoon() {
-  const { profile } = useSession();
+  const { profile, version } = useSession();
   const [picked, setPickedState] = useStored<PickedMoon | null>(Storage.getMoonSign);
+  // Log-out / another account clears the stored sign (Storage.clearUserData) and bumps the session version:
+  // re-read it so Home and Horoscope don't keep the previous person's Moon sign in memory.
+  const firstVersion = useRef(version);
+  useEffect(() => {
+    if (version === firstVersion.current) return;
+    firstVersion.current = version;
+    let alive = true;
+    Storage.getMoonSign().then((m) => alive && setPickedState(m));
+    return () => {
+      alive = false;
+    };
+  }, [version, setPickedState]);
   const setPicked = useCallback(
     async (m: PickedMoon | null) => {
       setPickedState(m);

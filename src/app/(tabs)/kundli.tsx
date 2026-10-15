@@ -60,6 +60,16 @@ function KundliForm() {
     hasEntitlement(Products.kundliReport.id).then(setUnlocked);
   }, [version]);
 
+  // Editing either person makes the shown match stale: hide it until "Match" is pressed again.
+  const editBoy = (p: Person) => {
+    setBoy(p);
+    setResult(null);
+  };
+  const editGirl = (p: Person) => {
+    setGirl(p);
+    setResult(null);
+  };
+
   const valid = (p: Person) => !!p.dob && !!p.place && (p.unknownTime || !!p.tob);
 
   const match = () => {
@@ -84,8 +94,8 @@ function KundliForm() {
       <Eyebrow>{t('kundli.sub')}</Eyebrow>
       <Title>{t('kundli.title')}</Title>
 
-      <PersonForm title={t('kundli.boy')} icon="male" value={boy} onChange={setBoy} />
-      <PersonForm title={t('kundli.girl')} icon="female" value={girl} onChange={setGirl} />
+      <PersonForm title={t('kundli.boy')} icon="male" value={boy} onChange={editBoy} />
+      <PersonForm title={t('kundli.girl')} icon="female" value={girl} onChange={editGirl} />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Button label={t('kundli.match')} icon="heart" onPress={match} />

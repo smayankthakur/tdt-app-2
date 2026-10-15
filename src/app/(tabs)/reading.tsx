@@ -20,7 +20,7 @@ import { buildReading, readingToText, type Reading } from '@/lib/ginni/engine';
 import { classify, type Intent } from '@/lib/ginni/intents';
 import { track } from '@/lib/events';
 import { recall } from '@/lib/ginni/memory';
-import { consumeReading, getQuota, type QuotaState } from '@/lib/quota';
+import { checkReading, getAccess, type Access } from '@/lib/quota';
 import { useSession } from '@/lib/session';
 import { shareStory } from '@/lib/share';
 import { Storage } from '@/lib/storage';
@@ -33,6 +33,8 @@ type Msg =
   | { id: string; kind: 'paywall' };
 
 const uid = () => Math.random().toString(36).slice(2);
+
+type Drawing = { intent: Intent; question: string; deck: string[]; picked: number[] };
 
 /** Ginni needs a login. The chat is keyed by account, so nobody ever sees the previous user's chat. */
 export default function ReadingScreen() {
@@ -54,17 +56,36 @@ function ReadingChat() {
   const { user, version } = useSession();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [drawing, setDrawing] = useState<{ intent: Intent; question: string; deck: string[]; picked: number[] } | null>(null);
-  const [quota, setQuota] = useState<QuotaState>({ unlimited: false, left: 0 });
+  const [drawing, setDrawingState] = useState<Drawing | null>(null);
+  // Mirror of `drawing` that changes at once, so two fast taps can't pick for the same position twice
+  const drawRef = useRef<Drawing | null>(null);
+  const setDrawing = (d: Drawing | null) => {
+    drawRef.current = d;
+    setDrawingState(d);
+  };
+  const [access, setAccess] = useState<Access>('loading');
+  // Cards are on the table and the reading is being written: the input stays hidden until it is shown
+  const [revealing, setRevealing] = useState(false);
+  // The question asked without a plan: answered right after a successful payment
+  const pendingQ = useRef<string | null>(null);
   const scroll = useRef<ScrollView>(null);
   const starting = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const againTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      if (againTimer.current) clearTimeout(againTimer.current);
+    },
+    [],
+  );
 
   const uidNow = user?.uid ?? null;
-  const refreshQuota = useCallback(() => {
-    getQuota(uidNow).then(setQuota);
+  const refreshAccess = useCallback(() => {
+    getAccess(uidNow).then((a) => setAccess((prev) => (a === 'offline' && prev !== 'loading' ? prev : a)));
   }, [uidNow]);
-  useFocusEffect(refreshQuota);
-  useEffect(refreshQuota, [version, refreshQuota]);
+  useFocusEffect(refreshAccess);
+  useEffect(refreshAccess, [version, refreshAccess]);
 
   // "Ginni remembers": greet a returning user with their last topic (history synced from the account first)
   const [lastReading, setLastReading] = useState<{ createdAt: number; intentId: string } | null>(null);
@@ -89,62 +110,84 @@ function ReadingChat() {
     scrollToEnd();
   };
 
-  const ask = async (q: string) => {
+  /** `again`: re-asking the saved question after a payment (its bubble is already in the chat). */
+  const ask = async (q: string, again = false) => {
     const question = q.trim();
     if (!question) {
       push({ id: uid(), kind: 'ginni', text: t('reading.empty') });
       return;
     }
-    if (drawing || starting.current) return;
+    if (drawRef.current || revealing || starting.current) return;
     starting.current = true;
     tap();
     setInput('');
-    const qState = await getQuota(uidNow);
+    const waitId = uid();
+    push(...(again ? [] : [{ id: uid(), kind: 'user' as const, text: question }]), { id: waitId, kind: 'ginni', text: t('reading.checking') });
+    // The server decides BEFORE any card is drawn: only Ginni Unlimited / website Premium can read (no free readings)
+    const check = await checkReading(uidNow);
     starting.current = false;
-    setQuota(qState);
-    if (!qState.unlimited && qState.left <= 0) {
-      push({ id: uid(), kind: 'user', text: question }, { id: uid(), kind: 'ginni', text: t('reading.quotaOut') }, { id: uid(), kind: 'paywall' });
+    setMessages((prev) => prev.filter((m) => m.id !== waitId));
+    if (check === 'offline') {
+      push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
+      setInput(question); // ready to send again
       return;
     }
+    if (check === 'limit') {
+      setAccess('none');
+      pendingQ.current = question;
+      // A payment for Ginni Unlimited is still being confirmed: never offer to pay again
+      const waiting = (await Storage.getPendingOrders()).some(
+        (o) => o.uid === uidNow && o.productId === Products.ginniUnlimited.id && Date.now() - o.createdAt < 3 * 86_400_000,
+      );
+      // Only one paywall in the chat: the newest question's
+      setMessages((prev) => prev.filter((m) => !m.id.startsWith('pw-')));
+      push(
+        ...(waiting
+          ? [{ id: `pw-${uid()}`, kind: 'ginni' as const, text: t('paywall.pending') }]
+          : [{ id: `pw-${uid()}`, kind: 'ginni' as const, text: t('reading.quotaOut') }, { id: `pw-${uid()}`, kind: 'paywall' as const }]),
+      );
+      return;
+    }
+    setAccess('active');
+    pendingQ.current = null;
     const intent = classify(question);
     track('reading_start');
     const count = intent.positions.length;
-    push(
-      { id: uid(), kind: 'user', text: question },
-      {
-        id: uid(),
-        kind: 'ginni',
-        text: t(count === 1 ? 'reading.understood' : 'reading.understoodPlural', { intent: t(`intents.${intent.id}`), count }),
-      },
-    );
+    push({
+      id: uid(),
+      kind: 'ginni',
+      text: t(count === 1 ? 'reading.understood' : 'reading.understoodPlural', { intent: t(`intents.${intent.id}`), count }),
+    });
     setDrawing({ intent, question, deck: shuffle(DECK.map((c) => c.id)), picked: [] });
   };
 
+  // Paid (from the paywall card, or confirmed later when the app comes back): answer the question that was waiting
+  const onUnlocked = () => setAccess('active');
+  useEffect(() => {
+    if (access !== 'active' || !pendingQ.current) return;
+    const q = pendingQ.current;
+    pendingQ.current = null;
+    push({ id: uid(), kind: 'ginni', text: t('reading.askAgainAfterPay') });
+    againTimer.current = setTimeout(() => ask(q, true), 600);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access]);
+
   const pick = (index: number) => {
-    if (!drawing || drawing.picked.includes(index)) return;
-    const picked = [...drawing.picked, index];
-    const total = drawing.intent.positions.length;
-    const cardId = drawing.deck[index];
-    push({ id: uid(), kind: 'card', cardId, position: drawing.intent.positions[picked.length - 1], n: picked.length, total });
+    const d = drawRef.current;
+    if (!d || d.picked.includes(index)) return;
+    const picked = [...d.picked, index];
+    const total = d.intent.positions.length;
+    const cardId = d.deck[index];
+    push({ id: uid(), kind: 'card', cardId, position: d.intent.positions[picked.length - 1], n: picked.length, total });
     if (picked.length < total) {
-      setDrawing({ ...drawing, picked });
+      setDrawing({ ...d, picked });
       return;
     }
-    const { intent, question } = drawing;
-    const ids = picked.map((i) => drawing.deck[i]);
+    const { intent, question } = d;
+    const ids = picked.map((i) => d.deck[i]);
     setDrawing(null);
-    setTimeout(async () => {
-      // Checked here, on the server: only Ginni Unlimited / website Premium can read (no free readings)
-      const used = await consumeReading(uidNow);
-      if (used === 'offline') {
-        push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
-        return;
-      }
-      if (used === 'limit') {
-        push({ id: uid(), kind: 'ginni', text: t('reading.quotaOut') }, { id: uid(), kind: 'paywall' });
-        refreshQuota();
-        return;
-      }
+    setRevealing(true);
+    timer.current = setTimeout(async () => {
       const reading = buildReading(intent, ids, lang);
       track('reading_done');
       const mem = recall(await Storage.getHistory(), intent.id, ids);
@@ -159,9 +202,9 @@ function ReadingChat() {
             },
           ]
         : [];
-      push({ id: uid(), kind: 'ginni', text: t('reading.revealing') }, ...memMsg, { id: uid(), kind: 'reading', question, reading });
+      push(...memMsg, { id: uid(), kind: 'ginni', text: t('reading.revealing') }, { id: uid(), kind: 'reading', question, reading });
+      setRevealing(false);
       tap('success');
-      refreshQuota();
       await pushReading(uidNow, {
         id: `${Date.now()}`,
         createdAt: Date.now(),
@@ -182,7 +225,11 @@ function ReadingChat() {
         </LinearGradient>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{t('reading.title')}</Text>
-          <Text style={styles.subtitle}>{quota.unlimited ? t('reading.unlimited') : t('reading.quotaLeft', { count: quota.left })}</Text>
+          {access !== 'offline' && (
+            <Text style={styles.subtitle}>
+              {access === 'active' ? t('reading.unlimited') : access === 'loading' ? t('reading.statusLoading') : t('reading.quotaLeft')}
+            </Text>
+          )}
         </View>
         <Pressable accessibilityLabel={t('reading.history')} onPress={() => router.push('/history')} hitSlop={10} style={styles.iconBtn}>
           <Ionicons name="time-outline" size={22} color={Colors.gold} />
@@ -204,7 +251,7 @@ function ReadingChat() {
             />
           )}
           {messages.map((m) => (
-            <MessageView key={m.id} m={m} onAgain={() => setMessages([])} />
+            <MessageView key={m.id} m={m} onAgain={() => setMessages([])} active={access === 'active'} onUnlocked={onUnlocked} />
           ))}
         </ScrollView>
 
@@ -214,6 +261,8 @@ function ReadingChat() {
               <Text style={styles.pulled}>{t('reading.pulled', { n: drawing.picked.length + 1, total: drawing.intent.positions.length })}</Text>
               <CardFan count={78} picked={drawing.picked} onPick={pick} hint={t('reading.fanHint')} />
             </Animated.View>
+          ) : revealing ? (
+            <ActivityIndicator color={Colors.gold} style={{ paddingVertical: Spacing.lg }} />
           ) : (
             <>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
@@ -252,7 +301,7 @@ function ReadingChat() {
 function LoginGate() {
   const { t } = useLang();
   const perks: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
-    ['gift-outline', t('reading.gatePerkFree')],
+    ['sparkles-outline', t('reading.gatePerkFree', { price: Products.ginniUnlimited.price, days: Products.ginniUnlimited.days })],
     ['bookmark-outline', t('reading.gatePerkSaved')],
     ['infinite-outline', t('reading.gatePerkShared')],
   ];
@@ -288,7 +337,7 @@ function LoginGate() {
   );
 }
 
-function MessageView({ m, onAgain }: { m: Msg; onAgain: () => void }) {
+function MessageView({ m, onAgain, active = false, onUnlocked = () => {} }: { m: Msg; onAgain: () => void; active?: boolean; onUnlocked?: () => void }) {
   const { t } = useLang();
   if (m.kind === 'user') {
     return (
@@ -309,10 +358,11 @@ function MessageView({ m, onAgain }: { m: Msg; onAgain: () => void }) {
     return (
       <Paywall
         product={Products.ginniUnlimited}
-        title={Products.ginniUnlimited.name}
-        body={t('reading.quotaOut')}
+        title={t('reading.paywallTitle')}
+        body={t('reading.paywallBody', { days: Products.ginniUnlimited.days })}
         cta={t('reading.subscribe', { price: Products.ginniUnlimited.price, days: Products.ginniUnlimited.days })}
-        onUnlocked={() => {}}
+        onUnlocked={onUnlocked}
+        active={active}
       />
     );
   }
