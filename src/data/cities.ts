@@ -6,7 +6,17 @@
  * (e.g. London/New York summer), the user must adjust the offset (+1h) manually.
  * India has used a single offset (IST, +5:30) since 1955.
  */
-export type City = { name: string; state: string; country: string; lat: number; lon: number; tz: number };
+export type City = {
+  name: string;
+  state: string;
+  country: string;
+  lat: number;
+  lon: number;
+  tz: number;
+  /** Daylight-saving rule used for Panchang times today (src/lib/kundli/dst.ts); birth times stay on standard time. */
+  dst?: DstRule;
+};
+export type DstRule = 'eu' | 'us' | 'au' | 'nz';
 
 type Row = [name: string, lat: number, lon: number];
 
@@ -529,31 +539,31 @@ const WORLD: City[] = [
   { name: 'Bangkok', state: 'Bangkok', country: 'Thailand', lat: 13.76, lon: 100.5, tz: 7 },
   { name: 'Hong Kong', state: 'Hong Kong', country: 'China', lat: 22.32, lon: 114.17, tz: 8 },
   { name: 'Tokyo', state: 'Tokyo', country: 'Japan', lat: 35.68, lon: 139.69, tz: 9 },
-  { name: 'Sydney', state: 'New South Wales', country: 'Australia', lat: -33.87, lon: 151.21, tz: 10 },
-  { name: 'Melbourne', state: 'Victoria', country: 'Australia', lat: -37.81, lon: 144.96, tz: 10 },
+  { name: 'Sydney', state: 'New South Wales', country: 'Australia', lat: -33.87, lon: 151.21, tz: 10, dst: 'au' },
+  { name: 'Melbourne', state: 'Victoria', country: 'Australia', lat: -37.81, lon: 144.96, tz: 10, dst: 'au' },
   { name: 'Perth', state: 'Western Australia', country: 'Australia', lat: -31.95, lon: 115.86, tz: 8 },
-  { name: 'Auckland', state: 'Auckland', country: 'New Zealand', lat: -36.85, lon: 174.76, tz: 12 },
+  { name: 'Auckland', state: 'Auckland', country: 'New Zealand', lat: -36.85, lon: 174.76, tz: 12, dst: 'nz' },
   { name: 'Suva', state: 'Central', country: 'Fiji', lat: -18.14, lon: 178.44, tz: 12 },
-  { name: 'London', state: 'England', country: 'United Kingdom', lat: 51.51, lon: -0.13, tz: 0 },
-  { name: 'Birmingham', state: 'England', country: 'United Kingdom', lat: 52.49, lon: -1.89, tz: 0 },
-  { name: 'Leicester', state: 'England', country: 'United Kingdom', lat: 52.64, lon: -1.13, tz: 0 },
-  { name: 'Manchester', state: 'England', country: 'United Kingdom', lat: 53.48, lon: -2.24, tz: 0 },
-  { name: 'Paris', state: 'Île-de-France', country: 'France', lat: 48.86, lon: 2.35, tz: 1 },
-  { name: 'Frankfurt', state: 'Hesse', country: 'Germany', lat: 50.11, lon: 8.68, tz: 1 },
-  { name: 'Amsterdam', state: 'North Holland', country: 'Netherlands', lat: 52.37, lon: 4.9, tz: 1 },
-  { name: 'New York', state: 'New York', country: 'United States', lat: 40.71, lon: -74.01, tz: -5 },
-  { name: 'Edison', state: 'New Jersey', country: 'United States', lat: 40.52, lon: -74.41, tz: -5 },
-  { name: 'Washington, D.C.', state: 'District of Columbia', country: 'United States', lat: 38.91, lon: -77.04, tz: -5 },
-  { name: 'Chicago', state: 'Illinois', country: 'United States', lat: 41.88, lon: -87.63, tz: -6 },
-  { name: 'Houston', state: 'Texas', country: 'United States', lat: 29.76, lon: -95.37, tz: -6 },
-  { name: 'Dallas', state: 'Texas', country: 'United States', lat: 32.78, lon: -96.8, tz: -6 },
-  { name: 'San Francisco', state: 'California', country: 'United States', lat: 37.77, lon: -122.42, tz: -8 },
-  { name: 'San Jose', state: 'California', country: 'United States', lat: 37.34, lon: -121.89, tz: -8 },
-  { name: 'Los Angeles', state: 'California', country: 'United States', lat: 34.05, lon: -118.24, tz: -8 },
-  { name: 'Seattle', state: 'Washington', country: 'United States', lat: 47.61, lon: -122.33, tz: -8 },
-  { name: 'Toronto', state: 'Ontario', country: 'Canada', lat: 43.65, lon: -79.38, tz: -5 },
-  { name: 'Brampton', state: 'Ontario', country: 'Canada', lat: 43.73, lon: -79.76, tz: -5 },
-  { name: 'Vancouver', state: 'British Columbia', country: 'Canada', lat: 49.28, lon: -123.12, tz: -8 },
+  { name: 'London', state: 'England', country: 'United Kingdom', lat: 51.51, lon: -0.13, tz: 0, dst: 'eu' },
+  { name: 'Birmingham', state: 'England', country: 'United Kingdom', lat: 52.49, lon: -1.89, tz: 0, dst: 'eu' },
+  { name: 'Leicester', state: 'England', country: 'United Kingdom', lat: 52.64, lon: -1.13, tz: 0, dst: 'eu' },
+  { name: 'Manchester', state: 'England', country: 'United Kingdom', lat: 53.48, lon: -2.24, tz: 0, dst: 'eu' },
+  { name: 'Paris', state: 'Île-de-France', country: 'France', lat: 48.86, lon: 2.35, tz: 1, dst: 'eu' },
+  { name: 'Frankfurt', state: 'Hesse', country: 'Germany', lat: 50.11, lon: 8.68, tz: 1, dst: 'eu' },
+  { name: 'Amsterdam', state: 'North Holland', country: 'Netherlands', lat: 52.37, lon: 4.9, tz: 1, dst: 'eu' },
+  { name: 'New York', state: 'New York', country: 'United States', lat: 40.71, lon: -74.01, tz: -5, dst: 'us' },
+  { name: 'Edison', state: 'New Jersey', country: 'United States', lat: 40.52, lon: -74.41, tz: -5, dst: 'us' },
+  { name: 'Washington, D.C.', state: 'District of Columbia', country: 'United States', lat: 38.91, lon: -77.04, tz: -5, dst: 'us' },
+  { name: 'Chicago', state: 'Illinois', country: 'United States', lat: 41.88, lon: -87.63, tz: -6, dst: 'us' },
+  { name: 'Houston', state: 'Texas', country: 'United States', lat: 29.76, lon: -95.37, tz: -6, dst: 'us' },
+  { name: 'Dallas', state: 'Texas', country: 'United States', lat: 32.78, lon: -96.8, tz: -6, dst: 'us' },
+  { name: 'San Francisco', state: 'California', country: 'United States', lat: 37.77, lon: -122.42, tz: -8, dst: 'us' },
+  { name: 'San Jose', state: 'California', country: 'United States', lat: 37.34, lon: -121.89, tz: -8, dst: 'us' },
+  { name: 'Los Angeles', state: 'California', country: 'United States', lat: 34.05, lon: -118.24, tz: -8, dst: 'us' },
+  { name: 'Seattle', state: 'Washington', country: 'United States', lat: 47.61, lon: -122.33, tz: -8, dst: 'us' },
+  { name: 'Toronto', state: 'Ontario', country: 'Canada', lat: 43.65, lon: -79.38, tz: -5, dst: 'us' },
+  { name: 'Brampton', state: 'Ontario', country: 'Canada', lat: 43.73, lon: -79.76, tz: -5, dst: 'us' },
+  { name: 'Vancouver', state: 'British Columbia', country: 'Canada', lat: 49.28, lon: -123.12, tz: -8, dst: 'us' },
   { name: 'Port of Spain', state: 'Port of Spain', country: 'Trinidad and Tobago', lat: 10.65, lon: -61.52, tz: -4 },
   { name: 'Port Louis', state: 'Port Louis', country: 'Mauritius', lat: -20.16, lon: 57.5, tz: 4 },
   { name: 'Nairobi', state: 'Nairobi', country: 'Kenya', lat: -1.29, lon: 36.82, tz: 3 },

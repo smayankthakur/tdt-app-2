@@ -8,18 +8,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CardFan } from '@/components/card-fan';
 import { Paywall } from '@/components/paywall';
+import { StoryFrame, storyStyles } from '@/components/share-card';
 import { CardFront, FlipCard } from '@/components/tarot-card';
 import { Button, tap } from '@/components/ui';
 import { Products } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/constants/theme';
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { pushReading } from '@/lib/cloud/db';
+import { pushReading, syncReadings } from '@/lib/cloud/db';
 import { buildReading, readingToText, type Reading } from '@/lib/ginni/engine';
 import { classify, type Intent } from '@/lib/ginni/intents';
+import { track } from '@/lib/events';
+import { recall } from '@/lib/ginni/memory';
 import { consumeReading, getQuota, type QuotaState } from '@/lib/quota';
 import { useSession } from '@/lib/session';
-import { shareViewAsImage } from '@/lib/share';
+import { shareStory } from '@/lib/share';
+import { Storage } from '@/lib/storage';
 
 type Msg =
   | { id: string; kind: 'ginni'; text: string }
@@ -51,7 +55,7 @@ function ReadingChat() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [drawing, setDrawing] = useState<{ intent: Intent; question: string; deck: string[]; picked: number[] } | null>(null);
-  const [quota, setQuota] = useState<QuotaState>({ unlimited: false, left: 3 });
+  const [quota, setQuota] = useState<QuotaState>({ unlimited: false, left: 0 });
   const scroll = useRef<ScrollView>(null);
   const starting = useRef(false);
 
@@ -62,6 +66,22 @@ function ReadingChat() {
   useFocusEffect(refreshQuota);
   useEffect(refreshQuota, [version, refreshQuota]);
 
+  // "Ginni remembers": greet a returning user with their last topic (history synced from the account first)
+  const [lastReading, setLastReading] = useState<{ createdAt: number; intentId: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (uidNow) await syncReadings(uidNow);
+      const recent = (await Storage.getHistory())
+        .filter((r) => Date.now() - r.createdAt < 30 * 86_400_000)
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+      if (alive && recent) setLastReading({ createdAt: recent.createdAt, intentId: recent.intentId });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [uidNow]);
+  const shortDate = (ms: number) => new Date(ms).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' });
 
   const scrollToEnd = () => setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 120);
   const push = (...m: Msg[]) => {
@@ -87,6 +107,7 @@ function ReadingChat() {
       return;
     }
     const intent = classify(question);
+    track('reading_start');
     const count = intent.positions.length;
     push(
       { id: uid(), kind: 'user', text: question },
@@ -125,7 +146,20 @@ function ReadingChat() {
         return;
       }
       const reading = buildReading(intent, ids, lang);
-      push({ id: uid(), kind: 'ginni', text: t('reading.revealing') }, { id: uid(), kind: 'reading', question, reading });
+      track('reading_done');
+      const mem = recall(await Storage.getHistory(), intent.id, ids);
+      const memMsg: Msg[] = mem
+        ? [
+            {
+              id: uid(),
+              kind: 'ginni',
+              text: `💭 ${t('memory.lastTime', { date: shortDate(mem.date), topic: t(`intents.${mem.topicId}`), card: mem.card })} ${t(`memory.${mem.trend}`)}${
+                mem.count >= 3 ? ` ${t('memory.nth', { count: mem.count, topic: t(`intents.${intent.id}`) })}` : ''
+              }`,
+            },
+          ]
+        : [];
+      push({ id: uid(), kind: 'ginni', text: t('reading.revealing') }, ...memMsg, { id: uid(), kind: 'reading', question, reading });
       tap('success');
       refreshQuota();
       await pushReading(uidNow, {
@@ -159,6 +193,16 @@ function ReadingChat() {
         <ScrollView ref={scroll} contentContainerStyle={styles.chat} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* The greeting always follows the selected language */}
           <MessageView m={{ id: 'hello', kind: 'ginni', text: t('reading.greeting') }} onAgain={() => {}} />
+          {lastReading && messages.length === 0 && (
+            <MessageView
+              m={{
+                id: 'welcome',
+                kind: 'ginni',
+                text: t('memory.welcome', { date: shortDate(lastReading.createdAt), topic: t(`intents.${lastReading.intentId}`) }),
+              }}
+              onAgain={() => {}}
+            />
+          )}
           {messages.map((m) => (
             <MessageView key={m.id} m={m} onAgain={() => setMessages([])} />
           ))}
@@ -232,7 +276,12 @@ function LoginGate() {
             </View>
           ))}
           <Button label={t('auth.login')} icon="log-in-outline" onPress={() => router.push('/login')} />
-          <Button label={t('auth.createAccount')} variant="ghost" icon="person-add-outline" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
+          <Button
+            label={t('auth.createAccount')}
+            variant="ghost"
+            icon="person-add-outline"
+            onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })}
+          />
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -295,7 +344,19 @@ function PulledCard({ m }: { m: Extract<Msg, { kind: 'card' }> }) {
 function ReadingView({ question, reading, onAgain }: { question: string; reading: Reading; onAgain: () => void }) {
   const { t } = useLang();
   const ref = useRef<View>(null);
+  const storyRef = useRef<View>(null);
   const tr = (k: string, o?: Record<string, unknown>) => t(k, o) as string;
+  const [showQ, setShowQ] = useState(false);
+  // The story image is drawn only while sharing (a long chat would otherwise keep one per reading in memory).
+  const [shooting, setShooting] = useState(false);
+  useEffect(() => {
+    if (!shooting) return;
+    const id = setTimeout(() => {
+      shareStory(storyRef, readingToText(showQ ? question : '', reading, tr)).finally(() => setShooting(false));
+    }, 400); // let the card images draw first
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shooting]);
   return (
     <Animated.View entering={FadeInDown.duration(500)} style={{ gap: Spacing.sm }}>
       <View ref={ref} collapsable={false} style={styles.readingCard}>
@@ -340,16 +401,59 @@ function ReadingView({ question, reading, onAgain }: { question: string; reading
           icon="share-social-outline"
           small
           style={{ flex: 1 }}
-          onPress={() => shareViewAsImage(ref, readingToText(question, reading, tr))}
+          loading={shooting}
+          onPress={() => setShooting(true)}
         />
         <Button label={t('reading.ask')} variant="ghost" icon="refresh" small style={{ flex: 1 }} onPress={onAgain} />
       </View>
+      {question ? (
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: showQ }}
+          onPress={() => setShowQ(!showQ)}
+          style={styles.showQ}
+          hitSlop={6}>
+          <Ionicons name={showQ ? 'checkbox' : 'square-outline'} size={18} color={Colors.gold} />
+          <Text style={styles.showQText}>{t('share.question')}</Text>
+        </Pressable>
+      ) : null}
+
+      {/* 9:16 story image for WhatsApp status / Instagram (captured off-screen) */}
+      {shooting && (
+        <StoryFrame ref={storyRef} eyebrow="Ginni Ki Baatein" footer={t('share.footer')}>
+          {showQ && question ? <Text style={storyStyles.quote}>“{question}”</Text> : null}
+          {reading.verdict && <Text style={storyStyles.verdict}>{t(`reading.${reading.verdict}`)}</Text>}
+          <View style={storyStyles.row}>
+            {reading.cards.map((c) => (
+              <View key={c.cardId} style={{ alignItems: 'center', gap: 4 }}>
+                <CardFront card={getCard(c.cardId)!} width={reading.cards.length === 1 ? 150 : reading.cards.length === 2 ? 120 : 92} />
+                <Text style={storyStyles.label}>{getCard(c.cardId)?.name}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={storyStyles.label}>{t('reading.advice')}</Text>
+          <Text style={storyStyles.text} numberOfLines={6}>
+            {reading.advice}
+          </Text>
+        </StoryFrame>
+      )}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  gate: { flexGrow: 1, justifyContent: 'center', gap: Spacing.lg, padding: Spacing.lg, paddingBottom: TAB_BAR_SPACE + Spacing.lg, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  showQ: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center' },
+  showQText: { fontFamily: Fonts.body, fontSize: 13, color: Colors.textMuted },
+  gate: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    gap: Spacing.lg,
+    padding: Spacing.lg,
+    paddingBottom: TAB_BAR_SPACE + Spacing.lg,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+  },
   gateOrb: {
     width: 104,
     height: 104,
@@ -366,7 +470,14 @@ const styles = StyleSheet.create({
   },
   gateTitle: { fontFamily: Fonts.display, fontSize: 24, color: Colors.text, textAlign: 'center' },
   gateBody: { fontFamily: Fonts.serifItalic, fontSize: 17, lineHeight: 25, color: Colors.goldSoft, textAlign: 'center' },
-  gateCard: { gap: Spacing.md, padding: Spacing.lg, borderRadius: Radius.xl, backgroundColor: 'rgba(20,14,28,0.85)', borderWidth: 1, borderColor: Colors.cardBorder },
+  gateCard: {
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: Radius.xl,
+    backgroundColor: 'rgba(20,14,28,0.85)',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
   perk: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   perkIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.12)' },
   perkText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 14.5, color: Colors.text },
@@ -378,17 +489,40 @@ const styles = StyleSheet.create({
   chat: { padding: Spacing.lg, gap: Spacing.md, maxWidth: 680, width: '100%', alignSelf: 'center' },
   bubble: { maxWidth: '86%', paddingVertical: 11, paddingHorizontal: 15, borderRadius: 20 },
   userBubble: { alignSelf: 'flex-end', backgroundColor: Colors.gold, borderBottomRightRadius: 6 },
-  ginniBubble: { alignSelf: 'flex-start', backgroundColor: 'rgba(42,18,80,0.85)', borderWidth: 1, borderColor: 'rgba(182,123,214,0.35)', borderBottomLeftRadius: 6 },
+  ginniBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(42,18,80,0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(182,123,214,0.35)',
+    borderBottomLeftRadius: 6,
+  },
   userText: { fontFamily: Fonts.bodyMedium, fontSize: 15, color: Colors.bgDeep, lineHeight: 21 },
   ginniText: { fontFamily: Fonts.body, fontSize: 15, color: Colors.text, lineHeight: 22 },
   pulledRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, alignSelf: 'flex-start' },
   posLabel: { fontFamily: Fonts.bodySemi, fontSize: 12, color: Colors.gold, letterSpacing: 1, textTransform: 'uppercase' },
   cardName: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text },
   keywords: { fontFamily: Fonts.body, fontSize: 12.5, color: Colors.textMuted },
-  readingCard: { borderRadius: Radius.xl, padding: Spacing.lg, gap: Spacing.md, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(233,196,106,0.4)', backgroundColor: Colors.violetDeep },
+  readingCard: {
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.4)',
+    backgroundColor: Colors.violetDeep,
+  },
   readingBrand: { fontFamily: Fonts.display, fontSize: 14, color: Colors.goldSoft, letterSpacing: 1 },
   readingQ: { fontFamily: Fonts.serifItalic, fontSize: 18, lineHeight: 26, color: Colors.text },
-  verdict: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(233,196,106,0.15)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 6 },
+  verdict: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(233,196,106,0.15)',
+    borderRadius: Radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
   verdictLabel: { fontFamily: Fonts.body, color: Colors.goldSoft, fontSize: 13 },
   verdictValue: { fontFamily: Fonts.bodySemi, color: Colors.gold, fontSize: 15 },
   readingCards: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
@@ -401,9 +535,25 @@ const styles = StyleSheet.create({
   watermark: { fontFamily: Fonts.body, fontSize: 10.5, color: 'rgba(241,236,245,0.5)', textAlign: 'center' },
   pulled: { fontFamily: Fonts.bodySemi, fontSize: 12, color: Colors.gold, textAlign: 'center', letterSpacing: 1.5, textTransform: 'uppercase' },
   chips: { gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.cardBorder, backgroundColor: 'rgba(23,17,31,0.85)' },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    backgroundColor: 'rgba(23,17,31,0.85)',
+  },
   chipText: { fontFamily: Fonts.bodyMedium, fontSize: 13.5, color: Colors.text },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm, maxWidth: 680, width: '100%', alignSelf: 'center' },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
+  },
   input: {
     flex: 1,
     minHeight: 48,

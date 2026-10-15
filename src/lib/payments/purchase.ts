@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { Products, SiteImages, StorePolicy } from '@/constants/config';
 import { COURSES, type Course } from '@/data/courses';
 import { callFunction, cloudReady, type AppUser } from '@/lib/cloud/supabase';
+import { track } from '@/lib/events';
 import { openCheckout } from '@/lib/payments/checkout';
 import { grantEntitlement } from '@/lib/quota';
 import { Storage } from '@/lib/storage';
@@ -46,6 +47,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
   }
   // Remembered until confirmed, so a payment that completes late (UPI / bank) is still unlocked later.
   await Storage.addPendingOrder({ orderId: order.orderId, productId: product.id, uid: user.uid, createdAt: Date.now() });
+  track('checkout_start', { product: product.id });
 
   const result = await openCheckout({
     key: order.keyId,
@@ -69,6 +71,7 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
       const v = await callFunction<{ expiresAt: number }>('tdt-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
       await grantEntitlement(product.id, product.days, v.expiresAt);
       await Storage.removePendingOrder(order.orderId);
+      track('payment_success', { product: product.id });
       return 'success';
     } catch {
       // fall through to the order check below
@@ -79,7 +82,11 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
   // the server asks Razorpay directly whether this order was paid.
   // One quick look after a plain close; a few tries after a bank-page return.
   const paid = await confirmOrder(order.orderId, product, result.status === 'cancelled' ? [0] : [0, 2500, 5000]);
-  if (paid) return 'success';
+  if (paid) {
+    track('payment_success', { product: product.id });
+    return 'success';
+  }
+  track('payment_failed', { product: product.id, outcome: result.status });
   if (result.status === 'cancelled') return 'cancelled';
   return 'failed';
 }

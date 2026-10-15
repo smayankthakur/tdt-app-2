@@ -12,6 +12,7 @@ import { SiteImages } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
 import { AuthError, isEmail, resetPassword, signIn, signUp } from '@/lib/cloud/auth';
+import { recordInviter } from '@/lib/cloud/invite';
 import { useSession } from '@/lib/session';
 
 type Mode = 'login' | 'signup' | 'reset';
@@ -25,10 +26,11 @@ const MIN_PASSWORD = 6;
  */
 export default function LoginScreen() {
   const { t } = useLang();
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; code?: string }>();
   const { user } = useSession();
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'login');
   const [name, setName] = useState('');
+  const [invite, setInvite] = useState(typeof params.code === 'string' ? params.code : '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
@@ -82,6 +84,7 @@ export default function LoginScreen() {
         tap('success');
       } else if (mode === 'signup') {
         const r = await signUp(name, email, password);
+        if (invite.trim()) await recordInviter(invite); // best effort; a wrong code never blocks sign-up
         tap('success');
         if (r === 'confirm-email') setDone('confirm');
       } else {
@@ -208,6 +211,18 @@ export default function LoginScreen() {
                   />
                 )}
                 {mode === 'signup' && <Text style={styles.hint}>{t('auth.passwordHint', { count: MIN_PASSWORD })}</Text>}
+                {mode === 'signup' && (
+                  <Field
+                    icon="gift-outline"
+                    label={t('invite.haveCode')}
+                    value={invite}
+                    onChangeText={(v) => setInvite(v.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12))}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    returnKeyType="go"
+                    onSubmitEditing={submit}
+                  />
+                )}
 
                 {mode === 'login' && (
                   <Pressable onPress={() => switchMode('reset')} hitSlop={8} style={{ alignSelf: 'flex-end' }}>

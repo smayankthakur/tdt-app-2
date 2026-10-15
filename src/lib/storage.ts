@@ -20,7 +20,20 @@ const KEYS = {
   /** Razorpay orders opened but not confirmed yet — re-checked when the app opens */
   pendingOrders: 'tdt.pendingOrders.v1',
   bookings: 'tdt.bookings.v1',
+  /** Moon sign picked by hand for the daily horoscope (when there are no birth details) */
+  moonSign: 'tdt.moonSign.v1',
+  /** City used for Panchang / muhurat times */
+  place: 'tdt.place.v1',
+  /** Streak milestones already celebrated */
+  badges: 'tdt.badges.v1',
+  /** Which reminders are on (daily card, streak, festivals, horoscope) */
+  notify: 'tdt.notify.v1',
+  /** we asked once (after the first card reveal) whether to turn on the daily reminder */
+  remindAsked: 'tdt.remindAsked.v1',
 } as const;
+
+export type PickedMoon = { rashi: number; nakshatra: number | null };
+export type NotifySettings = { streak: boolean; festivals: boolean };
 
 export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number };
 
@@ -157,10 +170,22 @@ export const Storage = {
     await writeJSON(KEYS.owner, '');
     try {
       await AsyncStorage.removeItem(KEYS.kundliForm);
+      await AsyncStorage.removeItem(KEYS.moonSign);
     } catch {
       // non-fatal
     }
   },
+
+  getMoonSign: () => readJSON<PickedMoon | null>(KEYS.moonSign, null),
+  setMoonSign: (m: PickedMoon | null) => writeJSON(KEYS.moonSign, m),
+  getPlace: () => readJSON<import('@/lib/kundli/panchang').Place | null>(KEYS.place, null),
+  setPlace: (p: import('@/lib/kundli/panchang').Place) => writeJSON(KEYS.place, p),
+  getBadges: () => readJSON<number[]>(KEYS.badges, []),
+  setBadges: (b: number[]) => writeJSON(KEYS.badges, b),
+  getRemindAsked: () => readJSON<boolean>(KEYS.remindAsked, false),
+  setRemindAsked: () => writeJSON(KEYS.remindAsked, true),
+  getNotify: () => readJSON<NotifySettings>(KEYS.notify, { streak: true, festivals: true }),
+  setNotify: (n: NotifySettings) => writeJSON(KEYS.notify, n),
 
   /** A random number fixed per install, so each user gets their own daily card. */
   async getSeed(): Promise<number> {

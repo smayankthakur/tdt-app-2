@@ -6,17 +6,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CountUp, useStarRefresh } from '@/components/effects';
+import { Sheet } from '@/components/pickers';
+import { StoryFrame, storyStyles } from '@/components/share-card';
 import { CardFront, FlipCard } from '@/components/tarot-card';
+import { HoroscopeCard, HoroscopeSetup, MoonSignSheet, PanchangSummary } from '@/components/today';
 import { Body, Button, Card, Eyebrow, IconTile, Screen, SectionTitle, tap, type IconName } from '@/components/ui';
 import { SiteImages, StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { getStreak, getTodaysDraw, revealToday, weeklyTrio } from '@/lib/daily';
+import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, weeklyTrio } from '@/lib/daily';
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { openSocial } from '@/lib/links';
-import type { DailyDraw, Streak } from '@/lib/storage';
+import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
+import { shareStory } from '@/lib/share';
+import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
+import { useToday } from '@/lib/today';
 
 export default function HomeScreen() {
   const { t, lang } = useLang();
@@ -25,12 +31,20 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState<Streak>({ count: 0, lastDate: '' });
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const [milestone, setMilestone] = useState<number | null>(null);
+  const [askRemind, setAskRemind] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const streakShot = useRef<View>(null);
+  const dailyShot = useRef<View>(null);
   const trio = weeklyTrio();
+  const today = useToday();
 
   const load = useCallback(async () => {
     setDaily(await getTodaysDraw());
     setStreak(await getStreak());
+    today.refresh();
     setTestimonials(await loadTestimonials());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFocusEffect(
@@ -52,6 +66,19 @@ export default function HomeScreen() {
     const r = await revealToday();
     setDaily(r.draw);
     setStreak(r.streak);
+    const m = await claimMilestone(r.streak);
+    if (m) setMilestone(m);
+    syncNotifications(); // the streak reminder moves to tomorrow night
+    if (notificationsAvailable && !(await Storage.getRemindAsked()) && !(await Storage.getReminder()).enabled) setAskRemind(true);
+  };
+
+  const answerRemind = async (yes: boolean) => {
+    setAskRemind(false);
+    await Storage.setRemindAsked();
+    if (yes && (await requestNotificationPermission())) {
+      await Storage.setReminder({ enabled: true, hour: 8, minute: 0 });
+      await syncNotifications();
+    }
   };
 
   const features: { icon: IconName; label: string; onPress: () => void }[] = [
@@ -59,6 +86,8 @@ export default function HomeScreen() {
     { icon: 'sunny', label: t('home.featDaily'), onPress: reveal },
     { icon: 'planet', label: t('home.featKundli'), onPress: () => router.navigate('/kundli') },
     { icon: 'school', label: t('home.featCourses'), onPress: () => router.navigate('/courses') },
+    { icon: 'moon', label: t('today.horoscopeTitle'), onPress: () => router.push('/horoscope') },
+    { icon: 'calendar', label: t('panchang.title'), onPress: () => router.push('/panchang') },
     ...(StorePolicy.personalReadingLink ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => router.push('/booking') }] : []),
     { icon: 'library', label: t('home.featLibrary'), onPress: () => router.push('/deck') },
   ];
@@ -107,10 +136,25 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* Your day: horoscope + panchang */}
+        <SectionTitle>{t('today.title')}</SectionTitle>
+        {today.birth.loaded &&
+          (today.horoscope ? (
+            <HoroscopeCard h={today.horoscope} tz={today.panchang?.place.tz ?? today.place.tz} date={today.date} compact />
+          ) : !today.birth.moon ? (
+            <HoroscopeSetup needsTime={today.birth.needsTime} onPick={() => setPicking(true)} />
+          ) : null)}
+        {today.panchang && <PanchangSummary p={today.panchang} festivals={today.festivals} now={today.now} />}
+
         {/* Card of the Day */}
         <SectionTitle>{t('home.cotdTitle')}</SectionTitle>
-        <View style={styles.streak}>
-          <Text style={styles.streakText}>🔥 {streak.count > 0 ? t('home.cotdStreak', { count: streak.count }) : t('home.cotdStreakStart')}</Text>
+        <View style={styles.streakRow}>
+          <View style={styles.streak}>
+            <Text style={styles.streakText}>🔥 {streak.count > 0 ? t('home.cotdStreak', { count: streak.count }) : t('home.cotdStreakStart')}</Text>
+          </View>
+          {nextMilestone(streak.count) !== null && streak.count > 0 && (
+            <Text style={styles.nextBadge}>{t('streak.nextBadge', { count: nextMilestone(streak.count) })}</Text>
+          )}
         </View>
         <Card style={styles.cotd}>
           {dailyCard && <FlipCard card={dailyCard} width={110} revealed={!!daily?.revealed} onPress={reveal} ring={!daily?.revealed} />}
@@ -119,9 +163,17 @@ export default function HomeScreen() {
               <>
                 <Text style={styles.cotdName}>{dailyCard.name}</Text>
                 <Text style={styles.cotdMsg}>{kbText(dailyCard.id, 'message', lang)}</Text>
-                <Pressable onPress={() => router.push(`/card/${dailyCard.id}`)} hitSlop={8}>
-                  <Text style={styles.link}>{t('reading.advice')} →</Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                  <Pressable onPress={() => router.push(`/card/${dailyCard.id}`)} hitSlop={8}>
+                    <Text style={styles.link}>{t('reading.advice')} →</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => shareStory(dailyShot, `${t('home.cotdTitle')}: ${dailyCard.name}\n${kbText(dailyCard.id, 'message', lang)}\n\n${t('share.footer')}`)}
+                    hitSlop={8}>
+                    <Text style={styles.link}>{t('common.share')}</Text>
+                  </Pressable>
+                </View>
               </>
             ) : (
               <Text style={styles.cotdTap}>{t('home.cotdTap')}</Text>
@@ -129,10 +181,20 @@ export default function HomeScreen() {
           </View>
         </Card>
 
+        {askRemind && (
+          <Card style={{ gap: Spacing.sm }}>
+            <Text style={styles.askText}>🔔 {t('streak.remindAsk')}</Text>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+              <Button label={t('streak.remindYes')} small style={{ flex: 1 }} onPress={() => answerRemind(true)} />
+              <Button label={t('streak.remindNo')} variant="ghost" small style={{ flex: 1 }} onPress={() => answerRemind(false)} />
+            </View>
+          </Card>
+        )}
+
         {/* Feature grid */}
         <SectionTitle>{t('home.explore')}</SectionTitle>
         <View style={styles.grid}>
-          {[features.slice(0, 3), features.slice(3, 6)].map((row, r) => (
+          {Array.from({ length: Math.ceil(features.length / 3) }, (_, r) => features.slice(r * 3, r * 3 + 3)).map((row, r) => (
             <View key={r} style={styles.gridRow}>
               {row.map((f) => (
                 <Pressable
@@ -201,6 +263,46 @@ export default function HomeScreen() {
         </View>
         <Text style={styles.disclaimer}>{t('home.disclaimer')}</Text>
       </View>
+
+      {daily?.revealed && dailyCard && (
+        <StoryFrame ref={dailyShot} eyebrow={t('home.cotdTitle')} footer={t('share.footer')}>
+          <View style={storyStyles.row}>
+            <CardFront card={dailyCard} width={170} />
+          </View>
+          <Text style={storyStyles.title}>{dailyCard.name}</Text>
+          <Text style={storyStyles.text}>{kbText(dailyCard.id, 'message', lang)}</Text>
+        </StoryFrame>
+      )}
+
+      <MoonSignSheet visible={picking} onClose={() => setPicking(false)} current={null} onPick={(m) => today.birth.setPicked(m)} />
+
+      <Sheet visible={milestone !== null} onClose={() => setMilestone(null)} title={t('streak.badgeTitle', { count: milestone ?? 0 })}>
+        <View style={{ alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md }}>
+          <Text style={{ fontSize: 56 }}>🔥</Text>
+          <Text style={styles.badgeName}>{t(`streak.names.b${milestone ?? 3}`)}</Text>
+          <Body muted style={styles.center}>
+            {t('streak.badgeBody', { count: milestone ?? 0, name: t(`streak.names.b${milestone ?? 3}`) })}
+          </Body>
+          <Button
+            label={t('share.story')}
+            icon="share-social-outline"
+            style={{ alignSelf: 'stretch' }}
+            onPress={() => shareStory(streakShot, `${t('streak.badgeTitle', { count: milestone ?? 0 })} 🔥 — The Divine Tarot`)}
+          />
+          <Button label={t('common.close')} variant="ghost" style={{ alignSelf: 'stretch' }} onPress={() => setMilestone(null)} />
+        </View>
+        {milestone !== null && dailyCard && (
+          <StoryFrame ref={streakShot} eyebrow={t('home.cotdTitle')} footer={t('share.footer')}>
+            <Text style={{ fontSize: 64, textAlign: 'center' }}>🔥</Text>
+            <Text style={storyStyles.title}>{t('streak.badgeTitle', { count: milestone })}</Text>
+            <Text style={storyStyles.quote}>{t(`streak.names.b${milestone}`)}</Text>
+            <View style={storyStyles.row}>
+              <CardFront card={dailyCard} width={120} />
+            </View>
+            <Text style={storyStyles.text}>{kbText(dailyCard.id, 'message', lang)}</Text>
+          </StoryFrame>
+        )}
+      </Sheet>
     </Screen>
   );
 }
@@ -272,7 +374,11 @@ const styles = StyleSheet.create({
   },
   statNum: { fontFamily: Fonts.display, fontSize: 20, color: Colors.goldSoft },
   statLabel: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textMuted },
-  streak: { alignSelf: 'flex-start', marginTop: -Spacing.sm, backgroundColor: 'rgba(240,134,106,0.14)', borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: -Spacing.sm },
+  nextBadge: { fontFamily: Fonts.body, fontSize: 12, color: Colors.textMuted },
+  askText: { fontFamily: Fonts.bodySemi, fontSize: 14.5, color: Colors.text },
+  badgeName: { fontFamily: Fonts.display, fontSize: 22, color: Colors.goldSoft },
+  streak: { alignSelf: 'flex-start', backgroundColor: 'rgba(240,134,106,0.14)', borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
   streakText: { fontFamily: Fonts.bodySemi, fontSize: 12, color: Colors.coral },
   cotd: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   cotdName: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text },

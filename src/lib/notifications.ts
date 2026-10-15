@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { Platform } from 'react-native';
 
+import i18n, { type Lang } from '@/i18n';
+import { getStreak, todayKey } from '@/lib/daily';
+import { festivalName, upcomingFestivals } from '@/lib/festivals';
+import { Storage } from '@/lib/storage';
+
 /**
- * Local (on-device) daily reminders in Hinglish — no push server needed.
+ * Local (on-device) notifications — no push server needed:
+ *  - daily card reminder (repeats, at the time chosen in Profile)
+ *  - streak reminder: 8:30 PM on a day the streak would break
+ *  - festival / Ekadashi mornings (7:00 AM), the next few weeks
+ * Everything is rescheduled by syncNotifications() when the app opens and when a setting or the streak changes.
  * expo-notifications is loaded defensively so a missing module never crashes the app.
  */
- 
+
 type Any = any;
 let N: Any = null;
 if (Platform.OS !== 'web') {
@@ -25,6 +34,9 @@ if (Platform.OS !== 'web') {
 }
 
 const CHANNEL_ID = 'daily-card';
+const STREAK_HOUR = 20;
+const STREAK_MIN = 30;
+const FESTIVAL_HOUR = 7;
 
 async function ensureChannel() {
   if (N && Platform.OS === 'android') {
@@ -38,6 +50,15 @@ async function ensureChannel() {
 
 export const notificationsAvailable = !!N;
 
+export async function notificationsGranted(): Promise<boolean> {
+  if (!N) return false;
+  try {
+    return !!(await N.getPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!N) return false;
   await ensureChannel();
@@ -47,33 +68,98 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return !!asked.granted;
 }
 
-const MESSAGES = [
-  'Aaj ka card tumhara wait kar raha hai ✨',
-  'Universe ka aaj ka message ready hai 🌙',
-  'Ek minute nikaalo — apna Card of the Day dekho 🔮',
-  'Streak mat todna! Aaj ka card reveal karo 🔥',
-  'Ginni ke paas aaj tumhare liye kuch khaas hai ✨',
-];
-
-export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
-  if (!N) return;
-  await ensureChannel();
-  await N.cancelAllScheduledNotificationsAsync();
-  await N.scheduleNotificationAsync({
-    content: {
-      title: 'The Divine Tarot',
-      body: MESSAGES[Math.floor(Math.random() * MESSAGES.length)],
-      data: { url: '/' },
-    },
-    trigger:
-      Platform.OS === 'ios'
-        ? { type: N.SchedulableTriggerInputTypes.CALENDAR, hour, minute, repeats: true }
-        : { type: N.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
-  });
+function tr(lang: Lang, key: string, opts?: Record<string, unknown>): Any {
+  return i18n.getFixedT(lang)(key, opts);
 }
 
-export async function cancelDailyReminder(): Promise<void> {
-  if (N) await N.cancelAllScheduledNotificationsAsync();
+function atLocal(date: string, hour: number, minute: number): Date {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d, hour, minute, 0, 0);
+}
+
+function dateTrigger(date: Date) {
+  return Platform.OS === 'android'
+    ? { type: N.SchedulableTriggerInputTypes.DATE, date, channelId: CHANNEL_ID }
+    : { type: N.SchedulableTriggerInputTypes.DATE, date };
+}
+
+let running: Promise<void> | null = null;
+
+/** Re-plans every local notification from the saved settings. Safe to call often. */
+export function syncNotifications(): Promise<void> {
+  if (!N) return Promise.resolve();
+  // one at a time: overlapping cancel/schedule runs could double up
+  running = (running ?? Promise.resolve()).then(doSync, doSync);
+  return running;
+}
+
+async function doSync(): Promise<void> {
+  try {
+    if (!(await notificationsGranted())) return;
+    await ensureChannel();
+    const lang = (i18n.language as Lang) || 'en';
+    const [reminder, notify, daily, streak] = await Promise.all([
+      Storage.getReminder(),
+      Storage.getNotify(),
+      Storage.getDaily(),
+      getStreak(), // 0 once a day was missed, so a broken streak never gets a "streak ends tonight" note
+    ]);
+    await N.cancelAllScheduledNotificationsAsync();
+    const now = Date.now();
+    const today = todayKey();
+
+    if (reminder.enabled) {
+      const msgs: string[] = tr(lang, 'notify.daily', { returnObjects: true });
+      const body = Array.isArray(msgs) ? msgs[new Date().getDate() % msgs.length] : String(msgs);
+      await N.scheduleNotificationAsync({
+        identifier: 'daily-card',
+        content: { title: 'The Divine Tarot', body, data: { url: '/' } },
+        trigger:
+          Platform.OS === 'ios'
+            ? { type: N.SchedulableTriggerInputTypes.CALENDAR, hour: reminder.hour, minute: reminder.minute, repeats: true }
+            : { type: N.SchedulableTriggerInputTypes.DAILY, hour: reminder.hour, minute: reminder.minute, channelId: CHANNEL_ID },
+      });
+    }
+
+    // Streak: remind tonight if today's card isn't open yet; else tomorrow night (cancelled again when it's opened).
+    if (notify.streak && streak.count >= 2) {
+      const revealedToday = daily?.date === today && daily.revealed;
+      const tonight = atLocal(today, STREAK_HOUR, STREAK_MIN);
+      const tomorrow = new Date(tonight.getTime() + 86_400_000);
+      const when = !revealedToday && tonight.getTime() > now ? tonight : revealedToday ? tomorrow : null;
+      if (when) {
+        await N.scheduleNotificationAsync({
+          identifier: 'streak',
+          content: { title: 'The Divine Tarot', body: tr(lang, 'notify.streakRisk', { count: streak.count }), data: { url: '/' } },
+          trigger: dateTrigger(when),
+        });
+      }
+    }
+
+    if (notify.festivals) {
+      // dates marked verify:true in festivals.json (sources disagree) get no notification
+      const list = upcomingFestivals(today, 30, ['festival', 'ekadashi']).filter((f) => !f.verify && atLocal(f.date, FESTIVAL_HOUR, 0).getTime() > now);
+      // one per day, the main festival first; max 8 ahead (iOS keeps 64 pending notifications in total)
+      const seen = new Set<string>();
+      let n = 0;
+      for (const f of list) {
+        if (seen.has(f.date) || n >= 8) continue;
+        seen.add(f.date);
+        n++;
+        await N.scheduleNotificationAsync({
+          identifier: `festival-${f.date}`,
+          content: {
+            title: tr(lang, 'notify.festivalTitle', { name: festivalName(f, lang) }),
+            body: tr(lang, 'notify.festivalBody'),
+            data: { url: '/panchang' },
+          },
+          trigger: dateTrigger(atLocal(f.date, FESTIVAL_HOUR, 0)),
+        });
+      }
+    }
+  } catch {
+    // notifications are best-effort
+  }
 }
 
 /** Subscribe to notification taps; returns an unsubscribe function. */

@@ -8,6 +8,7 @@
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@sentry/react-native": "~7.11.0",
     "@supabase/supabase-js": "2.117.2",
     "astronomy-engine": "2.1.19",
     "expo": "~57.0.28",
@@ -63,6 +64,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test:kundli": "node scripts/test-kundli.mjs",
+    "test:panchang": "node scripts/test-panchang.mjs",
     "kb:translate": "node scripts/translate-kb.mjs"
   },
   "private": true

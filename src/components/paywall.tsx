@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, tap } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
+import { track } from '@/lib/events';
 import { paymentsEnabled, purchase, type Product } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
 
@@ -15,6 +16,9 @@ export function Paywall({ product, title, body, cta, onUnlocked }: { product: Pr
   const { user, profile, refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (paymentsEnabled()) track('paywall_view', { product: product.id });
+  }, [product.id]);
 
   const buy = async () => {
     setMsg(null);

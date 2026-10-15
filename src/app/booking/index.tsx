@@ -31,6 +31,7 @@ import {
 import { openCheckout } from '@/lib/payments/checkout';
 import { openWhatsApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
+import { track } from '@/lib/events';
 
 const HERO = 'https://booking.thedivinetarotonline.com/hero-bharti.jpg';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -89,6 +90,7 @@ function BookingScreen() {
     setBusy(tier);
     try {
       const order = await createBooking(tier);
+      track('booking_start', { tier });
       const saved: SavedBooking = { token: order.token, bid: order.bid, tier, createdAt: Date.now() };
       await rememberBooking(saved);
       const result = await openCheckout({
@@ -124,6 +126,7 @@ function BookingScreen() {
       }
       if (paid) {
         tap('success');
+        track('booking_paid', { tier });
         await rememberBooking({ ...saved, paid: true });
         router.push({ pathname: '/booking/form', params: { bid: order.bid } });
       } else if (result.status === 'cancelled') setError(t('booking.cancelled'));

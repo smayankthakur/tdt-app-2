@@ -1,0 +1,917 @@
+[
+{
+"date": "2026-10-06",
+"key": "indira_ekadashi",
+"en": "Indira Ekadashi",
+"hi": "इंदिरा एकादशी",
+"hinglish": "Indira Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-10-10",
+"key": "sarva_pitru_amavasya",
+"en": "Sarva Pitru Amavasya (Pitru Paksha ends)",
+"hi": "सर्व पितृ अमावस्या (पितृ पक्ष समाप्त)",
+"hinglish": "Sarva Pitru Amavasya (Pitru Paksha ka antim din)",
+"kind": "festival"
+},
+{
+"date": "2026-10-10",
+"key": "ashwina_amavasya",
+"en": "Ashwina Amavasya",
+"hi": "आश्विन अमावस्या",
+"hinglish": "Ashwina Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2026-10-11",
+"key": "sharad_navratri_start",
+"en": "Sharad Navratri begins (Ghatasthapana)",
+"hi": "शारदीय नवरात्रि प्रारंभ (घटस्थापना)",
+"hinglish": "Sharad Navratri shuru (Ghatasthapana)",
+"kind": "festival"
+},
+{
+"date": "2026-10-20",
+"key": "dussehra",
+"en": "Dussehra (Vijayadashami)",
+"hi": "दशहरा (विजयादशमी)",
+"hinglish": "Dussehra (Vijayadashami)",
+"kind": "festival"
+},
+{
+"date": "2026-10-22",
+"key": "papankusha_ekadashi",
+"en": "Papankusha Ekadashi",
+"hi": "पापांकुशा एकादशी",
+"hinglish": "Papankusha Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-10-25",
+"key": "sharad_purnima",
+"en": "Sharad Purnima (Kojagara)",
+"hi": "शरद पूर्णिमा (कोजागरी)",
+"hinglish": "Sharad Purnima (Kojagari)",
+"kind": "festival"
+},
+{
+"date": "2026-10-26",
+"key": "ashwina_purnima",
+"en": "Ashwina Purnima (Purnima vrat: 25 Oct)",
+"hi": "आश्विन पूर्णिमा (व्रत: 25 अक्टूबर)",
+"hinglish": "Ashwina Purnima (Purnima vrat: 25 Oct)",
+"kind": "purnima"
+},
+{
+"date": "2026-10-29",
+"key": "karwa_chauth",
+"en": "Karwa Chauth",
+"hi": "करवा चौथ",
+"hinglish": "Karwa Chauth",
+"kind": "festival"
+},
+{
+"date": "2026-11-01",
+"key": "ahoi_ashtami",
+"en": "Ahoi Ashtami",
+"hi": "अहोई अष्टमी",
+"hinglish": "Ahoi Ashtami",
+"kind": "festival"
+},
+{
+"date": "2026-11-05",
+"key": "rama_ekadashi",
+"en": "Rama Ekadashi",
+"hi": "रमा एकादशी",
+"hinglish": "Rama Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-11-06",
+"key": "dhanteras",
+"en": "Dhanteras",
+"hi": "धनतेरस",
+"hinglish": "Dhanteras",
+"kind": "festival"
+},
+{
+"date": "2026-11-08",
+"key": "narak_chaturdashi",
+"en": "Narak Chaturdashi (Abhyang Snan)",
+"hi": "नरक चतुर्दशी (अभ्यंग स्नान)",
+"hinglish": "Narak Chaturdashi (Abhyang Snan)",
+"kind": "festival"
+},
+{
+"date": "2026-11-08",
+"key": "diwali",
+"en": "Diwali (Lakshmi Puja)",
+"hi": "दीवाली (लक्ष्मी पूजा)",
+"hinglish": "Diwali (Lakshmi Puja)",
+"kind": "festival"
+},
+{
+"date": "2026-11-09",
+"key": "kartika_amavasya",
+"en": "Kartik Amavasya (Darsha Amavasya: 8 Nov)",
+"hi": "कार्तिक अमावस्या (दर्श अमावस्या: 8 नवंबर)",
+"hinglish": "Kartik Amavasya (Darsha Amavasya: 8 Nov)",
+"kind": "amavasya"
+},
+{
+"date": "2026-11-10",
+"key": "govardhan_puja",
+"en": "Govardhan Puja",
+"hi": "गोवर्धन पूजा",
+"hinglish": "Govardhan Puja",
+"kind": "festival",
+"verify": true
+},
+{
+"date": "2026-11-11",
+"key": "bhai_dooj",
+"en": "Bhai Dooj",
+"hi": "भाई दूज",
+"hinglish": "Bhai Dooj",
+"kind": "festival"
+},
+{
+"date": "2026-11-15",
+"key": "chhath_puja",
+"en": "Chhath Puja (Sandhya Arghya)",
+"hi": "छठ पूजा (संध्या अर्घ्य)",
+"hinglish": "Chhath Puja (Sandhya Arghya)",
+"kind": "festival"
+},
+{
+"date": "2026-11-20",
+"key": "dev_uthani_ekadashi",
+"en": "Dev Uthani (Prabodhini) Ekadashi",
+"hi": "देवउठनी (प्रबोधिनी) एकादशी",
+"hinglish": "Dev Uthani (Prabodhini) Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-11-24",
+"key": "guru_nanak_jayanti",
+"en": "Guru Nanak Jayanti",
+"hi": "गुरु नानक जयंती",
+"hinglish": "Guru Nanak Jayanti",
+"kind": "festival"
+},
+{
+"date": "2026-11-24",
+"key": "kartika_purnima",
+"en": "Kartik Purnima (Dev Deepawali)",
+"hi": "कार्तिक पूर्णिमा (देव दीपावली)",
+"hinglish": "Kartik Purnima (Dev Deepawali)",
+"kind": "purnima"
+},
+{
+"date": "2026-12-04",
+"key": "utpanna_ekadashi",
+"en": "Utpanna Ekadashi",
+"hi": "उत्पन्ना एकादशी",
+"hinglish": "Utpanna Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-12-08",
+"key": "margashirsha_amavasya",
+"en": "Margashirsha Amavasya",
+"hi": "मार्गशीर्ष अमावस्या",
+"hinglish": "Margashirsha Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2026-12-20",
+"key": "mokshada_ekadashi",
+"en": "Mokshada Ekadashi",
+"hi": "मोक्षदा एकादशी",
+"hinglish": "Mokshada Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2026-12-23",
+"key": "margashirsha_purnima",
+"en": "Margashirsha Purnima",
+"hi": "मार्गशीर्ष पूर्णिमा",
+"hinglish": "Margashirsha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-01-03",
+"key": "saphala_ekadashi",
+"en": "Saphala Ekadashi",
+"hi": "सफला एकादशी",
+"hinglish": "Saphala Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-01-07",
+"key": "pausha_amavasya",
+"en": "Pausha Amavasya",
+"hi": "पौष अमावस्या",
+"hinglish": "Pausha Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2027-01-14",
+"key": "lohri",
+"en": "Lohri",
+"hi": "लोहड़ी",
+"hinglish": "Lohri",
+"kind": "festival"
+},
+{
+"date": "2027-01-15",
+"key": "makar_sankranti",
+"en": "Makar Sankranti",
+"hi": "मकर संक्रांति",
+"hinglish": "Makar Sankranti",
+"kind": "festival"
+},
+{
+"date": "2027-01-15",
+"key": "pongal",
+"en": "Pongal",
+"hi": "पोंगल",
+"hinglish": "Pongal",
+"kind": "festival"
+},
+{
+"date": "2027-01-18",
+"key": "pausha_putrada_ekadashi",
+"en": "Pausha Putrada Ekadashi",
+"hi": "पौष पुत्रदा एकादशी",
+"hinglish": "Pausha Putrada Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-01-22",
+"key": "pausha_purnima",
+"en": "Pausha Purnima",
+"hi": "पौष पूर्णिमा",
+"hinglish": "Pausha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-02-02",
+"key": "shattila_ekadashi",
+"en": "Shattila Ekadashi",
+"hi": "षटतिला एकादशी",
+"hinglish": "Shattila Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-02-06",
+"key": "magha_amavasya",
+"en": "Magha Amavasya (Mauni Amavasya)",
+"hi": "माघ अमावस्या (मौनी अमावस्या)",
+"hinglish": "Magha Amavasya (Mauni Amavasya)",
+"kind": "amavasya"
+},
+{
+"date": "2027-02-11",
+"key": "vasant_panchami",
+"en": "Vasant Panchami",
+"hi": "वसंत पंचमी",
+"hinglish": "Basant Panchami",
+"kind": "festival"
+},
+{
+"date": "2027-02-17",
+"key": "jaya_ekadashi",
+"en": "Jaya Ekadashi",
+"hi": "जया एकादशी",
+"hinglish": "Jaya Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-02-20",
+"key": "magha_purnima",
+"en": "Magha Purnima",
+"hi": "माघ पूर्णिमा",
+"hinglish": "Magha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-03-04",
+"key": "vijaya_ekadashi",
+"en": "Vijaya Ekadashi",
+"hi": "विजया एकादशी",
+"hinglish": "Vijaya Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-03-06",
+"key": "maha_shivratri",
+"en": "Maha Shivratri",
+"hi": "महाशिवरात्रि",
+"hinglish": "Maha Shivratri",
+"kind": "festival"
+},
+{
+"date": "2027-03-08",
+"key": "phalguna_amavasya",
+"en": "Phalguna Amavasya (Somvati; Darsha Amavasya: 7 Mar)",
+"hi": "फाल्गुन अमावस्या (सोमवती; दर्श अमावस्या: 7 मार्च)",
+"hinglish": "Phalguna Amavasya (Somvati; Darsha Amavasya: 7 Mar)",
+"kind": "amavasya"
+},
+{
+"date": "2027-03-18",
+"key": "amalaki_ekadashi",
+"en": "Amalaki Ekadashi",
+"hi": "आमलकी एकादशी",
+"hinglish": "Amalaki Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-03-21",
+"key": "holika_dahan",
+"en": "Holika Dahan",
+"hi": "होलिका दहन",
+"hinglish": "Holika Dahan",
+"kind": "festival",
+"verify": true
+},
+{
+"date": "2027-03-22",
+"key": "holi",
+"en": "Holi",
+"hi": "होली",
+"hinglish": "Holi",
+"kind": "festival",
+"verify": true
+},
+{
+"date": "2027-03-22",
+"key": "phalguna_purnima",
+"en": "Phalguna Purnima (Purnima vrat: 21 Mar)",
+"hi": "फाल्गुन पूर्णिमा (व्रत: 21 मार्च)",
+"hinglish": "Phalguna Purnima (Purnima vrat: 21 Mar)",
+"kind": "purnima"
+},
+{
+"date": "2027-04-02",
+"key": "papamochani_ekadashi",
+"en": "Papamochani Ekadashi",
+"hi": "पापमोचनी एकादशी",
+"hinglish": "Papamochani Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-04-06",
+"key": "chaitra_amavasya",
+"en": "Chaitra Amavasya",
+"hi": "चैत्र अमावस्या",
+"hinglish": "Chaitra Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2027-04-07",
+"key": "chaitra_navratri_start",
+"en": "Chaitra Navratri begins (Ghatasthapana)",
+"hi": "चैत्र नवरात्रि प्रारंभ (घटस्थापना)",
+"hinglish": "Chaitra Navratri shuru (Ghatasthapana)",
+"kind": "festival"
+},
+{
+"date": "2027-04-07",
+"key": "ugadi_gudi_padwa",
+"en": "Ugadi / Gudi Padwa",
+"hi": "उगादी / गुड़ी पड़वा",
+"hinglish": "Ugadi / Gudi Padwa",
+"kind": "festival"
+},
+{
+"date": "2027-04-15",
+"key": "ram_navami",
+"en": "Ram Navami",
+"hi": "राम नवमी",
+"hinglish": "Ram Navami",
+"kind": "festival"
+},
+{
+"date": "2027-04-17",
+"key": "kamada_ekadashi",
+"en": "Kamada Ekadashi",
+"hi": "कामदा एकादशी",
+"hinglish": "Kamada Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-04-19",
+"key": "mahavir_jayanti",
+"en": "Mahavir Jayanti",
+"hi": "महावीर जयंती",
+"hinglish": "Mahavir Jayanti",
+"kind": "festival"
+},
+{
+"date": "2027-04-20",
+"key": "hanuman_jayanti",
+"en": "Hanuman Jayanti",
+"hi": "हनुमान जयंती",
+"hinglish": "Hanuman Jayanti",
+"kind": "festival"
+},
+{
+"date": "2027-04-20",
+"key": "chaitra_purnima",
+"en": "Chaitra Purnima",
+"hi": "चैत्र पूर्णिमा",
+"hinglish": "Chaitra Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-05-02",
+"key": "varuthini_ekadashi",
+"en": "Varuthini Ekadashi",
+"hi": "वरुथिनी एकादशी",
+"hinglish": "Varuthini Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-05-06",
+"key": "vaishakha_amavasya",
+"en": "Vaishakha Amavasya",
+"hi": "वैशाख अमावस्या",
+"hinglish": "Vaishakha Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2027-05-09",
+"key": "akshaya_tritiya",
+"en": "Akshaya Tritiya",
+"hi": "अक्षय तृतीया",
+"hinglish": "Akshaya Tritiya",
+"kind": "festival"
+},
+{
+"date": "2027-05-16",
+"key": "mohini_ekadashi",
+"en": "Mohini Ekadashi",
+"hi": "मोहिनी एकादशी",
+"hinglish": "Mohini Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-05-20",
+"key": "buddha_purnima",
+"en": "Buddha Purnima",
+"hi": "बुद्ध पूर्णिमा",
+"hinglish": "Buddha Purnima",
+"kind": "festival"
+},
+{
+"date": "2027-05-20",
+"key": "vaishakha_purnima",
+"en": "Vaishakha Purnima",
+"hi": "वैशाख पूर्णिमा",
+"hinglish": "Vaishakha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-06-01",
+"key": "apara_ekadashi",
+"en": "Apara Ekadashi",
+"hi": "अपरा एकादशी",
+"hinglish": "Apara Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-06-04",
+"key": "vat_savitri",
+"en": "Vat Savitri Vrat",
+"hi": "वट सावित्री व्रत",
+"hinglish": "Vat Savitri Vrat",
+"kind": "festival"
+},
+{
+"date": "2027-06-04",
+"key": "jyeshtha_amavasya",
+"en": "Jyeshtha Amavasya",
+"hi": "ज्येष्ठ अमावस्या",
+"hinglish": "Jyeshtha Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2027-06-13",
+"key": "ganga_dussehra",
+"en": "Ganga Dussehra",
+"hi": "गंगा दशहरा",
+"hinglish": "Ganga Dussehra",
+"kind": "festival"
+},
+{
+"date": "2027-06-14",
+"key": "nirjala_ekadashi",
+"en": "Nirjala Ekadashi",
+"hi": "निर्जला एकादशी",
+"hinglish": "Nirjala Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-06-18",
+"key": "jyeshtha_purnima",
+"en": "Jyeshtha Purnima (Vat Purnima)",
+"hi": "ज्येष्ठ पूर्णिमा (वट पूर्णिमा)",
+"hinglish": "Jyeshtha Purnima (Vat Purnima)",
+"kind": "purnima"
+},
+{
+"date": "2027-06-30",
+"key": "yogini_ekadashi",
+"en": "Yogini Ekadashi",
+"hi": "योगिनी एकादशी",
+"hinglish": "Yogini Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-07-04",
+"key": "ashadha_amavasya",
+"en": "Ashadha Amavasya (Darsha Amavasya: 3 Jul)",
+"hi": "आषाढ़ अमावस्या (दर्श अमावस्या: 3 जुलाई)",
+"hinglish": "Ashadha Amavasya (Darsha Amavasya: 3 Jul)",
+"kind": "amavasya"
+},
+{
+"date": "2027-07-05",
+"key": "rath_yatra",
+"en": "Jagannath Rath Yatra",
+"hi": "जगन्नाथ रथ यात्रा",
+"hinglish": "Jagannath Rath Yatra",
+"kind": "festival"
+},
+{
+"date": "2027-07-14",
+"key": "devshayani_ekadashi",
+"en": "Devshayani Ekadashi",
+"hi": "देवशयनी एकादशी",
+"hinglish": "Devshayani Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-07-18",
+"key": "guru_purnima",
+"en": "Guru Purnima",
+"hi": "गुरु पूर्णिमा",
+"hinglish": "Guru Purnima",
+"kind": "festival"
+},
+{
+"date": "2027-07-18",
+"key": "ashadha_purnima",
+"en": "Ashadha Purnima",
+"hi": "आषाढ़ पूर्णिमा",
+"hinglish": "Ashadha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-07-29",
+"key": "kamika_ekadashi",
+"en": "Kamika Ekadashi",
+"hi": "कामिका एकादशी",
+"hinglish": "Kamika Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-08-02",
+"key": "shravana_amavasya",
+"en": "Shravana Amavasya (Hariyali, Somvati)",
+"hi": "श्रावण अमावस्या (हरियाली, सोमवती)",
+"hinglish": "Shravana Amavasya (Hariyali, Somvati)",
+"kind": "amavasya"
+},
+{
+"date": "2027-08-04",
+"key": "hariyali_teej",
+"en": "Hariyali Teej",
+"hi": "हरियाली तीज",
+"hinglish": "Hariyali Teej",
+"kind": "festival"
+},
+{
+"date": "2027-08-06",
+"key": "nag_panchami",
+"en": "Nag Panchami",
+"hi": "नाग पंचमी",
+"hinglish": "Nag Panchami",
+"kind": "festival"
+},
+{
+"date": "2027-08-12",
+"key": "shravana_putrada_ekadashi",
+"en": "Shravana Putrada Ekadashi",
+"hi": "श्रावण पुत्रदा एकादशी",
+"hinglish": "Shravana Putrada Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-08-17",
+"key": "raksha_bandhan",
+"en": "Raksha Bandhan",
+"hi": "रक्षा बंधन",
+"hinglish": "Raksha Bandhan",
+"kind": "festival"
+},
+{
+"date": "2027-08-17",
+"key": "shravana_purnima",
+"en": "Shravana Purnima (Purnima vrat: 16 Aug)",
+"hi": "श्रावण पूर्णिमा (व्रत: 16 अगस्त)",
+"hinglish": "Shravana Purnima (Purnima vrat: 16 Aug)",
+"kind": "purnima"
+},
+{
+"date": "2027-08-25",
+"key": "janmashtami",
+"en": "Krishna Janmashtami",
+"hi": "कृष्ण जन्माष्टमी",
+"hinglish": "Krishna Janmashtami",
+"kind": "festival"
+},
+{
+"date": "2027-08-28",
+"key": "aja_ekadashi",
+"en": "Aja Ekadashi",
+"hi": "अजा एकादशी",
+"hinglish": "Aja Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-08-31",
+"key": "bhadrapada_amavasya",
+"en": "Bhadrapada Amavasya (Pithori)",
+"hi": "भाद्रपद अमावस्या (पिठोरी)",
+"hinglish": "Bhadrapada Amavasya (Pithori)",
+"kind": "amavasya"
+},
+{
+"date": "2027-09-03",
+"key": "hartalika_teej",
+"en": "Hartalika Teej",
+"hi": "हरतालिका तीज",
+"hinglish": "Hartalika Teej",
+"kind": "festival"
+},
+{
+"date": "2027-09-04",
+"key": "ganesh_chaturthi",
+"en": "Ganesh Chaturthi",
+"hi": "गणेश चतुर्थी",
+"hinglish": "Ganesh Chaturthi",
+"kind": "festival"
+},
+{
+"date": "2027-09-11",
+"key": "parsva_ekadashi",
+"en": "Parsva (Parivartini) Ekadashi",
+"hi": "पार्श्व (परिवर्तिनी) एकादशी",
+"hinglish": "Parsva (Parivartini) Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-09-12",
+"key": "onam",
+"en": "Onam (Thiruvonam)",
+"hi": "ओणम (तिरुवोणम)",
+"hinglish": "Onam (Thiruvonam)",
+"kind": "festival"
+},
+{
+"date": "2027-09-15",
+"key": "bhadrapada_purnima",
+"en": "Bhadrapada Purnima",
+"hi": "भाद्रपद पूर्णिमा",
+"hinglish": "Bhadrapada Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-09-16",
+"key": "pitru_paksha_start",
+"en": "Pitru Paksha begins",
+"hi": "पितृ पक्ष प्रारंभ",
+"hinglish": "Pitru Paksha shuru",
+"kind": "festival"
+},
+{
+"date": "2027-09-26",
+"key": "indira_ekadashi",
+"en": "Indira Ekadashi",
+"hi": "इंदिरा एकादशी",
+"hinglish": "Indira Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-09-29",
+"key": "sarva_pitru_amavasya",
+"en": "Sarva Pitru Amavasya (Pitru Paksha ends)",
+"hi": "सर्व पितृ अमावस्या (पितृ पक्ष समाप्त)",
+"hinglish": "Sarva Pitru Amavasya (Pitru Paksha ka antim din)",
+"kind": "festival"
+},
+{
+"date": "2027-09-30",
+"key": "sharad_navratri_start",
+"en": "Sharad Navratri begins (Ghatasthapana)",
+"hi": "शारदीय नवरात्रि प्रारंभ (घटस्थापना)",
+"hinglish": "Sharad Navratri shuru (Ghatasthapana)",
+"kind": "festival"
+},
+{
+"date": "2027-09-30",
+"key": "ashwina_amavasya",
+"en": "Ashwina Amavasya (Darsha / Sarva Pitru Amavasya: 29 Sep)",
+"hi": "आश्विन अमावस्या (दर्श / सर्व पितृ अमावस्या: 29 सितंबर)",
+"hinglish": "Ashwina Amavasya (Darsha / Sarva Pitru Amavasya: 29 Sep)",
+"kind": "amavasya"
+},
+{
+"date": "2027-10-09",
+"key": "dussehra",
+"en": "Dussehra (Vijayadashami)",
+"hi": "दशहरा (विजयादशमी)",
+"hinglish": "Dussehra (Vijayadashami)",
+"kind": "festival"
+},
+{
+"date": "2027-10-11",
+"key": "papankusha_ekadashi",
+"en": "Papankusha Ekadashi",
+"hi": "पापांकुशा एकादशी",
+"hinglish": "Papankusha Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-10-14",
+"key": "sharad_purnima",
+"en": "Sharad Purnima (Kojagara)",
+"hi": "शरद पूर्णिमा (कोजागरी)",
+"hinglish": "Sharad Purnima (Kojagari)",
+"kind": "festival"
+},
+{
+"date": "2027-10-15",
+"key": "ashwina_purnima",
+"en": "Ashwina Purnima",
+"hi": "आश्विन पूर्णिमा",
+"hinglish": "Ashwina Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-10-18",
+"key": "karwa_chauth",
+"en": "Karwa Chauth",
+"hi": "करवा चौथ",
+"hinglish": "Karwa Chauth",
+"kind": "festival"
+},
+{
+"date": "2027-10-22",
+"key": "ahoi_ashtami",
+"en": "Ahoi Ashtami",
+"hi": "अहोई अष्टमी",
+"hinglish": "Ahoi Ashtami",
+"kind": "festival"
+},
+{
+"date": "2027-10-25",
+"key": "rama_ekadashi",
+"en": "Rama Ekadashi",
+"hi": "रमा एकादशी",
+"hinglish": "Rama Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-10-27",
+"key": "dhanteras",
+"en": "Dhanteras",
+"hi": "धनतेरस",
+"hinglish": "Dhanteras",
+"kind": "festival"
+},
+{
+"date": "2027-10-28",
+"key": "narak_chaturdashi",
+"en": "Narak Chaturdashi (Choti Diwali)",
+"hi": "नरक चतुर्दशी (छोटी दीवाली)",
+"hinglish": "Narak Chaturdashi (Choti Diwali)",
+"kind": "festival"
+},
+{
+"date": "2027-10-29",
+"key": "diwali",
+"en": "Diwali (Lakshmi Puja)",
+"hi": "दीवाली (लक्ष्मी पूजा)",
+"hinglish": "Diwali (Lakshmi Puja)",
+"kind": "festival"
+},
+{
+"date": "2027-10-29",
+"key": "kartika_amavasya",
+"en": "Kartik Amavasya",
+"hi": "कार्तिक अमावस्या",
+"hinglish": "Kartik Amavasya",
+"kind": "amavasya"
+},
+{
+"date": "2027-10-30",
+"key": "govardhan_puja",
+"en": "Govardhan Puja",
+"hi": "गोवर्धन पूजा",
+"hinglish": "Govardhan Puja",
+"kind": "festival"
+},
+{
+"date": "2027-10-31",
+"key": "bhai_dooj",
+"en": "Bhai Dooj",
+"hi": "भाई दूज",
+"hinglish": "Bhai Dooj",
+"kind": "festival"
+},
+{
+"date": "2027-11-04",
+"key": "chhath_puja",
+"en": "Chhath Puja (Sandhya Arghya)",
+"hi": "छठ पूजा (संध्या अर्घ्य)",
+"hinglish": "Chhath Puja (Sandhya Arghya)",
+"kind": "festival"
+},
+{
+"date": "2027-11-10",
+"key": "dev_uthani_ekadashi",
+"en": "Dev Uthani (Prabodhini) Ekadashi",
+"hi": "देवउठनी (प्रबोधिनी) एकादशी",
+"hinglish": "Dev Uthani (Prabodhini) Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-11-14",
+"key": "guru_nanak_jayanti",
+"en": "Guru Nanak Jayanti",
+"hi": "गुरु नानक जयंती",
+"hinglish": "Guru Nanak Jayanti",
+"kind": "festival"
+},
+{
+"date": "2027-11-14",
+"key": "kartika_purnima",
+"en": "Kartik Purnima (Purnima vrat & Dev Deepawali: 13 Nov)",
+"hi": "कार्तिक पूर्णिमा (व्रत व देव दीपावली: 13 नवंबर)",
+"hinglish": "Kartik Purnima (Purnima vrat & Dev Deepawali: 13 Nov)",
+"kind": "purnima"
+},
+{
+"date": "2027-11-24",
+"key": "utpanna_ekadashi",
+"en": "Utpanna Ekadashi",
+"hi": "उत्पन्ना एकादशी",
+"hinglish": "Utpanna Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-11-28",
+"key": "margashirsha_amavasya",
+"en": "Margashirsha Amavasya (Darsha Amavasya: 27 Nov)",
+"hi": "मार्गशीर्ष अमावस्या (दर्श अमावस्या: 27 नवंबर)",
+"hinglish": "Margashirsha Amavasya (Darsha Amavasya: 27 Nov)",
+"kind": "amavasya"
+},
+{
+"date": "2027-12-09",
+"key": "mokshada_ekadashi",
+"en": "Mokshada Ekadashi",
+"hi": "मोक्षदा एकादशी",
+"hinglish": "Mokshada Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-12-13",
+"key": "margashirsha_purnima",
+"en": "Margashirsha Purnima",
+"hi": "मार्गशीर्ष पूर्णिमा",
+"hinglish": "Margashirsha Purnima",
+"kind": "purnima"
+},
+{
+"date": "2027-12-23",
+"key": "saphala_ekadashi",
+"en": "Saphala Ekadashi",
+"hi": "सफला एकादशी",
+"hinglish": "Saphala Ekadashi",
+"kind": "ekadashi"
+},
+{
+"date": "2027-12-27",
+"key": "pausha_amavasya",
+"en": "Pausha Amavasya (Somvati)",
+"hi": "पौष अमावस्या (सोमवती)",
+"hinglish": "Pausha Amavasya (Somvati)",
+"kind": "amavasya"
+}
+]

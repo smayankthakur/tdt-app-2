@@ -18,7 +18,8 @@ export async function serverUsage(_uid: string): Promise<{ used: number; limit: 
       return null;
     }
     const d = data as { used?: number; limit?: number; premiumUntil?: number };
-    return { used: Number(d.used) || 0, limit: Number(d.limit) || 3, premiumUntil: Number(d.premiumUntil) || 0 };
+    // limit is 0 in the app; `|| 3` here once turned a real 0 into 3 and let people draw cards before the paywall
+    return { used: Number(d.used) || 0, limit: Number.isFinite(Number(d.limit)) ? Number(d.limit) : 0, premiumUntil: Number(d.premiumUntil) || 0 };
   } catch {
     return null;
   }

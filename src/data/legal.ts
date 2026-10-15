@@ -3,7 +3,7 @@
  * Keep it true to what the app does; update it together with the Play Store / App Store privacy forms.
  * Have it reviewed by a lawyer before launch (see docs/PRIVACY-POLICY.md).
  */
-export const PRIVACY_UPDATED = '13 Oct 2026';
+export const PRIVACY_UPDATED = '14 Oct 2026';
 export const PRIVACY_CONTACT = 'thedivinetarot111@gmail.com';
 
 export const PRIVACY: { h: string; p: string[] }[] = [
@@ -22,9 +22,11 @@ export const PRIVACY: { h: string; p: string[] }[] = [
       'Purchases: which product you bought, the amount, the date, the Razorpay order and payment IDs, and until when it is active. We never see or store your card, UPI or bank details — Razorpay handles those.',
       'Personal Reading bookings: after you pay, the form asks for your name, WhatsApp number, email, place, date and time of birth and a photo, and the same for up to two other people you ask about, plus your concern. These go to our reader so she can prepare your reading, and your slot and Google Meet link are emailed to you.',
       'Support requests: your name, email, the problem you describe and any screenshots you attach.',
-      'Usage data (optional, ON by default): each time the App opens we may record the date and time, a random session code, platform, operating-system version, device model, app version, App language and, if logged in, your user ID. Turn it off any time in Profile → Privacy. Your questions, readings and profile are never sent with it.',
+      'Usage data (optional, ON by default): each time the App opens we may record the date and time, a random session code, platform, operating-system version, device model, app version, App language and, if logged in, your user ID; and which steps you reach in the App (for example: opened the App, started a reading, saw a price, paid, shared), with a random install code and labels such as the product or screen. Turn it off any time in Profile → Privacy. Your questions, readings and profile are never sent with it.',
+      'Crash reports: if the App crashes or hits an error, a technical report (error details, app version, phone model and operating system) is sent to our crash-reporting provider so we can fix it. It contains no name, email, IP address, questions or readings.',
+      'Invites: if you enter a friend’s invite code when you sign up, we record who invited you. No reward is given in the App.',
       'Approximate location (optional, OFF by default): only if you turn on Profile → Privacy → Share approximate city and allow location permission, we record your city, state and country — never your exact position.',
-      'Stored only on your phone: Kundli Milan names and birth details, your daily card, streak and reminder settings. Reminders are scheduled on your phone; we do not run a push-notification server.',
+      'Stored only on your phone: Kundli Milan names and birth details, your daily card, streak and badges, the Moon sign you pick for your horoscope, the city you choose for Panchang, and reminder settings. Your horoscope and Panchang are worked out on your phone. Reminders (daily card, streak, festivals) are scheduled on your phone; we do not run a push-notification server.',
     ],
   },
   {
@@ -37,7 +39,8 @@ export const PRIVACY: { h: string; p: string[] }[] = [
   {
     h: '3. Who processes it',
     p: [
-      'Supabase (database, login and server functions): account, profile, saved readings, purchases.',
+      'Supabase (database, login and server functions): account, profile, saved readings, purchases, and usage steps (when usage data is on).',
+      'Sentry: crash reports.',
       'Razorpay: payments.',
       'Google (Firebase, Calendar, Sheets and Drive): Personal Reading bookings, Google Meet links, support tickets and optional usage records.',
       'Our email providers (including Resend): booking confirmations, support replies and password-reset emails.',
@@ -47,7 +50,7 @@ export const PRIVACY: { h: string; p: string[] }[] = [
   {
     h: '4. How long we keep it',
     p: [
-      'Account, profile and saved readings: until you delete your account (or a reading). Purchase and booking payment records: as long as Indian tax and accounting law requires, even after account deletion. Booking details: as long as needed to hold and follow up your reading. Usage records: up to 24 months, then deleted or made fully anonymous.',
+      'Account, profile and saved readings: until you delete your account (or a reading). Purchase and booking payment records: as long as Indian tax and accounting law requires, even after account deletion. Booking details: as long as needed to hold and follow up your reading. Usage records: up to 24 months, then deleted or made fully anonymous. Crash reports: up to 90 days.',
     ],
   },
   {

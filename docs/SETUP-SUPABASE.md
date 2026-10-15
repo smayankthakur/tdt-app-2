@@ -99,6 +99,10 @@ Dashboard → **Edge Functions → Secrets** → add:
 | `tdt_readings` | Saved readings | The user (own rows) |
 | `tdt_entitlements` | What the user bought in the app and until when | Only the server |
 | `tdt_payments` | One row per paid Razorpay order — your sales record; stops one payment unlocking twice | Only the server |
+| `tdt_events` | Anonymous funnel steps (see [DAILY-AND-GROWTH.md](DAILY-AND-GROWTH.md)) | Only through `tdt_log_events` |
+| `tdt_admins` | Website accounts that may see **Profile → Business numbers** | Only the server / SQL Editor |
+
+Later migrations (already applied on ginni2): `20261013200000_tdt_no_free_readings.sql`, `20261014120000_tdt_invites_and_events.sql`, `20261015090000_tdt_events_hardening.sql` — run them in that order on a fresh project.
 
 Row Level Security is on for all of them. Database functions: `tdt_check_password` and `tdt_create_user`
 (server only), `tdt_reading_status` and `tdt_use_reading` (logged-in users, own account only).

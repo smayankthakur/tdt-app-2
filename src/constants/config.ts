@@ -26,6 +26,9 @@ export const Links = {
   facebook: 'https://facebook.com/profile.php?id=61578567343068',
   youtube: 'https://youtube.com/@TheDivineTarot',
   developer: 'https://sitelytc.com/',
+  /** Opens Google Play or the App Store, whichever fits the phone (support site route /app) */
+  getApp: 'https://support.thedivinetarotonline.com/app',
+  playStore: 'https://play.google.com/store/apps/details?id=com.thedivinetarotonline.app',
 } as const;
 
 /** Personal Reading booking backend (booking.thedivinetarotonline.com) — its app routes, see src/lib/booking.ts */

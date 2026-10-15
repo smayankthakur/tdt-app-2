@@ -44,6 +44,24 @@ export async function getStreak(): Promise<Streak> {
   return gap > 1 ? { count: 0, lastDate: s.lastDate } : s;
 }
 
+/** Streak lengths that earn a badge. */
+export const MILESTONES = [3, 7, 11, 21, 51, 108] as const;
+
+/** The milestone just reached (and not celebrated before), or null. Records it as earned. */
+export async function claimMilestone(streak: Streak): Promise<number | null> {
+  const m = MILESTONES.find((x) => x === streak.count);
+  if (!m) return null;
+  const earned = await Storage.getBadges();
+  if (earned.includes(m)) return null;
+  await Storage.setBadges([...earned, m]);
+  return m;
+}
+
+/** Next milestone above the current streak. */
+export function nextMilestone(count: number): number | null {
+  return MILESTONES.find((x) => x > count) ?? null;
+}
+
 /** Reveal today's card and bump the 🔥 streak. */
 export async function revealToday(): Promise<{ draw: DailyDraw; streak: Streak }> {
   const draw = { ...(await getTodaysDraw()), revealed: true };

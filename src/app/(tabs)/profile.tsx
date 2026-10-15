@@ -4,22 +4,26 @@ import { Image } from 'expo-image';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
-import { Products, StorePolicy } from '@/constants/config';
+import { Links, Products, StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { CITIES, type City } from '@/data/cities';
 import { LANGS, useLang, type Lang } from '@/i18n';
 import { requestLocation } from '@/lib/analytics';
-import { cancelDailyReminder, notificationsAvailable, requestNotificationPermission, scheduleDailyReminder } from '@/lib/notifications';
+import { isAdmin } from '@/lib/cloud/admin';
+import { myInviteCode } from '@/lib/cloud/invite';
+import { MILESTONES } from '@/lib/daily';
+import { track } from '@/lib/events';
+import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { COURSES } from '@/data/courses';
 import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
-import { Storage, type Entitlements, type PrivacySettings, type Profile, type ReminderSettings } from '@/lib/storage';
+import { Storage, type Entitlements, type NotifySettings, type PrivacySettings, type Profile, type ReminderSettings } from '@/lib/storage';
 
 const TIMES = [
   { h: 7, m: 0 },
@@ -40,11 +44,45 @@ export default function ProfileScreen() {
   const [reminder, setReminder] = useState<ReminderSettings | null>(null);
   const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
   const [active, setActive] = useState<[string, number][]>([]);
+  const [notify, setNotify] = useState<NotifySettings | null>(null);
+  const [badges, setBadges] = useState<number[]>([]);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [owner, setOwner] = useState(false);
+  const params = useLocalSearchParams<{ edit?: string }>();
 
   useEffect(() => {
     Storage.getReminder().then(setReminder);
     Storage.getPrivacy().then(setPrivacy);
+    Storage.getNotify().then(setNotify);
+    Storage.getBadges().then(setBadges);
   }, []);
+  // "Add birth details" on Home opens the editor directly (state adjusted while rendering, param cleared after)
+  const [editParam, setEditParam] = useState<string | undefined>(undefined);
+  if (params.edit !== editParam) {
+    setEditParam(params.edit);
+    if (params.edit === '1') {
+      setDraft(profile);
+      setEditing(true);
+    }
+  }
+  useEffect(() => {
+    if (params.edit === '1') router.setParams({ edit: undefined });
+  }, [params.edit]);
+  useEffect(() => {
+    if (user) {
+      myInviteCode().then(setInviteCode);
+      isAdmin().then(setOwner);
+    }
+  }, [user]);
+  const shareInvite = async () => {
+    track('invite_share');
+    const msg = `${t('invite.message', { link: Links.getApp })}${inviteCode ? `\n${t('invite.codeLine', { code: inviteCode })}` : ''}`;
+    try {
+      await Share.share({ message: msg });
+    } catch {
+      // cancelled
+    }
+  };
   useEffect(() => {
     Storage.getEntitlements().then((e: Entitlements) => {
       const now = Date.now();
@@ -85,12 +123,23 @@ export default function ProfileScreen() {
     if (next.enabled) {
       const ok = await requestNotificationPermission();
       if (!ok) {
-        Alert.alert(t('profile.reminder'), 'Please allow notifications for The Divine Tarot in your phone settings.');
+        Alert.alert(t('profile.reminder'), t('notify.permission'));
         next = { ...next, enabled: false };
-      } else await scheduleDailyReminder(next.hour, next.minute);
-    } else await cancelDailyReminder();
+      }
+    }
     setReminder(next);
     await Storage.setReminder(next);
+    await syncNotifications();
+  };
+
+  const updateNotify = async (next: NotifySettings) => {
+    if ((next.streak || next.festivals) && !(await requestNotificationPermission())) {
+      Alert.alert(t('profile.reminder'), t('notify.permission'));
+      return;
+    }
+    setNotify(next);
+    await Storage.setNotify(next);
+    await syncNotifications();
   };
 
   const updatePrivacy = async (next: PrivacySettings) => {
@@ -257,6 +306,42 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
+          {notify && (
+            <>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{t('notify.streakSetting')}</Text>
+                  <Text style={styles.small}>{t('notify.streakSettingSub')}</Text>
+                </View>
+                <Switch value={notify.streak} onValueChange={(v) => updateNotify({ ...notify, streak: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
+              </View>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{t('notify.festivalSetting')}</Text>
+                  <Text style={styles.small}>{t('notify.festivalSettingSub')}</Text>
+                </View>
+                <Switch value={notify.festivals} onValueChange={(v) => updateNotify({ ...notify, festivals: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
+              </View>
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* Streak badges */}
+      {badges.length > 0 && (
+        <Card style={{ gap: Spacing.sm }}>
+          <Text style={styles.h}>{t('streak.badges')}</Text>
+          <View style={styles.chips}>
+            {MILESTONES.map((m) => {
+              const got = badges.includes(m);
+              return (
+                <View key={m} style={[styles.badge, !got && { opacity: 0.35 }]}>
+                  <Text style={styles.badgeNum}>{got ? '🔥' : '🔒'} {m}</Text>
+                  <Text style={styles.badgeName}>{t(`streak.names.b${m}`)}</Text>
+                </View>
+              );
+            })}
+          </View>
         </Card>
       )}
 
@@ -281,6 +366,21 @@ export default function ProfileScreen() {
         </Card>
       )}
 
+      {/* Invite friends (no reward — the code just records who invited whom) */}
+      <Card style={{ gap: Spacing.sm }}>
+        <Text style={styles.h}>🎁 {t('invite.title')}</Text>
+        <Text style={styles.small}>{t('invite.sub')}</Text>
+        {user && inviteCode ? (
+          <View style={styles.codeBox}>
+            <Text style={styles.small}>{t('invite.code')}</Text>
+            <Text style={styles.code} selectable>
+              {inviteCode}
+            </Text>
+          </View>
+        ) : null}
+        <Button label={t('invite.share')} icon="share-social-outline" small onPress={shareInvite} />
+      </Card>
+
       {/* Plan */}
       <Card>
         <Text style={styles.h}>{t('profile.plan')}</Text>
@@ -300,6 +400,9 @@ export default function ProfileScreen() {
 
       <Group>
         <ListRow icon="time-outline" label={t('profile.myReadings')} onPress={() => router.push('/history')} />
+        <ListRow icon="moon-outline" label={t('today.horoscopeTitle')} onPress={() => router.push('/horoscope')} />
+        <ListRow icon="calendar-outline" label={t('panchang.title')} onPress={() => router.push('/panchang')} />
+        {owner && <ListRow icon="stats-chart-outline" label="Business numbers" onPress={() => router.push('/admin')} />}
         <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />
         {StorePolicy.personalReadingLink && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
         <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => router.push('/support')} />
@@ -372,6 +475,11 @@ function ChipRow<T extends string>({ label, options, value, onChange, render }: 
 }
 
 const styles = StyleSheet.create({
+  codeBox: { alignItems: 'center', paddingVertical: 10, borderRadius: Radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: Colors.gold },
+  code: { fontFamily: Fonts.display, fontSize: 22, letterSpacing: 3, color: Colors.goldSoft },
+  badge: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.cardBorder, minWidth: 84 },
+  badgeNum: { fontFamily: Fonts.display, fontSize: 15, color: Colors.goldSoft },
+  badgeName: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textMuted },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarRing: { width: 84, height: 84, borderRadius: 42, padding: 3 },
   avatar: { width: 78, height: 78, borderRadius: 39 },

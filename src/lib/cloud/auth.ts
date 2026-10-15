@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import { GinniForgotPasswordApi, Links, SupabaseKey, SupabaseUrl } from '@/constants/config';
 import { callFunction, supabase } from '@/lib/cloud/supabase';
+import { track } from '@/lib/events';
 
 /**
  * Login = the Ginni Ki Baatein website account (reading.thedivinetarotonline.com): same email and password.
@@ -77,11 +78,13 @@ async function startSession(body: Record<string, string>): Promise<void> {
 /** Log in with the Ginni website email + password. */
 export async function signIn(email: string, password: string): Promise<void> {
   await startSession({ action: 'login', email: email.trim().toLowerCase(), password });
+  track('login');
 }
 
 /** Creates the account (it works on the Ginni website too) and logs in. */
 export async function signUp(name: string, email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
   await startSession({ action: 'signup', name: name.trim(), email: email.trim().toLowerCase(), password });
+  track('signup');
   return 'signed-in';
 }
 
