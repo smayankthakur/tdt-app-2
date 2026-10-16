@@ -49,4 +49,4 @@ export const Spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as cons
 export const Radius = { sm: 8, md: 14, lg: 20, xl: 28, pill: 999 } as const;
 
 /** Height reserved at the bottom of tab screens for the floating glass tab bar */
-export const TAB_BAR_SPACE = 104;
+export const TAB_BAR_SPACE = 116; // bar + the active bubble that rises above it
