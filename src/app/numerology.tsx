@@ -4,18 +4,21 @@ import { router, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { LockedLine, PremiumLock } from '@/components/premium-lock';
 import { Body, Button, Card, Eyebrow, Screen } from '@/components/ui';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { LIFE_PATH, LUCKY_BY_DAY, NUMEROLOGY_UI as U, PERSONAL_DAY, PERSONAL_YEAR } from '@/data/numerology';
 import { useLang } from '@/i18n';
 import { prettyDate } from '@/lib/festivals';
 import { MASTER_NUMBERS, useNumerology } from '@/lib/numerology';
+import { teaser, usePremium } from '@/lib/premium';
 import { useSession } from '@/lib/session';
 
 export default function NumerologyScreen() {
   const { lang } = useLang();
   const { profile } = useSession();
   const n = useNumerology();
+  const premium = usePremium();
 
   return (
     <Screen edges={[]}>
@@ -34,14 +37,15 @@ export default function NumerologyScreen() {
           </Card>
         </Animated.View>
       ) : (
-        <Numbers n={n} dob={profile.dob} />
+        <Numbers n={n} dob={profile.dob} locked={!premium.loading && !premium.premium} />
       )}
     </Screen>
   );
 }
 
-function Numbers({ n, dob }: { n: NonNullable<ReturnType<typeof useNumerology>>; dob: string }) {
-  const { lang } = useLang();
+/** `locked`: no plan — today's number and the first two lines show; the rest unlocks with Ginni Unlimited. */
+function Numbers({ n, dob, locked }: { n: NonNullable<ReturnType<typeof useNumerology>>; dob: string; locked: boolean }) {
+  const { t, lang } = useLang();
   const day = PERSONAL_DAY[n.personalDay - 1];
   const lucky = LUCKY_BY_DAY[n.personalDay - 1];
   const life = LIFE_PATH[n.lifePath];
@@ -73,76 +77,93 @@ function Numbers({ n, dob }: { n: NonNullable<ReturnType<typeof useNumerology>>;
               <Text style={styles.heroTitle}>{day.title[lang]}</Text>
             </View>
           </View>
-          <Text style={styles.heroText}>{day.meaning[lang]}</Text>
-
-          <View style={styles.doRow}>
-            <View style={[styles.doBox, { borderColor: 'rgba(91,211,138,0.4)' }]}>
-              <Text style={[styles.doLabel, { color: Colors.success }]}>{U.doThis[lang]}</Text>
-              <Text style={styles.doText}>{day.doThis[lang]}</Text>
+          {locked ? (
+            <View>
+              <Text style={styles.heroText} numberOfLines={2}>
+                {teaser(day.meaning[lang])}
+              </Text>
             </View>
-            <View style={[styles.doBox, { borderColor: 'rgba(240,113,122,0.4)' }]}>
-              <Text style={[styles.doLabel, { color: Colors.danger }]}>{U.avoid[lang]}</Text>
-              <Text style={styles.doText}>{day.avoid[lang]}</Text>
-            </View>
-          </View>
+          ) : (
+            <Text style={styles.heroText}>{day.meaning[lang]}</Text>
+          )}
+          {locked && <LockedLine text={t('premium.numerologyLocked')} />}
 
-          <View style={styles.pills}>
-            <View style={styles.pill}>
-              <View style={[styles.swatch, { backgroundColor: n.luckyColor.hex }]} />
-              <View style={{ flexShrink: 1 }}>
-                <Text style={styles.pillLabel}>{U.luckyColour[lang]}</Text>
-                <Text style={styles.pillValue}>{n.luckyColor.name[lang]}</Text>
+          {!locked && (
+            <>
+              <View style={styles.doRow}>
+                <View style={[styles.doBox, { borderColor: 'rgba(91,211,138,0.4)' }]}>
+                  <Text style={[styles.doLabel, { color: Colors.success }]}>{U.doThis[lang]}</Text>
+                  <Text style={styles.doText}>{day.doThis[lang]}</Text>
+                </View>
+                <View style={[styles.doBox, { borderColor: 'rgba(240,113,122,0.4)' }]}>
+                  <Text style={[styles.doLabel, { color: Colors.danger }]}>{U.avoid[lang]}</Text>
+                  <Text style={styles.doText}>{day.avoid[lang]}</Text>
+                </View>
               </View>
-            </View>
-            <Pill icon="keypad-outline" label={U.luckyNumber[lang]} value={String(n.luckyNumber)} />
-            <Pill icon="compass-outline" label={U.direction[lang]} value={lucky.direction[lang]} />
-            <Pill icon="time-outline" label={U.bestTime[lang]} value={lucky.time[lang]} />
-          </View>
+
+              <View style={styles.pills}>
+                <View style={styles.pill}>
+                  <View style={[styles.swatch, { backgroundColor: n.luckyColor.hex }]} />
+                  <View style={{ flexShrink: 1 }}>
+                    <Text style={styles.pillLabel}>{U.luckyColour[lang]}</Text>
+                    <Text style={styles.pillValue}>{n.luckyColor.name[lang]}</Text>
+                  </View>
+                </View>
+                <Pill icon="keypad-outline" label={U.luckyNumber[lang]} value={String(n.luckyNumber)} />
+                <Pill icon="compass-outline" label={U.direction[lang]} value={lucky.direction[lang]} />
+                <Pill icon="time-outline" label={U.bestTime[lang]} value={lucky.time[lang]} />
+              </View>
+            </>
+          )}
         </LinearGradient>
       </Animated.View>
 
-      {/* Cycle numbers */}
-      <Animated.View entering={FadeInDown.duration(450).delay(120)} style={styles.cycleRow}>
-        <Cycle label={U.year[lang]} value={n.personalYear} />
-        <Cycle label={U.personalMonth[lang]} value={n.personalMonth} />
-        <Cycle label={U.personalDay[lang]} value={n.personalDay} active />
-      </Animated.View>
+      {locked && <PremiumLock what={t('premium.whatNumerology')} />}
+      {!locked && (
+        <>
+          {/* Cycle numbers */}
+          <Animated.View entering={FadeInDown.duration(450).delay(120)} style={styles.cycleRow}>
+            <Cycle label={U.year[lang]} value={n.personalYear} />
+            <Cycle label={U.personalMonth[lang]} value={n.personalMonth} />
+            <Cycle label={U.personalDay[lang]} value={n.personalDay} active />
+          </Animated.View>
 
-      {/* Life Path */}
-      <Animated.View entering={FadeInDown.duration(450).delay(180)}>
-        <Card style={{ gap: Spacing.sm }}>
-          <View style={styles.rowHead}>
-            <View style={[styles.badge, master && styles.badgeMaster]}>
-              <Text style={[styles.badgeNum, master && { color: Colors.bgDeep }]}>{n.lifePath}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>{U.lifePath[lang]}</Text>
-              <Text style={styles.cardTitle}>{life.title[lang]}</Text>
-            </View>
-            {master && <Ionicons name="sparkles-outline" size={18} color={Colors.gold} />}
-          </View>
-          <Body muted>{life.text[lang]}</Body>
-        </Card>
-      </Animated.View>
+          {/* Life Path */}
+          <Animated.View entering={FadeInDown.duration(450).delay(180)}>
+            <Card style={{ gap: Spacing.sm }}>
+              <View style={styles.rowHead}>
+                <View style={[styles.badge, master && styles.badgeMaster]}>
+                  <Text style={[styles.badgeNum, master && { color: Colors.bgDeep }]}>{n.lifePath}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{U.lifePath[lang]}</Text>
+                  <Text style={styles.cardTitle}>{life.title[lang]}</Text>
+                </View>
+                {master && <Ionicons name="sparkles-outline" size={18} color={Colors.gold} />}
+              </View>
+              <Body muted>{life.text[lang]}</Body>
+            </Card>
+          </Animated.View>
 
-      {/* Personal Year */}
-      <Animated.View entering={FadeInDown.duration(450).delay(240)}>
-        <Card style={{ gap: Spacing.sm }}>
-          <View style={styles.rowHead}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeNum}>{n.personalYear}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>
-                {U.personalYear[lang]} · {n.date.slice(0, 4)}
-              </Text>
-              <Text style={styles.cardTitle}>{year.theme[lang]}</Text>
-            </View>
-          </View>
-          <Body muted>{year.text[lang]}</Body>
-        </Card>
-      </Animated.View>
-
+          {/* Personal Year */}
+          <Animated.View entering={FadeInDown.duration(450).delay(240)}>
+            <Card style={{ gap: Spacing.sm }}>
+              <View style={styles.rowHead}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeNum}>{n.personalYear}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>
+                    {U.personalYear[lang]} · {n.date.slice(0, 4)}
+                  </Text>
+                  <Text style={styles.cardTitle}>{year.theme[lang]}</Text>
+                </View>
+              </View>
+              <Body muted>{year.text[lang]}</Body>
+            </Card>
+          </Animated.View>
+        </>
+      )}
       <Text style={styles.note}>{U.method[lang]}</Text>
     </>
   );

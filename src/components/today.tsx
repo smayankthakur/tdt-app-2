@@ -5,9 +5,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Sheet } from '@/components/pickers';
+import { LockedLine } from '@/components/premium-lock';
 import { Button, Card, Chip, tap } from '@/components/ui';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { useLang, type Lang } from '@/i18n';
+import { teaser } from '@/lib/premium';
 import { festivalName, type Festival } from '@/lib/festivals';
 import { nakshatraLabel, rashiLabel, type Horoscope } from '@/lib/horoscope';
 import { NAKSHATRAS, RASHIS } from '@/lib/kundli/milan';
@@ -29,7 +31,8 @@ export function signName(index: number, lang: Lang) {
 }
 
 /** The horoscope card: compact on Home (tap → full screen), full on the Horoscope screen. */
-export function HoroscopeCard({ h, tz, date, compact }: { h: Horoscope; tz: number; date: string; compact?: boolean }) {
+/** `locked`: no plan — only the first two lines show, the rest unlocks with Ginni Unlimited. */
+export function HoroscopeCard({ h, tz, date, compact, locked }: { h: Horoscope; tz: number; date: string; compact?: boolean; locked?: boolean }) {
   const { t, lang } = useLang();
   const body = (
     <LinearGradient colors={Gradients.violetPanel} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.horo}>
@@ -47,12 +50,21 @@ export function HoroscopeCard({ h, tz, date, compact }: { h: Horoscope; tz: numb
         </View>
       )}
       <Text style={styles.area}>{h.area}</Text>
-      <Text style={styles.horoText} numberOfLines={compact ? 4 : undefined}>
-        {h.text}
-      </Text>
-      {!compact && h.tara && <Text style={styles.tara}>✦ {h.tara.name}: {h.tara.text}</Text>}
-      {!compact && h.houseChange && <Text style={styles.small}>{t('today.houseChange', { time: formatTimeOn(h.houseChange.at, tz, date) })}</Text>}
-      <View style={styles.pills}>
+      {locked ? (
+        <View>
+          <Text style={styles.horoText} numberOfLines={2}>
+            {teaser(h.text)}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.horoText} numberOfLines={compact ? 4 : undefined}>
+          {h.text}
+        </Text>
+      )}
+      {locked && <LockedLine text={t('premium.horoscopeLocked')} />}
+      {!locked && !compact && h.tara && <Text style={styles.tara}>✦ {h.tara.name}: {h.tara.text}</Text>}
+      {!locked && !compact && h.houseChange && <Text style={styles.small}>{t('today.houseChange', { time: formatTimeOn(h.houseChange.at, tz, date) })}</Text>}
+      {!locked && <View style={styles.pills}>
         <Pill icon="color-palette-outline" label={t('today.luckyColour')} value={h.luckyColour} />
         <Pill icon="keypad-outline" label={t('today.luckyNumber')} value={String(h.luckyNumber)} />
         <Pill
@@ -60,8 +72,8 @@ export function HoroscopeCard({ h, tz, date, compact }: { h: Horoscope; tz: numb
           label={t('today.bestTime')}
           value={h.bestTime ? `${formatTime(h.bestTime.start, tz)}–${formatTime(h.bestTime.end, tz)}` : t('today.noBestTime')}
         />
-      </View>
-      {!compact && (
+      </View>}
+      {!locked && !compact && (
         <View style={styles.doRow}>
           <View style={[styles.doBox, { borderColor: 'rgba(91,211,138,0.4)' }]}>
             <Text style={[styles.doLabel, { color: Colors.success }]}>{t('today.doThis')}</Text>

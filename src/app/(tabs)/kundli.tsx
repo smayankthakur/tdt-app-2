@@ -14,6 +14,7 @@ import type { City } from '@/data/cities';
 import { useLang } from '@/i18n';
 import { birthToUtc } from '@/lib/kundli/astro';
 import { getMoonProfile, matchKundli, type MatchResult, type MoonProfile } from '@/lib/kundli/milan';
+import { usePremium } from '@/lib/premium';
 import { hasEntitlement } from '@/lib/quota';
 import { useSession } from '@/lib/session';
 import { readJSON, Storage, writeJSON } from '@/lib/storage';
@@ -41,6 +42,7 @@ function KundliForm() {
   const [result, setResult] = useState<{ match: MatchResult; boy: MoonProfile; girl: MoonProfile } | null>(null);
   const [error, setError] = useState('');
   const [unlocked, setUnlocked] = useState(false);
+  const premium = usePremium(); // the ₹199 plan includes the Kundli full report
 
   useEffect(() => {
     readJSON<{ boy: Person; girl: Person } | null>(Storage.KEYS.kundliForm, null).then((f) => {
@@ -142,7 +144,7 @@ function KundliForm() {
             )}
           </Card>
 
-          {unlocked ? (
+          {unlocked || premium.premium ? (
             <Card>
               <Text style={styles.h}>{t('kundli.fullReport')}</Text>
               <View style={styles.tableHead}>

@@ -23,6 +23,7 @@ import { useJournalToday } from '@/lib/journal';
 import { openDeveloperSite, openSocial } from '@/lib/links';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
+import { usePremium } from '@/lib/premium';
 import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { shareStory } from '@/lib/share';
 import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
@@ -59,6 +60,7 @@ export default function HomeScreen() {
   const trio = weeklyTrio();
   const today = useToday();
   const numerology = useNumerology();
+  const premium = usePremium();
   const journal = useJournalToday();
   const mantra = todayMantra(new Date(today.now), lang);
 
@@ -190,14 +192,17 @@ export default function HomeScreen() {
       <View style={styles.body}>
         {/* Stats */}
         <View style={styles.stats}>
+          {/* The business in numbers (from the client): lakhs of clients, 7L+ YouTube family, 1500+ course students */}
           {[
-            { n: 78, label: t('home.statsCards') },
-            { n: 15, label: t('home.statsQuestions') },
-            { n: 3, label: t('home.statsLanguages') },
+            { text: t('home.statsClientsValue'), label: t('home.statsClients') },
+            { n: 7, suffix: 'L+', label: t('home.statsYoutube') },
+            { n: 1500, suffix: '+', label: t('home.statsStudents') },
           ].map((s) => (
             <View key={s.label} style={styles.statPill}>
-              <CountUp to={s.n} style={styles.statNum} />
-              <Text style={styles.statLabel}>{s.label}</Text>
+              {s.n !== undefined ? <CountUp to={s.n} suffix={s.suffix} style={styles.statNum} /> : <Text style={styles.statNum}>{s.text}</Text>}
+              <Text style={styles.statLabel} numberOfLines={1}>
+                {s.label}
+              </Text>
             </View>
           ))}
         </View>
@@ -206,7 +211,7 @@ export default function HomeScreen() {
         <SectionTitle>{t('today.title')}</SectionTitle>
         {today.birth.loaded &&
           (today.horoscope ? (
-            <HoroscopeCard h={today.horoscope} tz={today.panchang?.place.tz ?? today.place.tz} date={today.date} compact />
+            <HoroscopeCard h={today.horoscope} tz={today.panchang?.place.tz ?? today.place.tz} date={today.date} compact locked={!premium.loading && !premium.premium} />
           ) : !today.birth.moon ? (
             <HoroscopeSetup needsTime={today.birth.needsTime} onPick={() => setPicking(true)} />
           ) : null)}

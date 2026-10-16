@@ -5,11 +5,13 @@ import { ActivityIndicator, InteractionManager, StyleSheet, Text, View } from 'r
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { StoryFrame, storyStyles } from '@/components/share-card';
+import { LockedLine, PremiumLock } from '@/components/premium-lock';
 import { HoroscopeCard, HoroscopeSetup, MoonSignSheet, signName, Stars } from '@/components/today';
 import { Body, Button, Card, Screen } from '@/components/ui';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { PLANET_INFO, WEEKDAYS, WEEKLY_UI as WU } from '@/data/weekly';
 import { useLang, type Lang } from '@/i18n';
+import { usePremium } from '@/lib/premium';
 import { track } from '@/lib/events';
 import { nakshatraLabel } from '@/lib/horoscope';
 import { prettyDate } from '@/lib/festivals';
@@ -22,6 +24,8 @@ import { weeklyFor, type WeeklyRashifal } from '@/lib/weekly';
 export default function HoroscopeScreen() {
   const { t, lang } = useLang();
   const { date, place, panchang, horoscope, birth } = useToday();
+  const premium = usePremium();
+  const locked = !premium.loading && !premium.premium; // no plan: two-line previews, the rest unlocks with ₹199
   const [picking, setPicking] = useState(false);
   const shotRef = useRef<View>(null);
   useEffect(() => track('horoscope_view'), []);
@@ -44,16 +48,19 @@ export default function HoroscopeScreen() {
         </View>
       ) : (
         <>
-          <HoroscopeCard h={horoscope} tz={panchang.place.tz} date={date} />
+          <HoroscopeCard h={horoscope} tz={panchang.place.tz} date={date} locked={locked} />
+          {locked && <PremiumLock what={t('premium.whatHoroscope')} />}
           <Text style={styles.meta}>
             {t('today.todayNakshatra')}: {nakshatraLabel(panchang.nakshatras[0].index, lang)}
             {birth.moon.nakshatra !== null ? ` · ${t('today.birthNakshatra')}: ${nakshatraLabel(birth.moon.nakshatra, lang)}` : ''}
           </Text>
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <Button label={t('share.story')} icon="share-social-outline" variant="ghost" small style={{ flex: 1 }} onPress={share} />
+            {!locked && (
+              <Button label={t('share.story')} icon="share-social-outline" variant="ghost" small style={{ flex: 1 }} onPress={share} />
+            )}
             <Button label={t('today.changeSign')} icon="moon-outline" variant="ghost" small style={{ flex: 1 }} onPress={() => setPicking(true)} />
           </View>
-          <ThisWeek rashi={birth.moon.rashi} date={date} place={place} />
+          <ThisWeek rashi={birth.moon.rashi} date={date} place={place} locked={locked} />
           <Button label={t('panchang.title')} icon="calendar-outline" variant="ghost" small onPress={() => router.push('/panchang')} />
           <Text style={styles.note}>{t('today.basedOn')}</Text>
 
@@ -69,7 +76,8 @@ export default function HoroscopeScreen() {
             </Text>
             {horoscope.bestTime && (
               <Text style={storyStyles.label}>
-                {t('today.bestTime')}: {formatTime(horoscope.bestTime.start, panchang.place.tz)}–{formatTime(horoscope.bestTime.end, panchang.place.tz)}
+                {t('today.bestTime')}: {formatTime(horoscope.bestTime.start, panchang.place.tz)}–
+                {formatTime(horoscope.bestTime.end, panchang.place.tz)}
               </Text>
             )}
           </StoryFrame>
@@ -92,8 +100,8 @@ function signShort(index: number, lang: Lang) {
 }
 
 /** "This week": the six slow-ish planets from the birth Moon at mid-week, plus the week's best Moon day. */
-function ThisWeek({ rashi, date, place }: { rashi: number; date: string; place: Place }) {
-  const { lang } = useLang();
+function ThisWeek({ rashi, date, place, locked }: { rashi: number; date: string; place: Place; locked: boolean }) {
+  const { t, lang } = useLang();
   const hi = lang === 'hi';
   const key = `${rashi}|${date}|${place.lat}|${place.lon}|${place.tz}`;
   const [result, setResult] = useState<{ key: string; w: WeeklyRashifal } | null>(null);
@@ -136,50 +144,60 @@ function ThisWeek({ rashi, date, place }: { rashi: number; date: string; place: 
           </Text>
         </View>
         <Text style={styles.weekSummary}>{w.summary[lang]}</Text>
-
-        <View style={styles.dayStrip}>
-          {w.days.map((d) => {
-            const best = w.bestDay?.date === d.date;
-            const today = d.date === date;
-            return (
-              <View
-                key={d.date}
-                style={[styles.dayCell, best && styles.dayBest, today && !best && styles.dayToday]}
-                accessible
-                accessibilityLabel={`${WEEKDAYS[d.weekday].long[lang]}${best ? ` · ${WU.bestDay[lang]}` : ''}`}>
-                <Text style={[styles.dayName, best && { color: Colors.bgDeep }]}>{WEEKDAYS[d.weekday].short[lang]}</Text>
-                <View style={[styles.dot, { backgroundColor: best ? Colors.bgDeep : d.favourable ? Colors.success : 'rgba(255,255,255,0.18)' }]} />
+        {locked ? (
+          <LockedLine text={t('premium.title', { what: t('premium.whatWeekly') })} />
+        ) : (
+          <>
+            <View style={styles.dayStrip}>
+              {w.days.map((d) => {
+                const best = w.bestDay?.date === d.date;
+                const today = d.date === date;
+                return (
+                  <View
+                    key={d.date}
+                    style={[styles.dayCell, best && styles.dayBest, today && !best && styles.dayToday]}
+                    accessible
+                    accessibilityLabel={`${WEEKDAYS[d.weekday].long[lang]}${best ? ` · ${WU.bestDay[lang]}` : ''}`}>
+                    <Text style={[styles.dayName, best && { color: Colors.bgDeep }]}>{WEEKDAYS[d.weekday].short[lang]}</Text>
+                    <View
+                      style={[styles.dot, { backgroundColor: best ? Colors.bgDeep : d.favourable ? Colors.success : 'rgba(255,255,255,0.18)' }]}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+            {w.bestDay && (
+              <View style={styles.bestRow}>
+                <Ionicons name="star" size={14} color={Colors.gold} />
+                <Text style={styles.bestText}>
+                  {WU.bestDay[lang]}: <Text style={{ color: Colors.goldSoft }}>{WEEKDAYS[w.bestDay.weekday].long[lang]}</Text>
+                </Text>
               </View>
-            );
-          })}
-        </View>
-        {w.bestDay && (
-          <View style={styles.bestRow}>
-            <Ionicons name="star" size={14} color={Colors.gold} />
-            <Text style={styles.bestText}>
-              {WU.bestDay[lang]}: <Text style={{ color: Colors.goldSoft }}>{WEEKDAYS[w.bestDay.weekday].long[lang]}</Text>
-            </Text>
-          </View>
+            )}
+
+            <View style={{ gap: 10, marginTop: 2 }}>
+              {w.planets.map((p) => {
+                const info = PLANET_INFO[p.planet];
+                return (
+                  <View key={p.planet} style={styles.planetRow}>
+                    <View style={[styles.planetIcon, { borderColor: p.favourable ? 'rgba(91,211,138,0.5)' : 'rgba(233,196,106,0.35)' }]}>
+                      <Ionicons name={info.icon} size={15} color={p.favourable ? Colors.success : Colors.gold} />
+                    </View>
+                    <View style={{ flex: 1, gap: 1 }}>
+                      <Text style={styles.planetHead}>
+                        {info.name[lang]}{' '}
+                        <Text style={styles.planetMeta}>
+                          · {info.theme[lang]} · {signShort(p.sign, lang)} · {WU.houseLabel[lang]} {p.house}
+                        </Text>
+                      </Text>
+                      <Text style={styles.planetText}>{p.text[lang]}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
         )}
-
-        <View style={{ gap: 10, marginTop: 2 }}>
-          {w.planets.map((p) => {
-            const info = PLANET_INFO[p.planet];
-            return (
-              <View key={p.planet} style={styles.planetRow}>
-                <View style={[styles.planetIcon, { borderColor: p.favourable ? 'rgba(91,211,138,0.5)' : 'rgba(233,196,106,0.35)' }]}>
-                  <Ionicons name={info.icon} size={15} color={p.favourable ? Colors.success : Colors.gold} />
-                </View>
-                <View style={{ flex: 1, gap: 1 }}>
-                  <Text style={styles.planetHead}>
-                    {info.name[lang]} <Text style={styles.planetMeta}>· {info.theme[lang]} · {signShort(p.sign, lang)} · {WU.houseLabel[lang]} {p.house}</Text>
-                  </Text>
-                  <Text style={styles.planetText}>{p.text[lang]}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
         <Text style={styles.weekNote}>{WU.note[lang]}</Text>
       </Card>
     </Animated.View>
@@ -202,7 +220,15 @@ const styles = StyleSheet.create({
   bestRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bestText: { fontFamily: Fonts.bodySemi, fontSize: 13.5, color: Colors.text },
   planetRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  planetIcon: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.04)' },
+  planetIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
   planetHead: { fontFamily: Fonts.bodySemi, fontSize: 13.5, color: Colors.text },
   planetMeta: { fontFamily: Fonts.body, fontSize: 12, color: Colors.textMuted },
   planetText: { fontFamily: Fonts.body, fontSize: 13.5, lineHeight: 19.5, color: Colors.text },
