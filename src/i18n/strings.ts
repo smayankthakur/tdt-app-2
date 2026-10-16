@@ -525,6 +525,8 @@ const en = {
     journalSettingSub: 'A gentle note at 9:30 PM if you haven’t written today',
     journalBody: 'How was your day? Take 2 minutes to write it down ✍️',
     permission: 'Please allow notifications for The Divine Tarot in your phone settings.',
+    blocked: 'Notifications are blocked on this phone, so reminders can’t arrive.',
+    allow: 'Allow',
   },
   memory: {
     lastTime: 'Last time, on {{date}}, you asked about {{topic}} and drew {{card}}.',
@@ -1079,6 +1081,8 @@ const hi: Dict = {
     journalSettingSub: 'अगर आज नहीं लिखा, तो रात 9:30 बजे हल्की-सी याद',
     journalBody: 'आज का दिन कैसा रहा? 2 मिनट निकालकर लिख लीजिए ✍️',
     permission: 'कृपया फ़ोन की सेटिंग में The Divine Tarot के लिए सूचनाएँ चालू करें।',
+    blocked: 'इस फ़ोन पर सूचनाएँ बंद हैं, इसलिए रिमाइंडर नहीं आ पाएँगे।',
+    allow: 'चालू करें',
   },
   memory: {
     lastTime: 'पिछली बार, {{date}} को, आपने {{topic}} के बारे में पूछा था और {{card}} कार्ड आया था।',
@@ -1631,6 +1635,8 @@ const hinglish: Dict = {
     journalSettingSub: 'Aaj nahi likha toh raat 9:30 baje ek halka sa reminder',
     journalBody: 'Aaj ka din kaisa raha? 2 minute nikaal ke likh lo ✍️',
     permission: 'Phone settings mein The Divine Tarot ke liye notifications ON karo.',
+    blocked: 'Is phone pe notifications band hain, isliye reminders nahi aa payenge.',
+    allow: 'ON karo',
   },
   memory: {
     lastTime: 'Pichhli baar, {{date}} ko, tumne {{topic}} ke baare mein poocha tha aur {{card}} aaya tha.',

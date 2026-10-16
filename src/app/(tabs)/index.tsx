@@ -53,7 +53,6 @@ export default function HomeScreen() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [heroLoaded, setHeroLoaded] = useState(false);
   const [milestone, setMilestone] = useState<number | null>(null);
-  const [askRemind, setAskRemind] = useState(false);
   const [picking, setPicking] = useState(false);
   const streakShot = useRef<View>(null);
   const dailyShot = useRef<View>(null);
@@ -133,17 +132,20 @@ export default function HomeScreen() {
     const m = await claimMilestone(r.streak);
     if (m) setMilestone(m);
     syncNotifications(); // the streak reminder moves to tomorrow night
-    if (notificationsAvailable && !(await Storage.getRemindAsked()) && !(await Storage.getReminder()).enabled) setAskRemind(true);
   };
 
-  const answerRemind = async (yes: boolean) => {
-    setAskRemind(false);
-    await Storage.setRemindAsked();
-    if (yes && (await requestNotificationPermission())) {
-      await Storage.setReminder({ enabled: true, hour: 8, minute: 0 });
-      await syncNotifications();
-    }
-  };
+  // Reminders are on by default: ask the phone for permission once, on the first open (after the intro animation).
+  // If it's refused, the app never asks again by itself; Profile → Notifications asks when a switch is turned on.
+  useEffect(() => {
+    if (!notificationsAvailable) return;
+    const id = setTimeout(async () => {
+      if (await Storage.getRemindAsked()) return;
+      await Storage.setRemindAsked();
+      if (await requestNotificationPermission()) await syncNotifications();
+    }, 3000);
+    return () => clearTimeout(id);
+  }, []);
+
 
   const features: { icon: IconName; label: string; onPress: () => void }[] = [
     { icon: 'chatbubbles', label: t('home.featGinni'), onPress: () => router.navigate('/reading') },
@@ -244,16 +246,6 @@ export default function HomeScreen() {
             )}
           </View>
         </Card>
-
-        {askRemind && (
-          <Card style={{ gap: Spacing.sm }}>
-            <Text style={styles.askText}>🔔 {t('streak.remindAsk')}</Text>
-            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-              <Button label={t('streak.remindYes')} small style={{ flex: 1 }} onPress={() => answerRemind(true)} />
-              <Button label={t('streak.remindNo')} variant="ghost" small style={{ flex: 1 }} onPress={() => answerRemind(false)} />
-            </View>
-          </Card>
-        )}
 
         {/* Daily ritual: numerology, mantra, journal */}
         <SectionTitle>{t('home.ritualsTitle')}</SectionTitle>

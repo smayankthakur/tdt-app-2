@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import i18n, { type Lang } from '@/i18n';
 import { getStreak, todayKey } from '@/lib/daily';
 import { festivalName, upcomingFestivals } from '@/lib/festivals';
-import { getEntry } from '@/lib/journal';
+import { getEntries, getEntry } from '@/lib/journal';
 import { Storage } from '@/lib/storage';
 
 /**
@@ -139,8 +139,9 @@ async function doSync(): Promise<void> {
       }
     }
 
-    // Journal (off unless turned on): 9:30 PM tonight if today's page is still empty, else tomorrow night
-    if (notify.journal) {
+    // Journal (on by default, but only for people who have started a journal): 9:30 PM tonight if today's page is
+    // still empty, else tomorrow night
+    if (notify.journal !== false && (await getEntries()).length > 0) {
       const written = !!(await getEntry(today));
       const tonight = atLocal(today, JOURNAL_HOUR, JOURNAL_MIN);
       const when = !written && tonight.getTime() > now ? tonight : new Date(tonight.getTime() + 86_400_000);

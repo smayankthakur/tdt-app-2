@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
@@ -19,7 +19,7 @@ import { isAdmin } from '@/lib/cloud/admin';
 import { myInviteCode } from '@/lib/cloud/invite';
 import { MILESTONES } from '@/lib/daily';
 import { track } from '@/lib/events';
-import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
+import { notificationsAvailable, notificationsGranted, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { COURSES } from '@/data/courses';
 import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
@@ -53,6 +53,8 @@ export default function ProfileScreen() {
   const inviteCode = mine ? account.inviteCode : null;
   const owner = mine && account.owner;
   const params = useLocalSearchParams<{ edit?: string }>();
+  // Reminders are on by default, but the phone may still block them: then a line explains how to allow them
+  const [allowed, setAllowed] = useState(true);
 
   // Re-read on every visit: Home can turn the reminder on and earn badges while this tab stays mounted.
   useFocusEffect(
@@ -61,6 +63,7 @@ export default function ProfileScreen() {
       Storage.getPrivacy().then(setPrivacy);
       Storage.getNotify().then(setNotify);
       Storage.getBadges().then(setBadges);
+      notificationsGranted().then(setAllowed);
     }, []),
   );
   // "Add birth details" on Home opens the editor directly (state adjusted while rendering, param cleared after)
@@ -146,8 +149,19 @@ export default function ProfileScreen() {
     await syncNotifications();
   };
 
+  const allow = async () => {
+    if (await requestNotificationPermission()) {
+      setAllowed(true);
+      await syncNotifications();
+    } else {
+      Linking.openSettings().catch(() => {}); // already refused once: only the phone's settings can allow it now
+    }
+  };
+
   const updateNotify = async (next: NotifySettings) => {
-    if ((next.streak || next.festivals || next.journal) && !(await requestNotificationPermission())) {
+    // permission is only needed for a switch being turned ON (turning one off must always work)
+    const turningOn = (next.streak && !notify?.streak) || (next.festivals && !notify?.festivals) || (next.journal !== false && notify?.journal === false);
+    if (turningOn && !(await requestNotificationPermission())) {
       Alert.alert(t('profile.reminder'), t('notify.permission'));
       return;
     }
@@ -308,6 +322,13 @@ export default function ProfileScreen() {
             </View>
             <Switch value={reminder.enabled} onValueChange={(v) => updateReminder({ ...reminder, enabled: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
           </View>
+          {!allowed && (
+            <Pressable accessibilityRole="button" onPress={allow} style={styles.blocked}>
+              <Ionicons name="notifications-off-outline" size={18} color={Colors.gold} />
+              <Text style={styles.blockedText}>{t('notify.blocked')}</Text>
+              <Text style={styles.blockedCta}>{t('notify.allow')}</Text>
+            </Pressable>
+          )}
           {reminder.enabled && (
             <View style={styles.chips}>
               {TIMES.map((x) => (
@@ -341,7 +362,7 @@ export default function ProfileScreen() {
                   <Text style={styles.label}>{t('notify.journalSetting')}</Text>
                   <Text style={styles.small}>{t('notify.journalSettingSub')}</Text>
                 </View>
-                <Switch value={!!notify.journal} onValueChange={(v) => updateNotify({ ...notify, journal: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
+                <Switch value={notify.journal !== false} onValueChange={(v) => updateNotify({ ...notify, journal: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
               </View>
             </>
           )}
@@ -498,6 +519,18 @@ function ChipRow<T extends string>({ label, options, value, onChange, render }: 
 }
 
 const styles = StyleSheet.create({
+  blocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.35)',
+    backgroundColor: 'rgba(233,196,106,0.08)',
+  },
+  blockedText: { flex: 1, fontFamily: Fonts.body, fontSize: 12.5, color: Colors.text },
+  blockedCta: { fontFamily: Fonts.bodyMedium, fontSize: 12.5, color: Colors.gold },
   codeBox: { alignItems: 'center', paddingVertical: 10, borderRadius: Radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: Colors.gold },
   code: { fontFamily: Fonts.display, fontSize: 22, letterSpacing: 3, color: Colors.goldSoft },
   badge: { alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.cardBorder, minWidth: 84 },

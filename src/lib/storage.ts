@@ -132,7 +132,8 @@ export const Storage = {
   getStreak: () => readJSON<Streak>(KEYS.streak, { count: 0, lastDate: '' }),
   setStreak: (s: Streak) => writeJSON(KEYS.streak, s),
 
-  getReminder: () => readJSON<ReminderSettings>(KEYS.reminder, { enabled: false, hour: 8, minute: 0 }),
+  // On by default (8 AM); turned off only when the user switches it off in Profile
+  getReminder: () => readJSON<ReminderSettings>(KEYS.reminder, { enabled: true, hour: 8, minute: 0 }),
   setReminder: (s: ReminderSettings) => writeJSON(KEYS.reminder, s),
 
   getQuota: () => readJSON<Quota>(KEYS.quota, { date: '', used: 0 }),
