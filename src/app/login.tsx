@@ -8,7 +8,6 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, tap } from '@/components/ui';
-import { SiteImages } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
 import { AuthError, isEmail, resetPassword, signIn, signUp } from '@/lib/cloud/auth';
@@ -121,7 +120,7 @@ export default function LoginScreen() {
             <Animated.View entering={FadeIn.duration(500)} style={styles.brand}>
               <LinearGradient colors={Gradients.goldRing} style={styles.logoRing}>
                 <View style={styles.logoInner}>
-                  <Image source={{ uri: SiteImages.logo }} style={styles.logo} contentFit="contain" accessibilityLabel="The Divine Tarot logo" />
+                  <Image source={require('@/assets/images/logo.png')} style={styles.logo} contentFit="contain" accessibilityLabel="The Divine Tarot logo" />
                 </View>
               </LinearGradient>
               <Text style={styles.brandName}>The Divine Tarot</Text>

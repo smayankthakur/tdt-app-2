@@ -41,7 +41,7 @@ export function IntroSplash() {
         <Animated.View style={[styles.glow, glowStyle]} />
         <Animated.View style={[styles.ring, ringStyle]} />
         <Animated.View style={logoStyle}>
-          <Image source={require('@/assets/images/splash-icon.png')} style={{ width: 132, height: 132 }} contentFit="contain" />
+          <Image source={require('@/assets/images/logo.png')} style={{ width: 150, height: 176 }} contentFit="contain" />
         </Animated.View>
       </View>
       <Animated.View style={[{ alignItems: 'center', marginTop: 28 }, textStyle]}>

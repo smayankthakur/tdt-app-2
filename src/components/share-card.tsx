@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { SiteImages } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 
 /**
@@ -24,7 +23,7 @@ export const StoryFrame = forwardRef<View, { eyebrow: string; footer: string; ch
         <LinearGradient colors={['#170A2E', '#2A1250', '#0B0710']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
         <View style={styles.glow} />
         <View style={styles.head}>
-          <Image source={{ uri: SiteImages.logo }} style={styles.logo} contentFit="contain" />
+          <Image source={require('@/assets/images/logo.png')} style={styles.logo} contentFit="contain" />
           <Text style={styles.brand}>The Divine Tarot</Text>
         </View>
         <Text style={styles.eyebrow}>{eyebrow}</Text>

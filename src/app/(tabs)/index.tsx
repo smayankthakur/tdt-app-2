@@ -173,7 +173,7 @@ export default function HomeScreen() {
         {!heroLoaded && <LinearGradient colors={Gradients.violetPanel} style={StyleSheet.absoluteFill} />}
         <LinearGradient colors={Gradients.heroFade} locations={[0.2, 0.6, 1]} style={StyleSheet.absoluteFill} />
         <View style={styles.header}>
-          <Image source={{ uri: SiteImages.logo }} style={styles.logo} contentFit="contain" accessibilityLabel="The Divine Tarot logo" />
+          <Image source={require('@/assets/images/logo.png')} style={styles.logo} contentFit="contain" accessibilityLabel="The Divine Tarot logo" />
           <Text style={styles.brand}>The Divine Tarot</Text>
         </View>
         <View style={styles.heroText}>
