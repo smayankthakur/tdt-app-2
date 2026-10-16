@@ -18,7 +18,10 @@ import { useLang } from '@/i18n';
 import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, todayKey, weeklyTrio } from '@/lib/daily';
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
+import { useJournalToday } from '@/lib/journal';
 import { openSocial } from '@/lib/links';
+import { todayMantra } from '@/lib/mantra';
+import { useNumerology } from '@/lib/numerology';
 import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { shareStory } from '@/lib/share';
 import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
@@ -55,6 +58,9 @@ export default function HomeScreen() {
   const dailyShot = useRef<View>(null);
   const trio = weeklyTrio();
   const today = useToday();
+  const numerology = useNumerology();
+  const journal = useJournalToday();
+  const mantra = todayMantra(new Date(today.now), lang);
 
   // Card of the day + streak. Home stays mounted under the other tabs, so this also runs when the app comes back
   // to the foreground and when the date changes (see below) — not only on tab focus.
@@ -248,6 +254,35 @@ export default function HomeScreen() {
           </Card>
         )}
 
+        {/* Daily ritual: numerology, mantra, journal */}
+        <SectionTitle>{t('home.ritualsTitle')}</SectionTitle>
+        <View style={styles.rituals}>
+          <Pressable accessibilityRole="button" style={styles.ritual} onPress={() => { tap(); router.push('/numerology'); }}>
+            <Text style={styles.ritualLabel}>{t('home.numTile')}</Text>
+            {numerology ? (
+              <View style={{ alignItems: 'center', gap: 4 }}>
+                <Text style={styles.ritualNum}>{numerology.personalDay}</Text>
+                <View style={[styles.swatch, { backgroundColor: numerology.luckyColor.hex }]} />
+              </View>
+            ) : (
+              <Text style={styles.ritualValue}>{t('home.numSetup')}</Text>
+            )}
+          </Pressable>
+          <Pressable accessibilityRole="button" style={styles.ritual} onPress={() => { tap(); router.push('/mantra'); }}>
+            <Text style={styles.ritualLabel}>{t('home.mantraTile')}</Text>
+            <Text style={styles.ritualOm}>ॐ</Text>
+            <Text style={styles.ritualValue} numberOfLines={2}>{mantra.deity}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" style={styles.ritual} onPress={() => { tap(); router.push('/journal'); }}>
+            <Text style={styles.ritualLabel}>{t('home.journalTile')}</Text>
+            <Text style={styles.ritualOm}>{journal.hasEntryToday ? '✍️' : '📖'}</Text>
+            <Text style={styles.ritualValue} numberOfLines={2}>
+              {journal.hasEntryToday ? t('home.journalDone') : t('home.journalWrite')}
+              {journal.streak > 1 ? ` · 🔥${journal.streak}` : ''}
+            </Text>
+          </Pressable>
+        </View>
+
         {/* Feature grid */}
         <SectionTitle>{t('home.explore')}</SectionTitle>
         <View style={styles.grid}>
@@ -411,6 +446,24 @@ function TestimonialCarousel({ items, width }: { items: Testimonial[]; width: nu
 }
 
 const styles = StyleSheet.create({
+  rituals: { flexDirection: 'row', gap: Spacing.sm },
+  ritual: {
+    flex: 1,
+    minHeight: 132,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  ritualLabel: { fontFamily: Fonts.bodyMedium, fontSize: 11.5, color: Colors.goldSoft, textAlign: 'center', letterSpacing: 0.3 },
+  ritualNum: { fontFamily: Fonts.display, fontSize: 34, color: Colors.gold, lineHeight: 40 },
+  ritualOm: { fontSize: 28, color: Colors.gold, lineHeight: 36 },
+  ritualValue: { fontFamily: Fonts.body, fontSize: 12, color: Colors.text, textAlign: 'center' },
+  swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' },
   header: { position: 'absolute', top: Spacing.md, left: Spacing.lg, right: Spacing.lg, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   logo: { width: 40, height: 46 },
   brand: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text, letterSpacing: 1 },

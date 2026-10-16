@@ -13,6 +13,15 @@ What brings people back every day, what helps them bring friends, and how you se
 | **Streak badges** | Home + Profile | Milestones at 3, 7, 11, 21, 51 and 108 days (badges only — no free readings) |
 | **Ginni remembers** | Reading chat | A new reading on the same topic as one in the last 6 months gets a line like "Last time you asked about work, the Tower came up…". From saved history (phone + account); offline |
 
+## Daily ritual (Home → "Your daily ritual")
+
+| Feature | Where | How it works |
+|---|---|---|
+| **Numerology** | Home tile → `/numerology` | Life Path, Personal Year/Month/Day from the profile birth date (Pythagorean, master numbers 11/22/33), lucky colour/number/direction/time. Offline. Text: `src/data/numerology.ts`. Test: `npm run test:numerology` |
+| **Weekly rashifal** | Horoscope screen → "This week" | Sun, Mercury, Venus, Mars, Jupiter, Saturn signs at mid-week (Lahiri), house from the Moon sign, best day of the week. Offline. Text: `src/data/weekly.ts` |
+| **Mantra & Dhyaan** | Home tile → `/mantra` | Weekday mantra (Devanagari + Roman, meaning, how to chant), daily affirmation, 108-bead mala counter with haptics, 2-minute 4-4-6 breathing. Counts stay on the phone. Text: `src/data/mantras.ts` |
+| **Journal** | Home tile → `/journal`, `/journal-month` | Mood, tags and a note with today's Card of the Day; "your month in cards" summary. **Only on the phone** (one key per month), never sent to the server, cleared on logout. Optional 9:30 PM reminder (Profile → Notifications, off by default) |
+
 ## Sharing and invites
 
 - **Share as story** (9:16 image for WhatsApp status / Instagram): readings, Card of the Day and the horoscope. The question is hidden unless the user turns it on.

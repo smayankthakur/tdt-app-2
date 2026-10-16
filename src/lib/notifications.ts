@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import i18n, { type Lang } from '@/i18n';
 import { getStreak, todayKey } from '@/lib/daily';
 import { festivalName, upcomingFestivals } from '@/lib/festivals';
+import { getEntry } from '@/lib/journal';
 import { Storage } from '@/lib/storage';
 
 /**
@@ -37,6 +38,8 @@ const CHANNEL_ID = 'daily-card';
 const STREAK_HOUR = 20;
 const STREAK_MIN = 30;
 const FESTIVAL_HOUR = 7;
+const JOURNAL_HOUR = 21;
+const JOURNAL_MIN = 30;
 
 async function ensureChannel() {
   if (N && Platform.OS === 'android') {
@@ -136,6 +139,18 @@ async function doSync(): Promise<void> {
       }
     }
 
+    // Journal (off unless turned on): 9:30 PM tonight if today's page is still empty, else tomorrow night
+    if (notify.journal) {
+      const written = !!(await getEntry(today));
+      const tonight = atLocal(today, JOURNAL_HOUR, JOURNAL_MIN);
+      const when = !written && tonight.getTime() > now ? tonight : new Date(tonight.getTime() + 86_400_000);
+      await N.scheduleNotificationAsync({
+        identifier: 'journal',
+        content: { title: 'The Divine Tarot', body: tr(lang, 'notify.journalBody'), data: { url: '/journal' } },
+        trigger: dateTrigger(when),
+      });
+    }
+
     if (notify.festivals) {
       // dates marked verify:true in festivals.json (sources disagree) get no notification
       const list = upcomingFestivals(today, 30, ['festival', 'ekadashi']).filter((f) => !f.verify && atLocal(f.date, FESTIVAL_HOUR, 0).getTime() > now);
@@ -159,6 +174,15 @@ async function doSync(): Promise<void> {
     }
   } catch {
     // notifications are best-effort
+  }
+}
+
+/** Today's journal page was written: drop tonight's journal reminder right away (a full re-plan follows). */
+export async function cancelJournalReminder(): Promise<void> {
+  try {
+    await N?.cancelScheduledNotificationAsync?.('journal');
+  } catch {
+    // best-effort
   }
 }
 

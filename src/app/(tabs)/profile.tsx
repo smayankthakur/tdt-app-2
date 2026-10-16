@@ -147,7 +147,7 @@ export default function ProfileScreen() {
   };
 
   const updateNotify = async (next: NotifySettings) => {
-    if ((next.streak || next.festivals) && !(await requestNotificationPermission())) {
+    if ((next.streak || next.festivals || next.journal) && !(await requestNotificationPermission())) {
       Alert.alert(t('profile.reminder'), t('notify.permission'));
       return;
     }
@@ -335,6 +335,13 @@ export default function ProfileScreen() {
                   <Text style={styles.small}>{t('notify.festivalSettingSub')}</Text>
                 </View>
                 <Switch value={notify.festivals} onValueChange={(v) => updateNotify({ ...notify, festivals: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
+              </View>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{t('notify.journalSetting')}</Text>
+                  <Text style={styles.small}>{t('notify.journalSettingSub')}</Text>
+                </View>
+                <Switch value={!!notify.journal} onValueChange={(v) => updateNotify({ ...notify, journal: v })} trackColor={{ true: Colors.gold, false: '#3A3448' }} thumbColor={Colors.text} />
               </View>
             </>
           )}

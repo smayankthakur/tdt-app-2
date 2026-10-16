@@ -30,10 +30,23 @@ const KEYS = {
   notify: 'tdt.notify.v1',
   /** we asked once (after the first card reveal) whether to turn on the daily reminder */
   remindAsked: 'tdt.remindAsked.v1',
+  /**
+   * Journal entries + moods (src/lib/journal.ts). Only ever on this phone — never synced or sent anywhere.
+   * Now one key per month (`tdt.journal.YYYY-MM.v1`); this old single key is migrated once and removed.
+   */
+  journal: 'tdt.journal.v1',
 } as const;
 
+/** Every journal key starts with this (all are removed by clearUserData). */
+export const JOURNAL_PREFIX = 'tdt.journal.';
+let journalClear: (() => Promise<void>) | null = null;
+/** src/lib/journal.ts registers clearJournal() here, so log-out clears through its write queue and cache. */
+export function registerJournalClear(fn: () => Promise<void>): void {
+  journalClear = fn;
+}
+
 export type PickedMoon = { rashi: number; nakshatra: number | null };
-export type NotifySettings = { streak: boolean; festivals: boolean };
+export type NotifySettings = { streak: boolean; festivals: boolean; journal?: boolean };
 
 export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number };
 
@@ -171,6 +184,17 @@ export const Storage = {
     try {
       await AsyncStorage.removeItem(KEYS.kundliForm);
       await AsyncStorage.removeItem(KEYS.moonSign);
+    } catch {
+      // non-fatal
+    }
+    // Journal entries are private to the person who wrote them: never left behind for the next account.
+    // clearJournal() (src/lib/journal.ts) removes every tdt.journal.* key in step with pending saves.
+    try {
+      if (journalClear) await journalClear();
+      else {
+        const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(JOURNAL_PREFIX));
+        if (keys.length) await AsyncStorage.multiRemove(keys);
+      }
     } catch {
       // non-fatal
     }

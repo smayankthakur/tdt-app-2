@@ -3,7 +3,7 @@
  * Keep it true to what the app does; update it together with the Play Store / App Store privacy forms.
  * Have it reviewed by a lawyer before launch (see docs/PRIVACY-POLICY.md).
  */
-export const PRIVACY_UPDATED = '14 Oct 2026';
+export const PRIVACY_UPDATED = '16 Oct 2026';
 export const PRIVACY_CONTACT = 'thedivinetarot111@gmail.com';
 
 export const PRIVACY: { h: string; p: string[] }[] = [
@@ -26,7 +26,7 @@ export const PRIVACY: { h: string; p: string[] }[] = [
       'Crash reports: if the App crashes or hits an error, a technical report (error details, app version, phone model and operating system) is sent to our crash-reporting provider so we can fix it. It contains no name, email, IP address, questions or readings.',
       'Invites: if you enter a friend’s invite code when you sign up, we record who invited you. No reward is given in the App.',
       'Approximate location (optional, OFF by default): only if you turn on Profile → Privacy → Share approximate city and allow location permission, we record your city, state and country — never your exact position.',
-      'Stored only on your phone: Kundli Milan names and birth details, your daily card, streak and badges, the Moon sign you pick for your horoscope, the city you choose for Panchang, and reminder settings. Your horoscope and Panchang are worked out on your phone. Reminders (daily card, streak, festivals) are scheduled on your phone; we do not run a push-notification server.',
+      'Stored only on your phone: Kundli Milan names and birth details, your daily card, streak and badges, the Moon sign you pick for your horoscope, the city you choose for Panchang, your journal entries and moods, your mantra and meditation counts, and reminder settings. Journal entries are never sent to us (only your phone’s own backup, if you have it on, may include them) and are removed from the phone when you log out. Your horoscope, numerology and Panchang are worked out on your phone. Reminders (daily card, streak, festivals, journal) are scheduled on your phone; we do not run a push-notification server.',
     ],
   },
   {

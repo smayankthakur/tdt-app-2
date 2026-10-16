@@ -14,7 +14,8 @@ import { Colors, Fonts } from '@/constants/theme';
 import i18n, { loadSavedLanguage } from '@/i18n';
 import { initCrashReporting, wrapRoot } from '@/lib/crash';
 import { startEvents } from '@/lib/events';
-import { onNotificationTap, syncNotifications, takeLaunchNotificationUrl } from '@/lib/notifications';
+import { onJournalChange } from '@/lib/journal';
+import { cancelJournalReminder, onNotificationTap, syncNotifications, takeLaunchNotificationUrl } from '@/lib/notifications';
 import { CheckoutHost } from '@/lib/payments/checkout';
 import { SessionProvider } from '@/lib/session';
 
@@ -82,9 +83,18 @@ function RootLayout() {
     const sub = AppState.addEventListener('change', (st) => st === 'active' && syncNotifications());
     const onLang = () => syncNotifications();
     i18n.on('languageChanged', onLang);
+    // Writing today's journal page cancels tonight's journal reminder
+    let resync: ReturnType<typeof setTimeout> | null = null;
+    const offJournal = onJournalChange(() => {
+      cancelJournalReminder(); // at once: the app may be suspended before the re-plan below runs
+      if (resync) clearTimeout(resync);
+      resync = setTimeout(() => syncNotifications(), 3000);
+    });
     return () => {
       sub.remove();
       i18n.off('languageChanged', onLang);
+      offJournal();
+      if (resync) clearTimeout(resync);
     };
   }, [ready]);
 
@@ -113,6 +123,10 @@ function RootLayout() {
             <Stack.Screen name="panchang" options={{ title: '' }} />
             <Stack.Screen name="horoscope" options={{ title: '' }} />
             <Stack.Screen name="festivals" options={{ title: '' }} />
+            <Stack.Screen name="numerology" options={{ title: '' }} />
+            <Stack.Screen name="mantra" options={{ title: '' }} />
+            <Stack.Screen name="journal" options={{ title: '' }} />
+            <Stack.Screen name="journal-month" options={{ title: '' }} />
             <Stack.Screen name="admin" options={{ title: '' }} />
             <Stack.Screen name="web" options={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }} />
             {/* transparent so the starfield shows behind the login card */}
