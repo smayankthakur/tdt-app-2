@@ -56,16 +56,22 @@ export function openWhatsApp() {
 }
 
 /** Social profiles open in their own apps (Instagram, YouTube, Facebook) — never in a browser. */
-export function openSocial(kind: 'instagram' | 'youtube' | 'facebook') {
+export function openSocial(kind: 'instagram' | 'youtube' | 'youtube2' | 'facebook') {
   if (kind === 'instagram') {
     const user = Links.instagram.split('/').filter(Boolean).pop() ?? '';
     openApps([`instagram://user?username=${user}`], Links.instagram, 'Instagram');
-  } else if (kind === 'youtube') {
-    const path = Links.youtube.replace(/^https?:\/\/(www\.)?youtube\.com/, '');
+  } else if (kind === 'youtube' || kind === 'youtube2') {
+    const url = kind === 'youtube' ? Links.youtube : Links.youtube2;
+    const path = url.replace(/^https?:\/\/(www\.)?youtube\.com/, '');
     // Android: YouTube is built into the phone and opens its own links
-    openApps(Platform.OS === 'ios' ? [`youtube://www.youtube.com${path}`] : [Links.youtube], Links.youtube, 'YouTube');
+    openApps(Platform.OS === 'ios' ? [`youtube://www.youtube.com${path}`] : [url], url, 'YouTube');
   } else {
-    const id = /id=(\d+)/.exec(Links.facebook)?.[1] ?? '';
+    const id = /(\d{10,})/.exec(Links.facebook)?.[1] ?? '';
     openApps(Platform.OS === 'ios' ? [`fb://profile?id=${id}`] : [`fb://profile/${id}`], Links.facebook, 'Facebook');
   }
+}
+
+/** The developer's own website (credit in the Home footer) opens in the phone's browser. */
+export function openDeveloperSite() {
+  Linking.openURL(Links.developer).catch(() => {});
 }

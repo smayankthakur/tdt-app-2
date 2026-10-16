@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CountUp, useStarRefresh } from '@/components/effects';
+import { Newsletter } from '@/components/newsletter';
 import { Sheet } from '@/components/pickers';
 import { StoryFrame, storyStyles } from '@/components/share-card';
 import { CardFront, FlipCard } from '@/components/tarot-card';
@@ -19,7 +20,7 @@ import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, t
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { useJournalToday } from '@/lib/journal';
-import { openSocial } from '@/lib/links';
+import { openDeveloperSite, openSocial } from '@/lib/links';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
 import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
@@ -342,18 +343,31 @@ export default function HomeScreen() {
           <Button label={t('home.heroCta')} variant="ghost" icon="arrow-forward" onPress={() => router.navigate('/reading')} style={{ alignSelf: 'stretch' }} />
         </Card>
 
+        {/* Footer: newsletter (same as the website), socials, credit */}
+        <Card style={{ marginTop: Spacing.md }}>
+          <Newsletter />
+        </Card>
         <View style={styles.socials}>
-          <Pressable accessibilityLabel="Instagram" onPress={() => openSocial('instagram')} hitSlop={10}>
+          <Pressable accessibilityRole="link" accessibilityLabel="Instagram" onPress={() => openSocial('instagram')} hitSlop={10}>
             <Ionicons name="logo-instagram" size={24} color={Colors.textMuted} />
           </Pressable>
-          <Pressable accessibilityLabel="YouTube" onPress={() => openSocial('youtube')} hitSlop={10}>
+          <Pressable accessibilityRole="link" accessibilityLabel="Facebook" onPress={() => openSocial('facebook')} hitSlop={10}>
+            <Ionicons name="logo-facebook" size={24} color={Colors.textMuted} />
+          </Pressable>
+          <Pressable accessibilityRole="link" accessibilityLabel="YouTube" onPress={() => openSocial('youtube')} hitSlop={10}>
             <Ionicons name="logo-youtube" size={24} color={Colors.textMuted} />
           </Pressable>
-          <Pressable accessibilityLabel="Facebook" onPress={() => openSocial('facebook')} hitSlop={10}>
-            <Ionicons name="logo-facebook" size={24} color={Colors.textMuted} />
+          <Pressable accessibilityRole="link" accessibilityLabel={t('home.youtube2')} onPress={() => openSocial('youtube2')} hitSlop={10} style={styles.yt2}>
+            <Ionicons name="logo-youtube" size={24} color={Colors.textMuted} />
+            <Text style={styles.yt2Badge}>2</Text>
           </Pressable>
         </View>
         <Text style={styles.disclaimer}>{t('home.disclaimer')}</Text>
+        <Pressable accessibilityRole="link" onPress={openDeveloperSite} hitSlop={8} style={{ alignSelf: 'center' }}>
+          <Text style={styles.credit}>
+            {t('home.designedBy')} <Text style={styles.creditLink}>Sitelytc</Text> (sitelytc.com)
+          </Text>
+        </Pressable>
       </View>
 
       {daily?.revealed && dailyCard && (
@@ -527,4 +541,8 @@ const styles = StyleSheet.create({
   ctaTitle: { fontFamily: Fonts.serifItalic, fontSize: 20, color: Colors.goldSoft, textAlign: 'center', marginBottom: Spacing.sm },
   socials: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xl, marginTop: Spacing.lg },
   disclaimer: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
+  credit: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
+  creditLink: { fontFamily: Fonts.bodyMedium, color: Colors.gold, textDecorationLine: 'underline' },
+  yt2: { flexDirection: 'row', alignItems: 'flex-start' },
+  yt2Badge: { fontFamily: Fonts.bodyMedium, fontSize: 10, color: Colors.textMuted, marginLeft: 1, marginTop: -2 },
 });

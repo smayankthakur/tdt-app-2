@@ -22,9 +22,12 @@ export const Links = {
   courses: 'https://learn.thedivinetarotonline.com/',
   personalReading: 'https://booking.thedivinetarotonline.com/',
   support: 'https://support.thedivinetarotonline.com/',
-  instagram: 'https://instagram.com/thedivineetarot',
-  facebook: 'https://facebook.com/profile.php?id=61578567343068',
-  youtube: 'https://youtube.com/@TheDivineTarot',
+  instagram: 'https://www.instagram.com/thedivineetarot',
+  facebook: 'https://www.facebook.com/people/The-Divine-Tarot/61578567343068/',
+  youtube: 'https://www.youtube.com/@TheDivineTarot',
+  youtube2: 'https://www.youtube.com/@thedivineetarot',
+  /** The website's newsletter (Resend contacts + welcome email), same as the website footer */
+  newsletterApi: 'https://thedivinetarotonline.com/api/subscribe',
   developer: 'https://sitelytc.com/',
   /** Opens Google Play or the App Store, whichever fits the phone (support site route /app) */
   getApp: 'https://support.thedivinetarotonline.com/app',
