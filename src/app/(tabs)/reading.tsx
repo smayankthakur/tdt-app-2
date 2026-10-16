@@ -34,7 +34,7 @@ type Msg =
 
 const uid = () => Math.random().toString(36).slice(2);
 
-type Drawing = { intent: Intent; question: string; deck: string[]; picked: number[] };
+type Drawing = { id: string; intent: Intent; question: string; deck: string[]; picked: number[] };
 
 /** Ginni needs a login. The chat is keyed by account, so nobody ever sees the previous user's chat. */
 export default function ReadingScreen() {
@@ -158,7 +158,7 @@ function ReadingChat() {
       kind: 'ginni',
       text: t(count === 1 ? 'reading.understood' : 'reading.understoodPlural', { intent: t(`intents.${intent.id}`), count }),
     });
-    setDrawing({ intent, question, deck: shuffle(DECK.map((c) => c.id)), picked: [] });
+    setDrawing({ id: uid(), intent, question, deck: shuffle(DECK.map((c) => c.id)), picked: [] });
   };
 
   // Paid (from the paywall card, or confirmed later when the app comes back): answer the question that was waiting
@@ -178,7 +178,7 @@ function ReadingChat() {
     const picked = [...d.picked, index];
     const total = d.intent.positions.length;
     const cardId = d.deck[index];
-    push({ id: uid(), kind: 'card', cardId, position: d.intent.positions[picked.length - 1], n: picked.length, total });
+    push({ id: `draw-${d.id}-${picked.length}`, kind: 'card', cardId, position: d.intent.positions[picked.length - 1], n: picked.length, total });
     if (picked.length < total) {
       setDrawing({ ...d, picked });
       return;
@@ -202,7 +202,10 @@ function ReadingChat() {
             },
           ]
         : [];
-      push(...memMsg, { id: uid(), kind: 'ginni', text: t('reading.revealing') }, { id: uid(), kind: 'reading', question, reading });
+      // The reading card shows the cards again, so the one-by-one pulled cards make way for it
+      const drawPrefix = `draw-${d.id}-`;
+      setMessages((prev) => prev.filter((m) => !m.id.startsWith(drawPrefix)));
+      push(...memMsg, { id: uid(), kind: 'reading', question, reading });
       setRevealing(false);
       tap('success');
       await pushReading(uidNow, {
