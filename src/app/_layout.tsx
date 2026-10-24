@@ -52,8 +52,11 @@ function RootLayout() {
   }, []);
 
   const ready = (loaded || !!error) && langReady;
+  // The loading screen (IntroSplash) hides the native splash once its artwork is drawn; this is only a safety net.
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
+    if (!ready) return;
+    const t = setTimeout(() => SplashScreen.hideAsync().catch(() => {}), 3000);
+    return () => clearTimeout(t);
   }, [ready]);
 
   // Subscribe only once the Stack is mounted: navigating earlier (a tap that cold-starts the app

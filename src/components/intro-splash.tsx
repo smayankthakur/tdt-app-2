@@ -1,62 +1,72 @@
 import { Image } from 'expo-image';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { Platform, StyleSheet } from 'react-native';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
-import { Colors, Fonts } from '@/constants/theme';
-import { useLang } from '@/i18n';
+/** Same colour as the native splash (app.json → expo-splash-screen), so the switch to this screen is seamless. */
+export const LOADING_BG = '#4A0E09';
+const ART = require('@/assets/images/loading-screen.jpg');
 
-/** One-shot animated intro: the logo "blooms" out of a golden glow, then the overlay fades away. */
+/**
+ * The loading screen: Bharti Singh's "The Divine Tarot" artwork, shown full screen on every app start.
+ * The native splash stays up until the artwork is on screen, then the artwork holds for a moment
+ * (with a slow, gentle zoom) and fades into the app. The whole artwork is always visible: on tall
+ * phones the space above and below is filled with a blurred copy of it.
+ */
 export function IntroSplash() {
-  const { t } = useLang();
+  const reduceMotion = useReducedMotion();
+  const [shown, setShown] = useState(false);
   const [done, setDone] = useState(false);
-  const logo = useSharedValue(0);
-  const ring = useSharedValue(0);
-  const text = useSharedValue(0);
+  const zoom = useSharedValue(1);
   const overlay = useSharedValue(1);
 
+  // Hand over from the native splash once the artwork is drawn (or after 1.2 s, whatever happens first).
   useEffect(() => {
+    const t = setTimeout(() => setShown(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!shown) return;
+    SplashScreen.hideAsync().catch(() => {});
     const fast = Platform.OS === 'web';
-    logo.value = withTiming(1, { duration: fast ? 400 : 900, easing: Easing.out(Easing.back(1.6)) });
-    ring.value = withDelay(fast ? 100 : 250, withTiming(1, { duration: fast ? 600 : 1200, easing: Easing.out(Easing.cubic) }));
-    text.value = withDelay(fast ? 200 : 600, withTiming(1, { duration: 500 }));
+    const hold = fast ? 900 : 2200;
+    if (!reduceMotion) zoom.value = withTiming(1.02, { duration: hold + 500, easing: Easing.out(Easing.quad) });
     overlay.value = withDelay(
-      fast ? 900 : 1900,
-      withTiming(0, { duration: 450 }, (finished) => {
+      hold,
+      withTiming(0, { duration: 500, easing: Easing.inOut(Easing.quad) }, (finished) => {
         if (finished) runOnJS(setDone)(true);
       }),
     );
-  }, [logo, ring, text, overlay]);
+  }, [shown, reduceMotion, zoom, overlay]);
 
-  const logoStyle = useAnimatedStyle(() => ({ opacity: logo.value, transform: [{ scale: 0.55 + logo.value * 0.45 }] }));
-  const ringStyle = useAnimatedStyle(() => ({ opacity: (1 - ring.value) * 0.7, transform: [{ scale: 0.6 + ring.value * 1.9 }] }));
-  const glowStyle = useAnimatedStyle(() => ({ opacity: logo.value * 0.14, transform: [{ scale: 0.8 + logo.value * 0.4 }] }));
-  const textStyle = useAnimatedStyle(() => ({ opacity: text.value, transform: [{ translateY: (1 - text.value) * 10 }] }));
+  const artStyle = useAnimatedStyle(() => ({ transform: [{ scale: zoom.value }] }));
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlay.value }));
 
   if (done) return null;
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.root, overlayStyle]} pointerEvents="none">
-      <View style={styles.center}>
-        <Animated.View style={[styles.glow, glowStyle]} />
-        <Animated.View style={[styles.ring, ringStyle]} />
-        <Animated.View style={logoStyle}>
-          <Image source={require('@/assets/images/logo.png')} style={{ width: 150, height: 176 }} contentFit="contain" />
-        </Animated.View>
-      </View>
-      <Animated.View style={[{ alignItems: 'center', marginTop: 28 }, textStyle]}>
-        <Text style={styles.brand}>The Divine Tarot</Text>
-        <Text style={styles.tag}>{t('intro.tagline')}</Text>
+    <Animated.View
+      style={[StyleSheet.absoluteFill, styles.root, overlayStyle]}
+      pointerEvents="none"
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel="The Divine Tarot by Bharti Singh">
+      <Image source={ART} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={24} priority="high" />
+      <Animated.View style={[StyleSheet.absoluteFill, artStyle]}>
+        <Image
+          source={ART}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          priority="high"
+          transition={0}
+          onDisplay={() => setShown(true)}
+        />
       </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { backgroundColor: Colors.bgDeep, alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  center: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
-  glow: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: Colors.gold },
-  ring: { position: 'absolute', width: 150, height: 150, borderRadius: 75, borderWidth: 2, borderColor: Colors.goldSoft },
-  brand: { fontFamily: Fonts.display, fontSize: 24, color: Colors.text, letterSpacing: 2 },
-  tag: { fontFamily: Fonts.serifItalic, fontSize: 16, color: Colors.goldSoft, marginTop: 8 },
+  root: { backgroundColor: LOADING_BG, zIndex: 100 },
 });
