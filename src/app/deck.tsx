@@ -6,12 +6,20 @@ import { CardFront } from '@/components/tarot-card';
 import { Backdrop, Chip } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { DECK } from '@/data/cards';
+import { useLang, type Lang } from '@/i18n';
 
 const FILTERS = ['All', 'Major', 'Wands', 'Cups', 'Swords', 'Pentacles'] as const;
 type Filter = (typeof FILTERS)[number];
+const LABELS: Record<Lang, Record<Filter | 'title', string>> = {
+  en: { title: 'Card Library', All: 'All', Major: 'Major', Wands: 'Wands', Cups: 'Cups', Swords: 'Swords', Pentacles: 'Pentacles' },
+  hi: { title: 'कार्ड लाइब्रेरी', All: 'सभी', Major: 'मेजर', Wands: 'वैंड्स', Cups: 'कप्स', Swords: 'स्वॉर्ड्स', Pentacles: 'पेंटाकल्स' },
+  hinglish: { title: 'Card Library', All: 'Sab', Major: 'Major', Wands: 'Wands', Cups: 'Cups', Swords: 'Swords', Pentacles: 'Pentacles' },
+};
 
 export default function DeckScreen() {
   const { width } = useWindowDimensions();
+  const { lang } = useLang();
+  const L = LABELS[lang];
   const [filter, setFilter] = useState<Filter>('All');
   const cols = width > 600 ? 5 : 3;
   const gap = Spacing.sm;
@@ -26,7 +34,7 @@ export default function DeckScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       <Backdrop />
-      <Stack.Screen options={{ title: 'Card Library' }} />
+      <Stack.Screen options={{ title: L.title }} />
       <FlatList
         key={cols}
         data={cards}
@@ -37,7 +45,7 @@ export default function DeckScreen() {
         ListHeaderComponent={
           <View style={styles.filters}>
             {FILTERS.map((f) => (
-              <Chip key={f} label={f} active={f === filter} onPress={() => setFilter(f)} />
+              <Chip key={f} label={L[f]} active={f === filter} onPress={() => setFilter(f)} />
             ))}
           </View>
         }

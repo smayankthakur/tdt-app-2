@@ -5,8 +5,25 @@ import { CardFront } from '@/components/tarot-card';
 import { Body, Card, Eyebrow, Screen } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
-import { useLang } from '@/i18n';
+import { useLang, type Lang } from '@/i18n';
 import { kbText } from '@/lib/ginni/kb';
+
+type Labels = { major: string; minor: string; suits: Record<string, string>; love: string; career: string; money: string; wellbeing: string; family: string; spiritual: string };
+const LABELS: Record<Lang, Labels> = {
+  en: { major: 'Major Arcana', minor: 'Minor Arcana', suits: {}, love: 'Love', career: 'Career', money: 'Money', wellbeing: 'Wellbeing', family: 'Family', spiritual: 'Spiritual' },
+  hi: {
+    major: 'मेजर आर्काना',
+    minor: 'माइनर आर्काना',
+    suits: { Wands: 'वैंड्स', Cups: 'कप्स', Swords: 'स्वॉर्ड्स', Pentacles: 'पेंटाकल्स' },
+    love: 'प्रेम',
+    career: 'करियर',
+    money: 'पैसा',
+    wellbeing: 'सेहत और सुकून',
+    family: 'परिवार',
+    spiritual: 'आध्यात्मिक',
+  },
+  hinglish: { major: 'Major Arcana', minor: 'Minor Arcana', suits: {}, love: 'Pyaar', career: 'Career', money: 'Paisa', wellbeing: 'Sehat aur sukoon', family: 'Family', spiritual: 'Spiritual' },
+};
 
 export default function CardDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,14 +39,15 @@ export default function CardDetail() {
     );
   }
 
-  const group = card.arcana === 'major' ? 'Major Arcana' : `Minor Arcana · ${card.suit}`;
+  const L = LABELS[lang];
+  const group = card.arcana === 'major' ? L.major : `${L.minor} · ${card.suit ? (L.suits[card.suit] ?? card.suit) : ''}`;
   const sections: { title: string; field: Parameters<typeof kbText>[1] }[] = [
-    { title: '💞 Love', field: 'love' },
-    { title: '💼 Career', field: 'career' },
-    { title: '💰 Money', field: 'money' },
-    { title: '🌿 Wellbeing', field: 'wellbeing' },
-    { title: '👨‍👩‍👧 Family', field: 'family' },
-    { title: '🕉️ Spiritual', field: 'spiritual' },
+    { title: `💞 ${L.love}`, field: 'love' },
+    { title: `💼 ${L.career}`, field: 'career' },
+    { title: `💰 ${L.money}`, field: 'money' },
+    { title: `🌿 ${L.wellbeing}`, field: 'wellbeing' },
+    { title: `👨‍👩‍👧 ${L.family}`, field: 'family' },
+    { title: `🕉️ ${L.spiritual}`, field: 'spiritual' },
     { title: `✨ ${t('reading.advice')}`, field: 'advice' },
     { title: `⏳ ${t('reading.timing')}`, field: 'timing' },
   ];

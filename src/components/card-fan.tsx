@@ -70,7 +70,8 @@ const FanCard = memo(function FanCard({
   });
 
   return (
-    <Animated.View style={[{ position: 'absolute', left: side + i * STEP, top: 70 }, style]}>
+    // a pulled card floats above its neighbours: let taps pass through it to the cards behind
+    <Animated.View pointerEvents={picked ? 'none' : 'auto'} style={[{ position: 'absolute', left: side + i * STEP, top: 70 }, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Card ${i + 1}`}

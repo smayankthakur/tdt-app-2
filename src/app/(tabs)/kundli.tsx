@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { CountUp } from '@/components/effects';
@@ -41,6 +41,8 @@ function KundliForm() {
   const [girl, setGirl] = useState<Person>(EMPTY);
   const [result, setResult] = useState<{ match: MatchResult; boy: MoonProfile; girl: MoonProfile } | null>(null);
   const [error, setError] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+  const scrolledFor = useRef<unknown>(null);
   const [unlocked, setUnlocked] = useState(false);
   const premium = usePremium(); // the ₹199 plan includes the Kundli full report
 
@@ -92,7 +94,7 @@ function KundliForm() {
     v === 'excellent' ? Colors.success : v === 'good' ? Colors.gold : v === 'average' ? Colors.coral : Colors.danger;
 
   return (
-    <Screen tab>
+    <Screen tab scrollRef={scrollRef}>
       <Eyebrow>{t('kundli.sub')}</Eyebrow>
       <Title>{t('kundli.title')}</Title>
 
@@ -103,7 +105,15 @@ function KundliForm() {
       <Button label={t('kundli.match')} icon="heart" onPress={match} />
 
       {result && (
-        <Animated.View entering={FadeInDown.duration(500)} style={{ gap: Spacing.md }}>
+        <Animated.View
+          entering={FadeInDown.duration(500)}
+          style={{ gap: Spacing.md }}
+          // the score appears below the fold: bring it into view
+          onLayout={(e) => {
+            if (scrolledFor.current === result) return; // once per match, not on every re-layout
+            scrolledFor.current = result;
+            scrollRef.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - Spacing.lg), animated: true });
+          }}>
           <Card style={styles.scoreCard}>
             <Text style={styles.scoreLabel}>{t('kundli.score')}</Text>
             <View style={[styles.ring, { borderColor: verdictColor(result.match.verdict) }]}>

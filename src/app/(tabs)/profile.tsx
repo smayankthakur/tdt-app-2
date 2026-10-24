@@ -198,7 +198,7 @@ export default function ProfileScreen() {
       ]);
   };
 
-  const who = user?.displayName || user?.email || user?.phoneNumber || '';
+  const who = user?.email || user?.phoneNumber || user?.displayName || ''; // the name is the title; this line says which account
   const productName = (id: string) =>
     Object.values(Products).find((p) => p.id === id)?.name ?? COURSES.map(courseProduct).find((p) => p.id === id)?.name ?? id;
   const birthCity = CITIES.find((c) => `${c.name}, ${c.country === 'India' ? c.state : c.country}` === draft.birthplace) ?? null;
@@ -215,7 +215,7 @@ export default function ProfileScreen() {
               <Image source={{ uri: editing ? draft.photo : profile.photo }} style={styles.avatar} contentFit="cover" />
             ) : (
               <View style={[styles.avatar, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.violetDeep }]}>
-                <Text style={styles.initial}>{(profile.name || who || '✦').slice(0, 1).toUpperCase()}</Text>
+                <Text style={styles.initial}>{(profile.name || user?.displayName || who || '✦').slice(0, 1).toUpperCase()}</Text>
               </View>
             )}
           </LinearGradient>

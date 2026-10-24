@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Stack } from 'expo-router';
 import { useState, type ComponentProps, type ReactNode, type Ref } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -205,6 +206,7 @@ const styles = StyleSheet.create({
 export function WebsiteFallback({ title, body, cta, url }: { title: string; body: string; cta: string; url: string }) {
   return (
     <View style={{ gap: Spacing.md, padding: Spacing.lg, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+      <Stack.Screen options={{ title }} />
       <Text style={[styles.label, { fontSize: 20 }]}>{title}</Text>
       <Text style={[styles.hint, { fontSize: 14 }]}>{body}</Text>
       <Pressable accessibilityRole="link" onPress={() => window.open(url, '_blank', 'noopener')} style={styles.webBtn}>

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, ReactNode, Ref } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -42,9 +42,11 @@ type ScreenProps = {
   tab?: boolean;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   header?: ReactNode;
+  /** lets a screen scroll itself (e.g. to a result that appeared below the fold) */
+  scrollRef?: Ref<ScrollView>;
 };
 
-export function Screen({ children, scroll = true, edges = ['top'], contentStyle, tab, refreshControl, header }: ScreenProps) {
+export function Screen({ children, scroll = true, edges = ['top'], contentStyle, tab, refreshControl, header, scrollRef }: ScreenProps) {
   const pad = tab ? { paddingBottom: TAB_BAR_SPACE + Spacing.lg } : null;
   return (
     <View style={[styles.root, !tab && { backgroundColor: Colors.bg }]}>
@@ -53,6 +55,7 @@ export function Screen({ children, scroll = true, edges = ['top'], contentStyle,
         {header}
         {scroll ? (
           <ScrollView
+            ref={scrollRef}
             contentContainerStyle={[styles.content, pad, contentStyle]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"

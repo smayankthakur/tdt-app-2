@@ -71,6 +71,8 @@ export const INTENTS: Intent[] = [
     patterns: [
       /\b(love|crush|boyfriend|girlfriend|bf|gf|partner|relationship|pyaar|pyar|mohabbat|ishq|feelings?|soulmate|propose|like me|dating|date)\b/i,
       /(प्यार|प्रेम|रिश्ते|मोहब्बत|पसंद करता|पसंद करती)/,
+      // how people actually ask about a person: "hamara rishta", "woh mere baare mein sochta hai?", "usse baat karun?"
+      /\b(rishta|rishte|relation\w*|pasand (karta|karti)|mere baare mein soch\w*|yaad (karta|karti)|miss (karta|karti)|(usse|unse|uss?se) baat)\b/i,
     ],
   },
   {
