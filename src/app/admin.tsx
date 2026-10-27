@@ -43,7 +43,7 @@ export default function AdminScreen() {
       <Stack.Screen options={{ title: 'Business numbers' }} />
       <View style={styles.chips}>
         {[7, 30, 90].map((d) => (
-          <Chip key={d} label={`${d} days`} active={days === d} onPress={() => { setRows(undefined); setDays(d); }} />
+          <Chip key={d} label={`${d} days`} active={days === d} onPress={() => { if (d === days) return; setRows(undefined); setDays(d); }} />
         ))}
       </View>
       {rows === undefined ? (

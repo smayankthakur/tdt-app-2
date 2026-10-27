@@ -183,11 +183,21 @@ export async function savedBookings(): Promise<SavedBooking[]> {
   return loadList();
 }
 
-export async function rememberBooking(b: SavedBooking) {
-  const rest = (await loadList()).filter((x) => x.bid !== b.bid);
-  const keep = rest.filter((x) => x.paid || x.done);
-  const unpaid = rest.filter((x) => !x.paid && !x.done).slice(0, 5); // a paid booking is never pushed out
-  await saveList([b, ...keep, ...unpaid]);
+/** Read-change-write of the saved list, one at a time (a refresh and a form submit can finish together). */
+let listLock: Promise<unknown> = Promise.resolve();
+function withList<T>(fn: () => Promise<T>): Promise<T> {
+  const step = listLock.then(fn);
+  listLock = step.catch(() => {});
+  return step;
+}
+
+export function rememberBooking(b: SavedBooking) {
+  return withList(async () => {
+    const rest = (await loadList()).filter((x) => x.bid !== b.bid);
+    const keep = rest.filter((x) => x.paid || x.done);
+    const unpaid = rest.filter((x) => !x.paid && !x.done).slice(0, 5); // a paid booking is never pushed out
+    await saveList([b, ...keep, ...unpaid]);
+  });
 }
 
 const DAY = 86_400_000;
@@ -218,11 +228,21 @@ export async function refreshBookings(): Promise<SavedBooking[]> {
     }
     out.push(next);
   }
-  // keep anything saved meanwhile (a booking started while this was checking)
-  const latest = await loadList();
-  const merged = [...latest.filter((x) => !list.some((y) => y.bid === x.bid)), ...out];
-  await saveList(merged);
-  return merged;
+  // The server checks take a while: merge into the list as it is NOW, so nothing saved meanwhile is lost
+  // (a booking started, or a form sent / edited on this phone while this was checking)
+  return withList(async () => {
+    const latest = await loadList();
+    const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    const checked = out.flatMap((n) => {
+      const was = list.find((x) => x.bid === n.bid)!;
+      const now = latest.find((x) => x.bid === n.bid);
+      if (!now) return [];
+      return [{ ...now, paid: now.paid || n.paid, done: same(now.done, was.done) ? n.done : now.done }];
+    });
+    const merged = [...latest.filter((x) => !list.some((y) => y.bid === x.bid)), ...checked];
+    await saveList(merged);
+    return merged;
+  });
 }
 
 export const formatSlotDate = (d: string) =>

@@ -68,6 +68,8 @@ export async function saveProfile(uid: string | null, profile: Profile): Promise
   const clean = sanitizeProfile(profile);
   await Storage.setProfile(clean);
   if (!uid) return 'local';
+  // Marked first: if the app closes during the upload, the next login sync still knows the phone has the newer copy
+  await Storage.setProfileDirty(true);
   const ok = await pushProfile(uid, clean);
   await Storage.setProfileDirty(!ok);
   return ok ? 'saved' : 'local';
@@ -125,19 +127,27 @@ export async function removeReading(uid: string | null, id: string): Promise<voi
 /** Two-way merge of reading history so readings follow the user across devices. */
 export async function syncReadings(uid: string): Promise<void> {
   try {
-    const local = await Storage.getHistory();
     const { data, error } = await supabase.from('tdt_readings').select('id,data').eq('user_id', uid).order('created_at', { ascending: false }).limit(200);
     if (error) return;
-    const remote = (data ?? []).map((row) => row.data as SavedReading).filter((r) => r && r.id);
+    // Read again after the network call: a reading saved or deleted meanwhile must not be lost or brought back
+    const [local, gone] = await Promise.all([Storage.getHistory(), Storage.getDeletedReadings()]);
+    const deleted = new Set(gone);
+    const all = (data ?? []).map((row) => row.data as SavedReading).filter((r) => r && r.id);
+    // Deleted here while offline (or the delete didn't reach the server): delete it there now
+    const stale = all.filter((r) => deleted.has(r.id)).map((r) => r.id);
+    if (stale.length) await supabase.from('tdt_readings').delete().eq('user_id', uid).in('id', stale);
+    const remote = all.filter((r) => !deleted.has(r.id));
     const remoteIds = new Set(remote.map((r) => r.id));
-    const missing = local.filter((r) => !remoteIds.has(r.id));
+    const missing = local.filter((r) => !remoteIds.has(r.id) && !deleted.has(r.id));
     if (missing.length) {
       await supabase
         .from('tdt_readings')
         .upsert(missing.map((r) => ({ user_id: uid, id: r.id, created_at: new Date(r.createdAt).toISOString(), data: r })));
     }
+    const [latest, goneNow] = await Promise.all([Storage.getHistory(), Storage.getDeletedReadings()]);
+    const deletedNow = new Set(goneNow);
     const merged = new Map<string, SavedReading>();
-    for (const r of [...remote, ...local]) merged.set(r.id, r);
+    for (const r of [...remote, ...latest]) if (!deletedNow.has(r.id)) merged.set(r.id, r);
     await Storage.setHistory([...merged.values()].sort((a, b) => b.createdAt - a.createdAt));
   } catch {
     // offline — next time

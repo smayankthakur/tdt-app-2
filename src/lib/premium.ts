@@ -19,7 +19,8 @@ export function usePremium(): { premium: boolean; loading: boolean } {
     let alive = true;
     if (!uid) return; // guests: nothing to check (answered below)
     hasEntitlement(Products.ginniUnlimited.id).then((cached) => {
-      if (alive) setState((s) => (s.uid === uid && !s.loading ? s : { uid, premium: cached, loading: !cached }));
+      // A plan saved on this phone since the last check (just paid, or confirmed in the background) unlocks at once
+      if (alive) setState((s) => (s.uid === uid && !s.loading ? (cached && !s.premium ? { ...s, premium: true } : s) : { uid, premium: cached, loading: !cached }));
     });
     getAccess(uid).then((a) => {
       if (!alive || a === 'loading' || a === 'offline') {

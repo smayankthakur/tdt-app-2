@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
@@ -35,11 +35,39 @@ const TIMES = [
 ];
 const fmt = (h: number, m: number) => `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
 
+/** `edited` on top of `latest`: fields the person didn't touch (still equal to `base`) take the latest value. */
+function rebase(edited: Profile, base: Profile, latest: Profile): Profile {
+  const out = { ...latest };
+  for (const k of Object.keys(edited) as (keyof Profile)[]) if (edited[k] !== base[k]) (out as Record<string, string>)[k] = edited[k];
+  return out;
+}
+
 export default function ProfileScreen() {
   const { t, lang, setLanguage } = useLang();
   const { user, cloudReady, profile, updateProfile, version, signOut, deleteAccount } = useSession();
   const [draft, setDraft] = useState<Profile>(profile);
+  // The profile as it was when editing started: Save only sends the fields the person changed, so a sync that
+  // finished meanwhile (birth details from the account) is never overwritten by the older copy in the editor.
+  const [base, setBase] = useState<Profile>(profile);
   const [editing, setEditing] = useState(false);
+  const startEditing = () => {
+    setDraft(profile);
+    setBase(profile);
+    setEditing(true);
+  };
+  // State adjusted while rendering (no effect): a newer profile shows up in untouched fields; another account closes the editor
+  const [seen, setSeen] = useState<{ profile: Profile; uid: string | null }>({ profile, uid: user?.uid ?? null });
+  if (seen.profile !== profile || seen.uid !== (user?.uid ?? null)) {
+    setSeen({ profile, uid: user?.uid ?? null });
+    if (seen.uid !== (user?.uid ?? null)) {
+      setEditing(false);
+      setDraft(profile);
+      setBase(profile);
+    } else if (editing) {
+      setDraft((d) => rebase(d, base, profile));
+      setBase(profile);
+    }
+  }
   const [toast, setToast] = useState('');
   const [reminder, setReminder] = useState<ReminderSettings | null>(null);
   const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
@@ -66,14 +94,18 @@ export default function ProfileScreen() {
       notificationsGranted().then(setAllowed);
     }, []),
   );
+  // Coming back from the phone's settings (notifications allowed there): the "blocked" line goes away
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') notificationsGranted().then(setAllowed);
+    });
+    return () => sub.remove();
+  }, []);
   // "Add birth details" on Home opens the editor directly (state adjusted while rendering, param cleared after)
   const [editParam, setEditParam] = useState<string | undefined>(undefined);
   if (params.edit !== editParam) {
     setEditParam(params.edit);
-    if (params.edit === '1') {
-      setDraft(profile);
-      setEditing(true);
-    }
+    if (params.edit === '1') startEditing();
   }
   useEffect(() => {
     if (params.edit === '1') router.setParams({ edit: undefined });
@@ -115,7 +147,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const save = async () => {
     setSaving(true);
-    const r = await updateProfile(draft);
+    const r = await updateProfile(rebase(draft, base, profile));
     setSaving(false);
     tap('success');
     setEditing(false);
@@ -244,10 +276,7 @@ export default function ProfileScreen() {
               variant="ghost"
               small
               icon="create-outline"
-              onPress={() => {
-                setDraft(profile);
-                setEditing(true);
-              }}
+              onPress={startEditing}
             />
           )}
         </View>

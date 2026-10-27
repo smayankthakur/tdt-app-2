@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
@@ -30,7 +30,8 @@ import { emailTypo, isEmailAddress } from '@/lib/email';
 import { useSession } from '@/lib/session';
 import { limitWords, MAX_WORDS, wordCount } from '@/lib/words';
 
-type Person = { name: string; place: string; dob: string; tob: string; photo: PickedPhoto | null };
+/** sent: when editing, the form slot (2 or 3) whose photo the reader already has for this person. */
+type Person = { name: string; place: string; dob: string; tob: string; photo: PickedPhoto | null; sent?: number };
 const EMPTY: Person = { name: '', place: '', dob: '', tob: '', photo: null };
 const RESEND_S = 45;
 
@@ -94,19 +95,26 @@ export default function BookingFormScreen() {
     return () => clearTimeout(id);
   }, [wait]);
 
-  // Load the booking (only from this phone's saved bookings — the server only trusts the signed token).
+  // Read (not watched) by the load below: a token refresh or profile sync must not load the booking again
+  const who = useRef({ profile, user });
+  useEffect(() => {
+    who.current = { profile, user };
+  }, [profile, user]);
+
+  // Load the booking (only from this phone's saved bookings — the server only trusts the signed token). Once per booking.
   useEffect(() => {
     (async () => {
       const b = (await savedBookings()).find((x) => x.bid === bid) ?? null;
       setBooking(b);
       if (!b) return;
+      const { profile: pr, user: u } = who.current;
       setMe((m) => ({
         ...m,
-        name: m.name || words(profile.name || user?.displayName || ''),
-        email: m.email || user?.email || '',
-        dob: m.dob || profile.dob || '',
-        tob: m.tob || profile.tob || '',
-        place: m.place || words(profile.birthplace || ''),
+        name: m.name || words(pr.name || u?.displayName || ''),
+        email: m.email || u?.email || '',
+        dob: m.dob || pr.dob || '',
+        tob: m.tob || pr.tob || '',
+        place: m.place || words(pr.birthplace || ''),
       }));
       try {
         const s = await bookingStatus(b.token);
@@ -128,7 +136,7 @@ export default function BookingFormScreen() {
         // offline: the form still works, submit will retry
       }
     })();
-  }, [bid, profile, user]);
+  }, [bid]);
 
   /** Opens the submitted form again, filled with the saved answers (photos stay with the reader unless replaced). */
   const startEdit = useCallback(() => {
@@ -137,7 +145,7 @@ export default function BookingFormScreen() {
     setMe({ name: r.name || '', phone: r.phone || '', email: r.email || '', place: r.place || '', dob: isoDate(r, 'dob'), tob: hm24(r, 'tob'), photo: null });
     const list: Person[] = [];
     for (const n of [2, 3]) {
-      if ((r[`name${n}`] || '').trim()) list.push({ name: r[`name${n}`], place: r[`place${n}`] || '', dob: isoDate(r, `dob${n}`), tob: hm24(r, `tob${n}`), photo: null });
+      if ((r[`name${n}`] || '').trim()) list.push({ name: r[`name${n}`], place: r[`place${n}`] || '', dob: isoDate(r, `dob${n}`), tob: hm24(r, `tob${n}`), photo: null, sent: n });
     }
     if (needsPartner(r.concern || '') && !list.length) list.push({ ...EMPTY });
     setOthers(list);
@@ -223,7 +231,12 @@ export default function BookingFormScreen() {
     if (s === 1 && (!concern || (concern === 'Other' && !concernOther.trim()))) return t('booking.required');
     if (s === 2 && partner) {
       const p = others[0];
-      if (!p?.name.trim() || (!p.photo && !(editing && edit?.hadPartner))) return t('booking.partnerRequired');
+      if (!p?.name.trim() || (!p.photo && p.sent !== 2)) return t('booking.partnerRequired');
+    }
+    if (s === 2) {
+      // Removing someone moves the next person up a place: the reader's photo for that place is someone else's
+      const moved = others.findIndex((p, i) => p.name.trim() && p.sent && p.sent !== i + 2 && !p.photo);
+      if (moved >= 0) return t('booking.photoAgain', { name: others[moved].name.trim() });
     }
     return '';
   };
@@ -286,7 +299,8 @@ export default function BookingFormScreen() {
       if (editing) {
         setEditing(false);
         setSaved(true);
-        setEdit((e) => (e ? { ...e, raw: { ...e.raw, ...fields }, hadPartner: e.hadPartner || !!fields.name2, emailVerified: true } : e));
+        // The server keeps exactly these answers now (a removed person is gone)
+        setEdit((e) => (e ? { ...e, raw: { ...fields }, hadPartner: !!fields.name2, emailVerified: true } : e));
       } else {
         bookingStatus(booking.token).then((s) => setEdit(s.edit ?? null), () => {});
       }
@@ -492,7 +506,7 @@ export default function BookingFormScreen() {
             required={!editing}
             hint={editing ? t('booking.photoKeep') : t('booking.photoHint')}
             value={me.photo}
-            onChange={(p) => setMe({ ...me, photo: p })}
+            onChange={(p) => setMe((m) => ({ ...m, photo: p }))}
             addLabel={t('booking.addPhoto')}
             changeLabel={t('booking.changePhoto')}
             name="you"

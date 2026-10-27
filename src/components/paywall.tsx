@@ -7,7 +7,7 @@ import { Body, Button, Card, tap } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
 import { track } from '@/lib/events';
-import { paymentsEnabled, purchase, type Product } from '@/lib/payments/purchase';
+import { awaitingPayment, paymentsEnabled, purchase, type Product } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
 
 /**
@@ -37,6 +37,20 @@ export function Paywall({
   useEffect(() => {
     if (paymentsEnabled()) track('paywall_view', { product: product.id });
   }, [product.id]);
+  // Shown again later (another screen, the app reopened): a payment still being confirmed keeps the Buy button away
+  const uidNow = user?.uid ?? null;
+  useEffect(() => {
+    if (!uidNow) return;
+    let alive = true;
+    awaitingPayment(uidNow, product.id).then((w) => {
+      if (!alive || !w) return;
+      setDone(true);
+      setMsg(t('paywall.pending'));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [uidNow, product.id, t]);
 
   const buy = async () => {
     setMsg(null);

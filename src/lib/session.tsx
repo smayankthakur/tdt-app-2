@@ -151,9 +151,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(
     async (p: Profile) => {
       setProfile(p);
-      const r = await saveProfile(user?.uid ?? null, p);
-      setProfile(await Storage.getProfile()); // the cleaned-up version that was actually stored
-      return user ? r : 'saved';
+      const uid = user?.uid ?? null;
+      // In the session queue: never at the same time as a login sync, and never after a log-out / account switch
+      const step = queue.current.then(async (): Promise<'saved' | 'local'> => {
+        if ((current.current?.uid ?? null) !== uid) return 'local';
+        const r = await saveProfile(uid, p);
+        setProfile(await Storage.getProfile()); // the cleaned-up version that was actually stored
+        return uid ? r : 'saved';
+      });
+      queue.current = step.then(
+        () => {},
+        () => {},
+      );
+      return step.catch(() => 'local' as const);
     },
     [user],
   );

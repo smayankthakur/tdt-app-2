@@ -92,11 +92,12 @@ export async function signUp(name: string, email: string, password: string): Pro
  * Passwords belong to the Ginni website account, so the website's own reset is used: it e-mails a link
  * (valid 30 minutes) to set a new password. For privacy it answers the same whether or not the email has an account.
  */
-export async function resetPassword(email: string): Promise<void> {
+/** 'opened' = the website's reset page was opened instead (web build); 'sent' = the reset email was sent. */
+export async function resetPassword(email: string): Promise<'sent' | 'opened'> {
   if (Platform.OS === 'web') {
     // the website's API doesn't accept calls from other sites: use its own page
     window.open(Links.ginniWeb, '_blank', 'noopener');
-    return;
+    return 'opened';
   }
   let res: Response;
   try {
@@ -111,6 +112,7 @@ export async function resetPassword(email: string): Promise<void> {
   if (res.status === 400) throw new AuthError('invalid-email');
   if (res.status === 429) throw new AuthError('rate-limited');
   if (!res.ok) throw new AuthError('unknown');
+  return 'sent';
 }
 
 /**

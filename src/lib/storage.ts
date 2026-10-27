@@ -36,6 +36,8 @@ const KEYS = {
    * Now one key per month (`tdt.journal.YYYY-MM.v1`); this old single key is migrated once and removed.
    */
   journal: 'tdt.journal.v1',
+  /** Readings deleted on this phone, so a sync (or an offline delete) never brings them back */
+  deletedReadings: 'tdt.deletedReadings.v1',
 } as const;
 
 /** Every journal key starts with this (all are removed by clearUserData). */
@@ -52,7 +54,8 @@ export function registerJournalClear(fn: () => Promise<void>): void {
 export type PickedMoon = { rashi: number; nakshatra: number | null };
 export type NotifySettings = { streak: boolean; festivals: boolean; journal?: boolean };
 
-export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number };
+/** maybePaid: Razorpay said paid (or a bank page came back) but the server couldn't confirm it yet — never offer to pay again meanwhile. */
+export type PendingOrder = { orderId: string; productId: string; uid: string; createdAt: number; maybePaid?: boolean };
 
 export type SavedReading = {
   id: string;
@@ -124,9 +127,12 @@ export const Storage = {
     await Storage.setHistory([r, ...list.filter((x) => x.id !== r.id)]);
   },
   async deleteReading(id: string): Promise<void> {
+    const gone = await Storage.getDeletedReadings();
+    await writeJSON(KEYS.deletedReadings, [id, ...gone.filter((x) => x !== id)].slice(0, 300));
     const list = await Storage.getHistory();
     await Storage.setHistory(list.filter((r) => r.id !== id));
   },
+  getDeletedReadings: () => readJSON<string[]>(KEYS.deletedReadings, []),
   async clearHistory(): Promise<void> {
     await writeJSON(KEYS.history, []);
   },
@@ -172,6 +178,11 @@ export const Storage = {
   /** The email typed before paying for a Personal Reading (remembered on this phone, like the website). */
   getBookingEmail: () => readJSON<string>(KEYS.bookingEmail, ''),
   setBookingEmail: (email: string) => writeJSON(KEYS.bookingEmail, email),
+  async markPendingOrderMaybePaid(orderId: string): Promise<void> {
+    const list = await Storage.getPendingOrders();
+    if (!list.some((x) => x.orderId === orderId)) return; // confirmed (and removed) meanwhile
+    await writeJSON(KEYS.pendingOrders, list.map((x) => (x.orderId === orderId ? { ...x, maybePaid: true } : x)));
+  },
   async removePendingOrder(orderId: string): Promise<void> {
     const list = await Storage.getPendingOrders();
     await writeJSON(KEYS.pendingOrders, list.filter((x) => x.orderId !== orderId));
@@ -183,6 +194,7 @@ export const Storage = {
    */
   async clearUserData(): Promise<void> {
     await writeJSON(KEYS.history, []);
+    await writeJSON(KEYS.deletedReadings, []);
     await writeJSON(KEYS.profile, EMPTY_PROFILE);
     await writeJSON(KEYS.entitlements, {});
     await writeJSON(KEYS.quota, { date: '', used: 0 });

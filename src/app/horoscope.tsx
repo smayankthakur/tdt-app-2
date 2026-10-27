@@ -25,7 +25,8 @@ export default function HoroscopeScreen() {
   const { t, lang } = useLang();
   const { date, place, panchang, horoscope, birth } = useToday();
   const premium = usePremium();
-  const locked = !premium.loading && !premium.premium; // no plan: two-line previews, the rest unlocks with ₹199
+  // no plan: two-line previews, the rest unlocks with ₹199. While the plan is checked nothing paid shows (and no Buy button yet).
+  const locked = !premium.premium;
   const [picking, setPicking] = useState(false);
   const shotRef = useRef<View>(null);
   useEffect(() => track('horoscope_view'), []);
@@ -49,7 +50,7 @@ export default function HoroscopeScreen() {
       ) : (
         <>
           <HoroscopeCard h={horoscope} tz={panchang.place.tz} date={date} locked={locked} />
-          {locked && <PremiumLock what={t('premium.whatHoroscope')} />}
+          {locked && !premium.loading && <PremiumLock what={t('premium.whatHoroscope')} />}
           <Text style={styles.meta}>
             {t('today.todayNakshatra')}: {nakshatraLabel(panchang.nakshatras[0].index, lang)}
             {birth.moon.nakshatra !== null ? ` · ${t('today.birthNakshatra')}: ${nakshatraLabel(birth.moon.nakshatra, lang)}` : ''}

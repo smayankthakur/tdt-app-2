@@ -137,6 +137,12 @@ export function MoonSignSheet({
 }) {
   const { t, lang } = useLang();
   const [rashi, setRashi] = useState<number | null>(current?.rashi ?? null);
+  // Opened again: start from the sign picked now, not the one shown when the sheet was first made (adjusted while rendering)
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) setRashi(current?.rashi ?? null);
+  }
   // nakshatras that fall (at least partly) inside the chosen sign
   const naks =
     rashi === null

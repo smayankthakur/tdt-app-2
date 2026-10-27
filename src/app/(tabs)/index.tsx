@@ -113,7 +113,18 @@ export default function HomeScreen() {
   const dailyCard = daily ? getCard(daily.cardId) : undefined;
   const contentW = Math.min(width, 640) - Spacing.lg * 2; // card trio + testimonials
 
+  // A second tap while today's card is still flipping must not open the card page halfway through the animation
+  const [revealing, setRevealing] = useState(false);
   const reveal = async () => {
+    if (revealing) return;
+    setRevealing(true);
+    try {
+      await revealNow();
+    } finally {
+      setTimeout(() => setRevealing(false), 900);
+    }
+  };
+  const revealNow = async () => {
     // The screen may still show yesterday's card (e.g. open since before midnight): load today's first, so the card
     // that flips is the one that gets saved, and the streak is counted from today.
     if (!daily || daily.date !== todayKey()) {
@@ -211,7 +222,7 @@ export default function HomeScreen() {
         <SectionTitle>{t('today.title')}</SectionTitle>
         {today.birth.loaded &&
           (today.horoscope ? (
-            <HoroscopeCard h={today.horoscope} tz={today.panchang?.place.tz ?? today.place.tz} date={today.date} compact locked={!premium.loading && !premium.premium} />
+            <HoroscopeCard h={today.horoscope} tz={today.panchang?.place.tz ?? today.place.tz} date={today.date} compact locked={!premium.premium} />
           ) : !today.birth.moon ? (
             <HoroscopeSetup needsTime={today.birth.needsTime} onPick={() => setPicking(true)} />
           ) : null)}

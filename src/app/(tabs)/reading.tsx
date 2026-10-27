@@ -22,6 +22,7 @@ import { classify, getIntent, type Intent, type IntentId, type KbField } from '@
 import { kbText } from '@/lib/ginni/kb';
 import { smallTalk } from '@/lib/ginni/smalltalk';
 import { track } from '@/lib/events';
+import { awaitingPayment } from '@/lib/payments/purchase';
 import { recall } from '@/lib/ginni/memory';
 import { checkReading, getAccess, type Access } from '@/lib/quota';
 import { useSession } from '@/lib/session';
@@ -124,7 +125,8 @@ function ReadingChat() {
     loadChat(user.uid).then((saved) => {
       if (!alive) return;
       loaded.current = true;
-      if (saved.length) setMessages((now) => (now.length ? now : saved));
+      // Something asked before the saved chat came back stays, after it
+      if (saved.length) setMessages((now) => [...saved, ...now.filter((m) => !saved.some((x) => x.id === m.id))]);
       scrollToEnd();
     });
     return () => {
@@ -172,9 +174,7 @@ function ReadingChat() {
       setAccess('none');
       pendingQ.current = question;
       // A payment for Ginni Unlimited is still being confirmed: never offer to pay again
-      const waiting = (await Storage.getPendingOrders()).some(
-        (o) => o.uid === uidNow && o.productId === Products.ginniUnlimited.id && Date.now() - o.createdAt < 3 * 86_400_000,
-      );
+      const waiting = uidNow ? await awaitingPayment(uidNow, Products.ginniUnlimited.id) : false;
       // Only one paywall in the chat: the newest question's
       setMessages((prev) => prev.filter((m) => !m.id.startsWith('pw-')));
       push(
@@ -272,6 +272,10 @@ function ReadingChat() {
     setMessages([]);
     setLastReading(null);
     setInput('');
+    // The question that was waiting for a payment belongs to the old chat
+    pendingQ.current = null;
+    if (againTimer.current) clearTimeout(againTimer.current);
+    againTimer.current = null;
   };
 
   const greeting = profile.name ? t('reading.greetingName', { name: profile.name.split(' ')[0] }) : t('reading.greeting');

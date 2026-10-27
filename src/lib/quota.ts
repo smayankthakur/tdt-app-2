@@ -53,6 +53,8 @@ export async function checkReading(uid?: string | null): Promise<ReadingCheck> {
   if (!uid) return 'limit';
   const r = await spendReadingOnServer();
   if (!r) return 'offline';
-  await mergeEntitlements({}, r.allowed && r.premiumUntil ? r.premiumUntil : 0);
+  // Not allowed: keep the (past) end date so the chat can still say "renew" to someone whose plan ran out
+  const until = r.premiumUntil || 0;
+  await mergeEntitlements({}, r.allowed ? until : Math.min(until, Date.now() - 1));
   return r.allowed ? 'ok' : 'limit';
 }

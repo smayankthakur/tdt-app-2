@@ -136,7 +136,9 @@ function BookingScreen() {
         );
       }
       // A UPI app / bank page can finish after the sheet closed: ask the booking server (it asks Razorpay).
-      for (const ms of paid ? [] : result.status === 'cancelled' ? [0] : [0, 2500, 5000]) {
+      // (The checkout never opened on an old app build: nothing to wait for.)
+      const noSheet = result.status === 'failed' && result.message === 'update-app';
+      for (const ms of paid || noSheet ? [] : result.status === 'cancelled' ? [0] : [0, 2500, 5000]) {
         if (ms) await wait(ms);
         const s = await bookingStatus(order.token).catch(() => null);
         if (s?.status === 'paid') {
@@ -290,7 +292,7 @@ function BookingScreen() {
       </Card>
 
       <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
-      <EmailSheet key={`${askFor ?? 'closed'}-${savedEmail}`} visible={!!askFor} initial={savedEmail} onClose={() => setAskFor(null)} onContinue={(email) => askFor && pay(askFor, email)} />
+      <EmailSheet key={askFor ?? 'closed'} visible={!!askFor} initial={savedEmail} onClose={() => setAskFor(null)} onContinue={(email) => askFor && pay(askFor, email)} />
     </Screen>
   );
 }

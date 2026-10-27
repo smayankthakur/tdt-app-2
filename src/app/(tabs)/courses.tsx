@@ -11,7 +11,7 @@ import { StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { COURSES, formatINR, type Course } from '@/data/courses';
 import { useLang } from '@/i18n';
-import { courseProduct, paymentsEnabled, purchase } from '@/lib/payments/purchase';
+import { awaitingPayment, courseProduct, paymentsEnabled, purchase } from '@/lib/payments/purchase';
 import { hasEntitlement } from '@/lib/quota';
 import { useSession } from '@/lib/session';
 
@@ -28,20 +28,30 @@ function CourseImage({ uri, style }: { uri: string; style: object }) {
 export default function CoursesScreen() {
   const { t } = useLang();
   const { width } = useWindowDimensions();
-  const { user, profile, refresh } = useSession();
+  const { user, profile, refresh, version } = useSession();
   const [open, setOpen] = useState<Course | null>(null);
   const [owned, setOwned] = useState<Record<string, boolean>>({});
+  // A payment for the course may already be taken and is still being confirmed: no second Pay button
+  const [waiting, setWaiting] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const uidNow = user?.uid ?? null;
   const loadOwned = useCallback(async () => {
-    const entries = await Promise.all(COURSES.map(async (c) => [c.id, await hasEntitlement(courseProduct(c).id)] as const));
-    setOwned(Object.fromEntries(entries));
-  }, []);
+    const entries = await Promise.all(
+      COURSES.map(async (c) => {
+        const id = courseProduct(c).id;
+        return [c.id, await hasEntitlement(id), uidNow ? await awaitingPayment(uidNow, id) : false] as const;
+      }),
+    );
+    setOwned(Object.fromEntries(entries.map(([id, own]) => [id, own])));
+    setWaiting(Object.fromEntries(entries.map(([id, , w]) => [id, w])));
+  }, [uidNow]);
+  // Also when a late payment is confirmed in the background (`version`, app back in the foreground)
   useFocusEffect(
     useCallback(() => {
-      loadOwned();
-    }, [loadOwned]),
+      if (version >= 0) loadOwned();
+    }, [loadOwned, version]),
   );
 
   // Enrol = pay the course price in Razorpay's native sheet; the team sends the course login by email.
@@ -59,8 +69,10 @@ export default function CoursesScreen() {
       router.push('/login');
     } else if (r === 'cancelled') setMsg(t('paywall.cancelled'));
     else if (r === 'not-configured') setMsg(t('paywall.notConfigured'));
-    else if (r === 'pending') setMsg(t('paywall.pending'));
-    else setMsg(t('paywall.failed'));
+    else if (r === 'pending') {
+      setMsg(t('paywall.pending'));
+      setWaiting((w) => ({ ...w, [c.id]: true }));
+    } else setMsg(t('paywall.failed'));
   };
   const contentW = Math.min(width, 900) - Spacing.lg * 2;
   const cols = width > 700 ? 3 : 2;
@@ -129,6 +141,8 @@ export default function CoursesScreen() {
                       {t('courses.enrolledText')}
                     </Body>
                   </Card>
+                ) : waiting[open.id] && StorePolicy.courseEnrolLinks && paymentsEnabled() ? (
+                  <Text style={styles.msg}>{t('paywall.pending')}</Text>
                 ) : StorePolicy.courseEnrolLinks && paymentsEnabled() ? (
                   <>
                     <Text style={styles.modalPrice}>{formatINR(open.price)}</Text>

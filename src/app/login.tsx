@@ -49,14 +49,18 @@ export default function LoginScreen() {
   // Close only when a login HAPPENS while this screen is open (not because a stale login was still
   // around when it opened — the server may just have rejected that one).
   const wasLoggedIn = useRef(!!user);
+  // A login made on this screen closes it too (also when a stale login was around when it opened)
+  const [signedIn, setSignedIn] = useState(false);
+  const closed = useRef(false);
   useEffect(() => {
     const now = !!user;
     const justLoggedIn = now && !wasLoggedIn.current;
     wasLoggedIn.current = now;
-    if (!justLoggedIn) return;
+    if (closed.current || !(justLoggedIn || (signedIn && now))) return;
+    closed.current = true;
     if (router.canGoBack()) router.back();
     else router.replace('/profile');
-  }, [user]);
+  }, [user, signedIn]);
 
   const switchMode = (m: Mode) => {
     tap();
@@ -75,7 +79,10 @@ export default function LoginScreen() {
     return '';
   };
 
+  // The keyboard's "go" key and the button can both fire: one request at a time
+  const sending = useRef(false);
   const submit = async () => {
+    if (sending.current) return;
     const v = validate();
     if (v) {
       setError(v);
@@ -84,26 +91,32 @@ export default function LoginScreen() {
     }
     setError('');
     setBusy(true);
+    sending.current = true;
     try {
       if (mode === 'login') {
         await signIn(email, password);
         tap('success');
+        setSignedIn(true);
       } else if (mode === 'signup') {
         const r = await signUp(name, email, password);
         if (invite.trim()) await recordInviter(invite); // best effort; a wrong code never blocks sign-up
         if (offers) subscribeNewsletter(email).catch(() => {}); // only when they ticked it
         tap('success');
         if (r === 'confirm-email') setDone('confirm');
+        else setSignedIn(true);
       } else {
-        await resetPassword(email);
-        tap('success');
-        setDone('reset-sent');
+        // On the web the website's own reset page opens instead: nothing was sent from here
+        if ((await resetPassword(email)) === 'sent') {
+          tap('success');
+          setDone('reset-sent');
+        }
       }
     } catch (e) {
       const code = e instanceof AuthError ? e.code : 'unknown';
       setError(t(`auth.err.${code}`, { count: mode === 'signup' ? MIN_NEW_PASSWORD : MIN_PASSWORD }));
       tap('light');
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   };

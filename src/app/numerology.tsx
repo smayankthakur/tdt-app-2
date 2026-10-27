@@ -37,14 +37,14 @@ export default function NumerologyScreen() {
           </Card>
         </Animated.View>
       ) : (
-        <Numbers n={n} dob={profile.dob} locked={!premium.loading && !premium.premium} />
+        <Numbers n={n} dob={profile.dob} locked={!premium.premium} checking={premium.loading} />
       )}
     </Screen>
   );
 }
 
 /** `locked`: no plan — today's number and the first two lines show; the rest unlocks with Ginni Unlimited. */
-function Numbers({ n, dob, locked }: { n: NonNullable<ReturnType<typeof useNumerology>>; dob: string; locked: boolean }) {
+function Numbers({ n, dob, locked, checking }: { n: NonNullable<ReturnType<typeof useNumerology>>; dob: string; locked: boolean; checking: boolean }) {
   const { t, lang } = useLang();
   const day = PERSONAL_DAY[n.personalDay - 1];
   const lucky = LUCKY_BY_DAY[n.personalDay - 1];
@@ -118,7 +118,7 @@ function Numbers({ n, dob, locked }: { n: NonNullable<ReturnType<typeof useNumer
         </LinearGradient>
       </Animated.View>
 
-      {locked && <PremiumLock what={t('premium.whatNumerology')} />}
+      {locked && !checking && <PremiumLock what={t('premium.whatNumerology')} />}
       {!locked && (
         <>
           {/* Cycle numbers */}

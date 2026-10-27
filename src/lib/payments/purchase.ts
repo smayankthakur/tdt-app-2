@@ -39,6 +39,14 @@ export function paymentsEnabled(): boolean {
 export async function purchase(product: Product, user: AppUser | null, prefillName?: string): Promise<PurchaseOutcome> {
   if (!paymentsEnabled()) return 'not-configured';
   if (!user) return 'sign-in-required';
+  // A payment for this product may already be taken and is still being confirmed: check it, never open a second checkout
+  if (await awaitingPayment(user.uid, product.id)) {
+    await recheckPendingOrders(user.uid);
+    if (!(await awaitingPayment(user.uid, product.id))) {
+      const e = await Storage.getEntitlements();
+      if ((e[product.id] ?? 0) > Date.now()) return 'success';
+    } else return 'pending';
+  }
 
   let order: { orderId: string; amount: number; keyId: string };
   try {
@@ -91,7 +99,11 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
   if (result.status === 'cancelled') return 'cancelled';
   // Razorpay reported success, or the user came back from a bank page: the money may be taken. The pending
   // order is re-checked when the app opens / comes back, and the webhook unlocks it on the server.
-  if (result.status === 'success' || result.status === 'returned') return 'pending';
+  if (result.status === 'success' || result.status === 'returned') {
+    await Storage.markPendingOrderMaybePaid(order.orderId);
+    return 'pending';
+  }
+  // Cancelled / failed: the order stays remembered (a UPI payment can still land late) but the Buy button comes back
   return 'failed';
 }
 
@@ -114,6 +126,15 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
 }
 
 const PENDING_MAX_AGE = 3 * 86_400_000;
+/** How long a "maybe paid" order blocks a new checkout for the same product (a bank payment that never lands is refunded by then). */
+const MAYBE_PAID_BLOCK = 86_400_000;
+
+/** True while a payment for this product may already be taken and isn't confirmed yet (see PurchaseOutcome 'pending'). */
+export async function awaitingPayment(uid: string, productId: string): Promise<boolean> {
+  return (await Storage.getPendingOrders()).some(
+    (o) => o.uid === uid && o.productId === productId && o.maybePaid && Date.now() - o.createdAt < MAYBE_PAID_BLOCK,
+  );
+}
 
 /**
  * Re-checks orders that were opened on this phone but never confirmed (paid in a UPI app and came back
