@@ -46,6 +46,20 @@ export class BookingError extends Error {
 
 const TIMEOUT = 25_000;
 
+/**
+ * The booking server's messages sometimes say "WhatsApp karein +91 …". In the app every request goes through a
+ * support ticket, so phone numbers and email addresses are taken out and the person is pointed to Help & support.
+ */
+export function noDirectContact(msg: string): string {
+  if (!/\+?\d[\d\s-]{8,}\d|[\w.+-]+@[\w-]+\.\w/.test(msg)) return msg;
+  const ticket = 'Help & support mein ticket bhejein';
+  return msg
+    .replace(/(ya |or )?WhatsApp( karein| kijiye| करें)?\s*:?\s*\+?\d[\d\s-]{8,}\d/gi, `$1${ticket}`)
+    .replace(/\+?\d[\d\s-]{8,}\d/g, ticket)
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]*\w/g, ticket)
+    .trim();
+}
+
 async function call<T>(path: string, init: RequestInit & { token?: string } = {}): Promise<T> {
   const { token, headers, ...rest } = init;
   const ctrl = new AbortController();
@@ -64,7 +78,7 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
   }
   const data = (await res.json().catch(() => null)) as (T & { error?: string; code?: string }) | null;
   if (!res.ok || !data) {
-    const msg = data?.error ?? '';
+    const msg = noDirectContact(data?.error ?? '');
     if (data?.code === 'no_slots') throw new BookingError(msg, 'no_slots');
     if (res.status === 404) throw new BookingError(msg, 'not_found');
     if (res.status === 402) throw new BookingError(msg, 'not_paid');

@@ -4,7 +4,8 @@
  * Have it reviewed by a lawyer before launch (see docs/PRIVACY-POLICY.md).
  */
 export const PRIVACY_UPDATED = '27 Oct 2026';
-export const PRIVACY_CONTACT = 'thedivinetarot111@gmail.com';
+/** No phone number or email is given to users: every request goes through a support ticket. */
+export const PRIVACY_CONTACT = 'a support ticket (Profile → Help & support in the App, or support.thedivinetarotonline.com)';
 
 export const PRIVACY: { h: string; p: string[] }[] = [
   {
@@ -60,7 +61,7 @@ export const PRIVACY: { h: string; p: string[] }[] = [
     p: [
       'Delete your account in the App: Profile → Delete account. This permanently deletes your login, profile, saved readings and purchases from our servers — and, because it is the same account, your Ginni Ki Baatein login on the website. A record of each payment is kept, without your account, as explained above.',
       'Turn usage data or location sharing on or off in Profile → Privacy, and edit your profile any time.',
-      `You can ask us to access, correct or erase your personal data, or raise a grievance, by writing to ${PRIVACY_CONTACT}. We reply within 30 days.`,
+      `You can ask us to access, correct or erase your personal data, or raise a grievance, by raising ${PRIVACY_CONTACT}. We reply within 30 days.`,
       'If you use the App without logging in, your data stays on your phone; uninstalling the App removes it.',
     ],
   },
@@ -82,13 +83,12 @@ export const PRIVACY: { h: string; p: string[] }[] = [
   },
   {
     h: '10. Contact',
-    p: [`The Divine Tarot · ${PRIVACY_CONTACT} · WhatsApp +91 88281 16545`],
+    p: ['The Divine Tarot · Contact us only through a support ticket: Profile → Help & support in the App, or support.thedivinetarotonline.com.'],
   },
 ];
 
 /** Terms of use and refund & cancellation policy (Profile → Terms / Refunds). Have a lawyer review before launch. */
 export const TERMS_UPDATED = '27 Oct 2026';
-export const SUPPORT_CONTACT = 'thedivinetarotsupport@gmail.com';
 
 export const TERMS_OF_USE: { h: string; p: string[] }[] = [
   {
@@ -141,7 +141,7 @@ export const TERMS_OF_USE: { h: string; p: string[] }[] = [
   },
   {
     h: '9. Contact and grievances',
-    p: [`Support: ${SUPPORT_CONTACT} or Profile → Help & support (we reply within 24 hours). Privacy and grievances: ${PRIVACY_CONTACT} — we acknowledge within 24 hours and resolve within 30 days. WhatsApp +91 88281 16545.`],
+    p: ['All help, privacy requests and grievances go through a support ticket: Profile → Help & support in the App, or support.thedivinetarotonline.com. We reply by email within 24 hours and resolve grievances within 30 days.'],
   },
 ];
 
@@ -169,7 +169,7 @@ export const REFUND_POLICY: { h: string; p: string[] }[] = [
   {
     h: '3. How to ask for a refund',
     p: [
-      `Open Profile → Help & support, choose "Billing / double charge", and attach your payment proof — or email ${SUPPORT_CONTACT} within 7 days of the payment.`,
+      'Open Profile → Help & support, choose "Billing / double charge", and attach your payment proof within 7 days of the payment.',
       'Approved refunds go back to the original payment method through Razorpay, usually within 5–7 working days.',
     ],
   },

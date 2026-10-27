@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Linking, Platform } from 'react-native';
 
-import { BookingPrices, Links } from '@/constants/config';
+import { Links } from '@/constants/config';
 import { isStartAllowed, routeLink } from '@/lib/url';
 
 /**
@@ -49,11 +49,6 @@ async function openApps(appUrls: string[], fallback: string, title: string) {
   openInApp(fallback, title);
 }
 
-/** Chat with the team in the WhatsApp app. */
-export function openWhatsApp() {
-  const n = BookingPrices.whatsapp.replace(/\D/g, '');
-  openApps([`whatsapp://send?phone=${n}`], `https://wa.me/${n}`, 'WhatsApp');
-}
 
 /** Social profiles open in their own apps (Instagram, YouTube, Facebook) — never in a browser. */
 export function openSocial(kind: 'instagram' | 'youtube' | 'youtube2' | 'facebook') {

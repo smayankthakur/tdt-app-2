@@ -30,7 +30,6 @@ import {
   type Tier,
 } from '@/lib/booking';
 import { openCheckout } from '@/lib/payments/checkout';
-import { openWhatsApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
 import { Storage } from '@/lib/storage';
 import { track } from '@/lib/events';
@@ -63,7 +62,6 @@ function BookingScreen() {
 
   const [offerOn] = useState(() => Date.now() <= BookingPrices.offer.until);
   const standardPrice = offerOn ? BookingPrices.offer.price : BookingPrices.regular;
-  const wa = BookingPrices.whatsapp;
 
   const loadSlots = useCallback(() => {
     (['standard', 'urgent'] as const).forEach((tier) =>
@@ -93,10 +91,10 @@ function BookingScreen() {
 
   const errorText = (e: unknown) => {
     const code = e instanceof BookingError ? e.code : 'server';
-    if (code === 'no_slots') return (e as BookingError).message || t('booking.errNoSlots', { number: wa });
+    if (code === 'no_slots') return (e as BookingError).message || t('booking.errNoSlots');
     if (code === 'network') return t('booking.errNetwork');
-    if (code === 'not_found') return t('booking.errUnavailable', { number: wa });
-    return t('booking.errServer', { number: wa });
+    if (code === 'not_found') return t('booking.errUnavailable');
+    return t('booking.errServer');
   };
 
   const book = (tier: Tier) => {
@@ -291,7 +289,7 @@ function BookingScreen() {
         <Text style={styles.agree}>{t('booking.agree')}</Text>
       </Card>
 
-      <Button variant="ghost" label={t('booking.whatsapp', { number: wa })} icon="logo-whatsapp" onPress={openWhatsApp} />
+      <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
       <EmailSheet key={`${askFor ?? 'closed'}-${savedEmail}`} visible={!!askFor} initial={savedEmail} onClose={() => setAskFor(null)} onContinue={(email) => askFor && pay(askFor, email)} />
     </Screen>
   );

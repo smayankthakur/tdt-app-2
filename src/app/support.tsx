@@ -6,10 +6,9 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { ChoiceList, ErrorNote, FieldLabel, PhotoField, TextField, WebsiteFallback, type PickedPhoto } from '@/components/form';
 import { Body, Button, Card, Screen, tap } from '@/components/ui';
-import { BookingPrices, Links, SupportApi } from '@/constants/config';
+import { Links, SupportApi } from '@/constants/config';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
-import { openWhatsApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
 
 const ISSUES = ['login_after_sub', 'billing', 'technical', 'other'] as const;
@@ -143,7 +142,6 @@ function SupportScreen() {
       </Card>
       <ErrorNote text={error} />
       <Button label={t('support.send')} icon="send" onPress={send} loading={busy} />
-      <Button variant="ghost" label={t('support.whatsappHint', { number: BookingPrices.whatsapp })} icon="logo-whatsapp" onPress={openWhatsApp} />
     </Screen>
   );
 }

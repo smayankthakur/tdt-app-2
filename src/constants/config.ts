@@ -48,7 +48,6 @@ export const BookingPrices = {
   regular: 8500,
   urgent: 17000,
   offer: { name: 'Diwali Offer', price: 5500, until: Date.parse('2026-11-30T23:59:59+05:30'), untilText: '30 Nov 2026' },
-  whatsapp: '+91 88281 16545',
 } as const;
 
 /** Website images (served by the site's Next.js image optimiser) */

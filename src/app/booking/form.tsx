@@ -7,7 +7,6 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { ChoiceList, ErrorNote, FieldLabel, PhotoField, TextField, type PickedPhoto } from '@/components/form';
 import { DateField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Screen, tap } from '@/components/ui';
-import { BookingPrices } from '@/constants/config';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { CONCERNS, needsPartner } from '@/data/booking';
 import { useLang } from '@/i18n';
@@ -28,7 +27,6 @@ import {
   type Slot,
 } from '@/lib/booking';
 import { emailTypo, isEmailAddress } from '@/lib/email';
-import { openWhatsApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
 import { limitWords, MAX_WORDS, wordCount } from '@/lib/words';
 
@@ -89,7 +87,6 @@ export default function BookingFormScreen() {
   const [otpBusy, setOtpBusy] = useState<'send' | 'verify' | null>(null);
   const [otpMsg, setOtpMsg] = useState('');
   const [wait, setWait] = useState(0);
-  const wa = BookingPrices.whatsapp;
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -188,7 +185,7 @@ export default function BookingFormScreen() {
       setWait(RESEND_S);
       tap('success');
     } catch (e) {
-      setOtpMsg(e instanceof BookingError && e.code === 'network' ? t('booking.errNetwork') : (e as Error).message || t('booking.errServer', { number: wa }));
+      setOtpMsg(e instanceof BookingError && e.code === 'network' ? t('booking.errNetwork') : (e as Error).message || t('booking.errServer'));
     } finally {
       setOtpBusy(null);
     }
@@ -209,7 +206,7 @@ export default function BookingFormScreen() {
       setCode('');
       tap('success');
     } catch (e) {
-      setOtpMsg(e instanceof BookingError && e.code === 'network' ? t('booking.errNetwork') : (e as Error).message || t('booking.errServer', { number: wa }));
+      setOtpMsg(e instanceof BookingError && e.code === 'network' ? t('booking.errNetwork') : (e as Error).message || t('booking.errServer'));
     } finally {
       setOtpBusy(null);
     }
@@ -311,7 +308,7 @@ export default function BookingFormScreen() {
           ? t('booking.errNetwork')
           : code === 'not_paid'
             ? t('booking.errNotPaid')
-            : (e as Error).message || t('booking.errServer', { number: wa }),
+            : (e as Error).message || t('booking.errServer'),
       );
     } finally {
       setBusy(false);
@@ -331,7 +328,7 @@ export default function BookingFormScreen() {
     return (
       <Screen edges={[]}>
         <Stack.Screen options={{ title: t('booking.formTitle') }} />
-        <ErrorNote text={t('booking.errServer', { number: wa })} />
+        <ErrorNote text={t('booking.errServer')} />
         <Button label={t('booking.title')} onPress={() => router.replace('/booking')} />
       </Screen>
     );
@@ -390,7 +387,7 @@ export default function BookingFormScreen() {
             <Button variant="ghost" label={t('booking.editForm')} icon="create-outline" onPress={startEdit} />
           </Card>
         ) : null}
-        <Button variant="ghost" label={t('booking.whatsapp', { number: wa })} icon="logo-whatsapp" onPress={openWhatsApp} />
+        <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
       </Screen>
     );
   }
