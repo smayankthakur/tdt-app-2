@@ -12,12 +12,14 @@ import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { useLang } from '@/i18n';
 import { AuthError, isEmail, resetPassword, signIn, signUp } from '@/lib/cloud/auth';
 import { recordInviter } from '@/lib/cloud/invite';
+import { subscribeNewsletter } from '@/lib/newsletter';
 import { useSession } from '@/lib/session';
 
 type Mode = 'login' | 'signup' | 'reset';
 type Done = null | 'confirm' | 'reset-sent';
 
-const MIN_PASSWORD = 6;
+const MIN_PASSWORD = 6; // logging in (older accounts)
+const MIN_NEW_PASSWORD = 8; // new accounts — the website's rule
 
 /**
  * Login / create account / forgot password.
@@ -36,6 +38,9 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<Done>(null);
+  // Sign-up: confirming 18+ is required; offers by email is a separate, unticked choice
+  const [adult, setAdult] = useState(false);
+  const [offers, setOffers] = useState(false);
   const emailRef = useRef<TextInput>(null);
   const passRef = useRef<TextInput>(null);
 
@@ -64,7 +69,9 @@ export default function LoginScreen() {
     if (mode === 'signup' && name.trim().length < 2) return t('auth.err.name');
     if (!isEmail(email)) return t('auth.err.invalid-email');
     if (mode === 'reset') return '';
-    if (password.length < MIN_PASSWORD) return t('auth.err.weak-password', { count: MIN_PASSWORD });
+    const min = mode === 'signup' ? MIN_NEW_PASSWORD : MIN_PASSWORD;
+    if (password.length < min) return t('auth.err.weak-password', { count: min });
+    if (mode === 'signup' && !adult) return t('auth.err.adult');
     return '';
   };
 
@@ -84,6 +91,7 @@ export default function LoginScreen() {
       } else if (mode === 'signup') {
         const r = await signUp(name, email, password);
         if (invite.trim()) await recordInviter(invite); // best effort; a wrong code never blocks sign-up
+        if (offers) subscribeNewsletter(email).catch(() => {}); // only when they ticked it
         tap('success');
         if (r === 'confirm-email') setDone('confirm');
       } else {
@@ -93,7 +101,7 @@ export default function LoginScreen() {
       }
     } catch (e) {
       const code = e instanceof AuthError ? e.code : 'unknown';
-      setError(t(`auth.err.${code}`, { count: MIN_PASSWORD }));
+      setError(t(`auth.err.${code}`, { count: mode === 'signup' ? MIN_NEW_PASSWORD : MIN_PASSWORD }));
       tap('light');
     } finally {
       setBusy(false);
@@ -209,7 +217,7 @@ export default function LoginScreen() {
                     }
                   />
                 )}
-                {mode === 'signup' && <Text style={styles.hint}>{t('auth.passwordHint', { count: MIN_PASSWORD })}</Text>}
+                {mode === 'signup' && <Text style={styles.hint}>{t('auth.passwordHint', { count: MIN_NEW_PASSWORD })}</Text>}
                 {mode === 'signup' && (
                   <Field
                     icon="gift-outline"
@@ -221,6 +229,13 @@ export default function LoginScreen() {
                     returnKeyType="go"
                     onSubmitEditing={submit}
                   />
+                )}
+
+                {mode === 'signup' && (
+                  <View style={{ gap: Spacing.sm }}>
+                    <Check checked={adult} onToggle={() => setAdult((x) => !x)} label={t('auth.adult')} />
+                    <Check checked={offers} onToggle={() => setOffers((x) => !x)} label={t('auth.offers')} />
+                  </View>
                 )}
 
                 {mode === 'login' && (
@@ -291,7 +306,26 @@ function Field({ label, icon, right, ref, style, ...input }: FieldProps) {
   );
 }
 
+function Check({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      onPress={() => {
+        tap();
+        onToggle();
+      }}
+      hitSlop={6}
+      style={styles.check}>
+      <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={20} color={Colors.gold} />
+      <Text style={styles.checkText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  check: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  checkText: { flex: 1, fontFamily: Fonts.body, fontSize: 13.5, lineHeight: 19, color: Colors.textMuted },
   root: { flex: 1 },
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: Spacing.md, paddingTop: Spacing.xs },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },

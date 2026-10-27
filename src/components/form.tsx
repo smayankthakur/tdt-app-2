@@ -109,11 +109,14 @@ export async function pickPhoto(name: string, maxSide = 1400, withBase64 = false
   const w = a.width || maxSide;
   const h = a.height || maxSide;
   const scale = Math.min(1, maxSide / Math.max(w, h));
-  const out = await manipulateAsync(a.uri, scale < 1 ? [{ resize: { width: Math.round(w * scale), height: Math.round(h * scale) } }] : [], {
-    compress: 0.8,
-    format: SaveFormat.JPEG,
-    base64: withBase64,
-  });
+  const resize = scale < 1 ? [{ resize: { width: Math.round(w * scale), height: Math.round(h * scale) } }] : [];
+  let out = await manipulateAsync(a.uri, resize, { compress: 0.8, format: SaveFormat.JPEG, base64: withBase64 });
+  // The booking server takes photos up to 1.4 MB: squeeze harder if a detailed photo came out bigger.
+  const size = await fetch(out.uri)
+    .then((r) => r.blob())
+    .then((b) => b.size)
+    .catch(() => 0);
+  if (size > 1_300_000) out = await manipulateAsync(a.uri, resize, { compress: 0.55, format: SaveFormat.JPEG, base64: withBase64 });
   return { uri: out.uri, name: `${name}.jpg`, type: 'image/jpeg', base64: out.base64 };
 }
 

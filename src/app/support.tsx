@@ -39,6 +39,7 @@ function SupportScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const [ticket, setTicket] = useState('');
 
   const dataUrl = (p: PickedPhoto | null) => (p?.base64 ? `data:image/jpeg;base64,${p.base64}` : null);
 
@@ -66,9 +67,10 @@ function SupportScreen() {
         body: JSON.stringify({ name: name.trim(), email: email.trim(), issue, description: description.trim(), paymentScreenshot, errorScreenshot }),
         signal: ctrl.signal,
       });
-      const data = (await res.json().catch(() => null)) as { status?: string } | null;
+      const data = (await res.json().catch(() => null)) as { status?: string; ticketId?: string } | null;
       if (!res.ok || data?.status !== 'success') throw new Error('failed');
       tap('success');
+      setTicket(data.ticketId ?? '');
       setSent(true);
     } catch {
       // offline, timed out or rejected by the desk — the form stays filled so the user can just tap Send again
@@ -89,9 +91,23 @@ function SupportScreen() {
               <Ionicons name="mail-open-outline" size={34} color={Colors.gold} />
             </View>
             <Text style={styles.title}>{t('support.sentTitle')}</Text>
+            {ticket ? <Text style={styles.ticket}>{t('support.ticketId', { id: ticket })}</Text> : null}
             <Body muted style={{ textAlign: 'center' }}>
               {t('support.sentBody', { email: email.trim() })}
             </Body>
+            <Button
+              variant="ghost"
+              label={t('support.another')}
+              icon="add-circle-outline"
+              onPress={() => {
+                setDescription('');
+                setPayShot(null);
+                setErrShot(null);
+                setTicket('');
+                setSent(false);
+              }}
+              style={{ alignSelf: 'stretch' }}
+            />
           </Card>
         </Animated.View>
       </Screen>
@@ -135,4 +151,5 @@ function SupportScreen() {
 const styles = StyleSheet.create({
   doneIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.1)', borderWidth: 1, borderColor: 'rgba(233,196,106,0.35)' },
   title: { fontFamily: Fonts.display, fontSize: 22, color: Colors.text, textAlign: 'center' },
+  ticket: { fontFamily: Fonts.bodySemi, fontSize: 15, color: Colors.gold, textAlign: 'center' },
 });

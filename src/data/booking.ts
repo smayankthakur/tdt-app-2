@@ -18,6 +18,16 @@ export const CONCERNS: { icon: string; text: string; label: string }[] = [
   { icon: '❤️', text: 'Current Ya Ex Partner se Shaadi hogi?', label: 'Current ya ex partner se shaadi hogi?' },
 ];
 
+/** Reasons that are about a partner: the Second Person / Partner section (name + photo) becomes required — the same
+ *  list the booking server checks (booking repo: lib/concerns.ts). */
+export const PARTNER_CONCERNS = [
+  'Third Party situation main stuck hai',
+  'Partner ki current feelings or actions jaanne hai',
+  'Partner ke sath reunion ya reconcilation ka pata lagana hai',
+  'Current Ya Ex Partner se Shaadi hogi?',
+];
+export const needsPartner = (concern: string) => PARTNER_CONCERNS.includes(concern);
+
 /** Full terms & conditions (English, as on the booking website). {urgent}/{price}/{regular}/{until} are filled in. */
 export const TERMS: string[] = [
   'We are certified and experienced in Astrology, Numerology, Psychic Tarot Card Reading, Vedic Kundli Analysis, Candle Wax Reading, Coffee Cup Reading, and other spiritual guidance practices.',

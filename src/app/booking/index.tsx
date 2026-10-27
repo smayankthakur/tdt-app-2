@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { EmailSheet } from '@/components/email-sheet';
 import { ErrorNote, WebsiteFallback } from '@/components/form';
 import { Body, Button, Card, Eyebrow, Screen, tap } from '@/components/ui';
 import { AppInfo, BookingPrices, Links, SiteImages } from '@/constants/config';
@@ -31,6 +32,7 @@ import {
 import { openCheckout } from '@/lib/payments/checkout';
 import { openWhatsApp } from '@/lib/links';
 import { useSession } from '@/lib/session';
+import { Storage } from '@/lib/storage';
 import { track } from '@/lib/events';
 
 const HERO = 'https://booking.thedivinetarotonline.com/hero-bharti.jpg';
@@ -52,6 +54,12 @@ function BookingScreen() {
   const [busy, setBusy] = useState<Tier | null>(null);
   const [error, setError] = useState('');
   const [terms, setTerms] = useState(false);
+  // The email is asked before paying (as on the website): the form link and "payment received" mail go there.
+  const [askFor, setAskFor] = useState<Tier | null>(null);
+  const [savedEmail, setSavedEmail] = useState('');
+  useEffect(() => {
+    Storage.getBookingEmail().then((e) => setSavedEmail(e || user?.email || ''));
+  }, [user?.email]);
 
   const [offerOn] = useState(() => Date.now() <= BookingPrices.offer.until);
   const standardPrice = offerOn ? BookingPrices.offer.price : BookingPrices.regular;
@@ -91,11 +99,19 @@ function BookingScreen() {
     return t('booking.errServer', { number: wa });
   };
 
-  const book = async (tier: Tier) => {
+  const book = (tier: Tier) => {
+    setError('');
+    setAskFor(tier);
+  };
+
+  const pay = async (tier: Tier, email: string) => {
+    setAskFor(null);
+    setSavedEmail(email);
+    Storage.setBookingEmail(email);
     setError('');
     setBusy(tier);
     try {
-      const order = await createBooking(tier);
+      const order = await createBooking(tier, email);
       track('booking_start', { tier });
       const saved: SavedBooking = { token: order.token, bid: order.bid, tier, createdAt: Date.now() };
       await rememberBooking(saved);
@@ -107,7 +123,7 @@ function BookingScreen() {
         description: order.description,
         image: SiteImages.logo,
         order_id: order.orderId,
-        prefill: { name: profile.name || user?.displayName || undefined, email: user?.email || undefined, contact: user?.phoneNumber || undefined },
+        prefill: { name: profile.name || user?.displayName || undefined, email, contact: user?.phoneNumber || undefined },
         notes: { bid: order.bid },
         theme: { color: Colors.gold },
         // like the website's 30-minute payment link: an urgent slot is only held while paying
@@ -205,7 +221,10 @@ function BookingScreen() {
                     <Text style={styles.mineSub}>#{b.bid}</Text>
                   </View>
                 </View>
-                {b.done.meetLink ? <Button small label={t('booking.joinMeet')} icon="videocam" onPress={() => Linking.openURL(b.done!.meetLink!)} /> : null}
+                <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                  {b.done.meetLink ? <Button small label={t('booking.joinMeet')} icon="videocam" onPress={() => Linking.openURL(b.done!.meetLink!)} style={{ flex: 1 }} /> : null}
+                  <Button small variant="ghost" label={t('booking.details')} icon="document-text-outline" onPress={() => router.push({ pathname: '/booking/form', params: { bid: b.bid } })} style={{ flex: 1 }} />
+                </View>
               </View>
             ) : b.paid ? (
               <View key={b.bid} style={styles.mine}>
@@ -273,6 +292,7 @@ function BookingScreen() {
       </Card>
 
       <Button variant="ghost" label={t('booking.whatsapp', { number: wa })} icon="logo-whatsapp" onPress={openWhatsApp} />
+      <EmailSheet key={`${askFor ?? 'closed'}-${savedEmail}`} visible={!!askFor} initial={savedEmail} onClose={() => setAskFor(null)} onContinue={(email) => askFor && pay(askFor, email)} />
     </Screen>
   );
 }

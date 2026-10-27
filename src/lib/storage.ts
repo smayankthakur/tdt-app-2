@@ -20,6 +20,7 @@ const KEYS = {
   /** Razorpay orders opened but not confirmed yet — re-checked when the app opens */
   pendingOrders: 'tdt.pendingOrders.v1',
   bookings: 'tdt.bookings.v1',
+  bookingEmail: 'tdt.bookingEmail.v1',
   /** Moon sign picked by hand for the daily horoscope (when there are no birth details) */
   moonSign: 'tdt.moonSign.v1',
   /** City used for Panchang / muhurat times */
@@ -40,6 +41,9 @@ const KEYS = {
 /** Every journal key starts with this (all are removed by clearUserData). */
 export const JOURNAL_PREFIX = 'tdt.journal.';
 let journalClear: (() => Promise<void>) | null = null;
+/** Saved Ginni chats, one key per account: `${CHAT_PREFIX}<uid>.v1`. */
+export const CHAT_PREFIX = 'tdt.chat.';
+
 /** src/lib/journal.ts registers clearJournal() here, so log-out clears through its write queue and cache. */
 export function registerJournalClear(fn: () => Promise<void>): void {
   journalClear = fn;
@@ -165,6 +169,9 @@ export const Storage = {
   /** Personal Reading bookings made on this phone (see src/lib/booking.ts). Kept across log-outs: a paid booking isn't tied to a login. */
   getBookings: () => readJSON<import('@/lib/booking').SavedBooking[]>(KEYS.bookings, []),
   setBookings: (list: import('@/lib/booking').SavedBooking[]) => writeJSON(KEYS.bookings, list),
+  /** The email typed before paying for a Personal Reading (remembered on this phone, like the website). */
+  getBookingEmail: () => readJSON<string>(KEYS.bookingEmail, ''),
+  setBookingEmail: (email: string) => writeJSON(KEYS.bookingEmail, email),
   async removePendingOrder(orderId: string): Promise<void> {
     const list = await Storage.getPendingOrders();
     await writeJSON(KEYS.pendingOrders, list.filter((x) => x.orderId !== orderId));
@@ -185,6 +192,13 @@ export const Storage = {
     try {
       await AsyncStorage.removeItem(KEYS.kundliForm);
       await AsyncStorage.removeItem(KEYS.moonSign);
+    } catch {
+      // non-fatal
+    }
+    // Ginni chats are private too (tdt.chat.<account>.v1)
+    try {
+      const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(CHAT_PREFIX));
+      if (keys.length) await AsyncStorage.multiRemove(keys);
     } catch {
       // non-fatal
     }

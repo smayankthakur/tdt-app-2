@@ -3,13 +3,14 @@
 //
 //   { action: "login",  email, password }        → { ok, email, token_hash: <single-use login token> }
 //   { action: "signup", name, email, password }  → same; also creates the website account
+//   { action: "change_password", password, new_password } + the app's login (Authorization) → { ok }
 //
 // The password is checked against the website's "User" table (bcrypt). The function then makes sure a matching
 // Supabase Auth user exists (linked in tdt_accounts) and returns a single-use login token for it (an admin magic
 // link that is never e-mailed); the app exchanges it with supabase.auth.verifyOtp. The website password itself is
 // never stored in Supabase Auth, and logging in on one phone does not sign out the others.
 // Deploy WITHOUT JWT verification (nobody is logged in yet). Rate-limited per email and per IP.
-import { authAdmin, CORS, HttpError, json, rest, rpc } from "../_tdt/common.ts";
+import { authAdmin, CORS, HttpError, json, requireUser, rest, rpc, SB_SERVICE, SB_URL } from "../_tdt/common.ts";
 
 const WINDOW_MS = 15 * 60_000;
 const MAX_PER_EMAIL = 10;
@@ -75,10 +76,33 @@ async function loginToken(authId: string, email: string): Promise<string> {
   return hash;
 }
 
+/**
+ * Change the password of the logged-in account: the current password must be right (same check as login), the
+ * new one is at least 8 characters (the website's rule). Other phones logged in to the app are signed out.
+ */
+async function changePassword(req: Request, body: Record<string, unknown>) {
+  const user = await requireUser(req);
+  const current = String(body.password ?? "");
+  const next = String(body.new_password ?? "");
+  if (next.length < 8 || next.length > 200) throw new HttpError(400, "weak_password");
+  await rateLimit(`chpw:${user.gid}`, MAX_PER_EMAIL);
+  const acc = await rest(`User?id=eq.${encodeURIComponent(user.gid)}&select=email`);
+  const email = String(acc?.[0]?.email ?? "").toLowerCase();
+  if (!email || !(await rpc("tdt_check_password", { p_email: email, p_password: current }))?.[0]) throw new HttpError(400, "invalid_credentials");
+  await rpc("tdt_set_password", { p_gid: user.gid, p_password: next });
+  // Sign the app out on every other phone; this phone keeps its session.
+  await fetch(`${SB_URL}/auth/v1/logout?scope=others`, {
+    method: "POST",
+    headers: { apikey: SB_SERVICE, Authorization: req.headers.get("Authorization") || "" },
+  }).catch(() => {});
+  return { ok: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
+    if (body.action === "change_password") return json(await changePassword(req, body));
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     if (!isEmail(email)) throw new HttpError(400, "invalid_email");

@@ -113,6 +113,31 @@ export async function resetPassword(email: string): Promise<void> {
   if (!res.ok) throw new AuthError('unknown');
 }
 
+/**
+ * Changes the password of the logged-in account (it is the Ginni website password too). The current password is
+ * checked on the server; the app is then signed out on every other phone, while this phone stays logged in.
+ */
+export async function changePassword(current: string, next: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new AuthError('invalid-credentials');
+  let res: Response;
+  try {
+    res = await fetch(`${SupabaseUrl}/functions/v1/tdt-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SupabaseKey, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'change_password', password: current, new_password: next }),
+    });
+  } catch {
+    throw new AuthError('network');
+  }
+  const out = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+  if (res.ok && out?.ok) return;
+  // invalid_email: a server that doesn't know this action yet (it reads it as a login without an email)
+  if (out?.error === 'invalid_email') throw new AuthError('unknown');
+  throw new AuthError(AUTH_CODES[out?.error ?? ''] ?? (res.status === 429 ? 'rate-limited' : 'unknown'));
+}
+
 /** Signs out on THIS phone only — the website and other phones stay logged in. */
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});

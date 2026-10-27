@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,8 +16,11 @@ import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/cons
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
 import { pushReading, syncReadings } from '@/lib/cloud/db';
-import { buildReading, readingToText, type Reading } from '@/lib/ginni/engine';
-import { classify, type Intent } from '@/lib/ginni/intents';
+import { loadChat, saveChat, type SavedMsg } from '@/lib/ginni/chat';
+import { buildReading, readingToText } from '@/lib/ginni/engine';
+import { classify, getIntent, type Intent, type IntentId, type KbField } from '@/lib/ginni/intents';
+import { kbText } from '@/lib/ginni/kb';
+import { smallTalk } from '@/lib/ginni/smalltalk';
 import { track } from '@/lib/events';
 import { recall } from '@/lib/ginni/memory';
 import { checkReading, getAccess, type Access } from '@/lib/quota';
@@ -26,11 +29,13 @@ import { shareStory } from '@/lib/share';
 import { Storage } from '@/lib/storage';
 
 type Msg =
-  | { id: string; kind: 'ginni'; text: string }
-  | { id: string; kind: 'user'; text: string }
+  | SavedMsg
   | { id: string; kind: 'card'; cardId: string; position: string; n: number; total: number }
-  | { id: string; kind: 'reading'; question: string; reading: Reading }
   | { id: string; kind: 'paywall' };
+type ReadingMsg = Extract<Msg, { kind: 'reading' }>;
+
+/** Only real conversation is kept: no paywall cards, pulled cards or "checking…" lines. */
+const keepable = (m: Msg): m is SavedMsg => (m.kind === 'ginni' || m.kind === 'user' || m.kind === 'reading') && !m.id.startsWith('pw-') && !m.id.startsWith('tmp-');
 
 const uid = () => Math.random().toString(36).slice(2);
 
@@ -53,9 +58,10 @@ export default function ReadingScreen() {
 
 function ReadingChat() {
   const { t, lang } = useLang();
-  const { user, version } = useSession();
+  const { user, version, profile } = useSession();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
+  const inputRef = useRef<TextInput>(null);
   const [drawing, setDrawingState] = useState<Drawing | null>(null);
   // Mirror of `drawing` that changes at once, so two fast taps can't pick for the same position twice
   const drawRef = useRef<Drawing | null>(null);
@@ -110,6 +116,26 @@ function ReadingChat() {
     scrollToEnd();
   };
 
+  // The chat is saved on this phone per account and restored when the person comes back
+  const loaded = useRef(false);
+  useEffect(() => {
+    if (!user?.uid) return;
+    let alive = true;
+    loadChat(user.uid).then((saved) => {
+      if (!alive) return;
+      loaded.current = true;
+      if (saved.length) setMessages((now) => (now.length ? now : saved));
+      scrollToEnd();
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user?.uid]);
+  useEffect(() => {
+    if (!user?.uid || !loaded.current) return;
+    saveChat(user.uid, messages.filter(keepable));
+  }, [messages, user?.uid]);
+
   /** `again`: re-asking the saved question after a payment (its bubble is already in the chat). */
   const ask = async (q: string, again = false) => {
     const question = q.trim();
@@ -118,10 +144,20 @@ function ReadingChat() {
       return;
     }
     if (drawRef.current || revealing || starting.current) return;
+    // "hi", "kaise ho", "thanks": Ginni answers in character — no cards, nothing checked or charged
+    const st = again ? null : smallTalk(question);
+    if (st) {
+      tap();
+      setInput('');
+      push({ id: uid(), kind: 'user', text: question }, { id: uid(), kind: 'ginni', text: t(`reading.small.${st}`, { name: profile.name ? ` ${profile.name.split(' ')[0]}` : '' }) });
+      return;
+    }
     starting.current = true;
     tap();
     setInput('');
-    const waitId = uid();
+    const waitId = `tmp-${uid()}`;
+    // Had a plan before? (read before the server's answer replaces it) — then the message says "renew"
+    const hadPlan = ((await Storage.getEntitlements())[Products.ginniUnlimited.id] ?? 0) > 0;
     push(...(again ? [] : [{ id: uid(), kind: 'user' as const, text: question }]), { id: waitId, kind: 'ginni', text: t('reading.checking') });
     // The server decides BEFORE any card is drawn: only Ginni Unlimited / website Premium can read (no free readings)
     const check = await checkReading(uidNow);
@@ -144,7 +180,7 @@ function ReadingChat() {
       push(
         ...(waiting
           ? [{ id: `pw-${uid()}`, kind: 'ginni' as const, text: t('paywall.pending') }]
-          : [{ id: `pw-${uid()}`, kind: 'ginni' as const, text: t('reading.quotaOut') }, { id: `pw-${uid()}`, kind: 'paywall' as const }]),
+          : [{ id: `pw-${uid()}`, kind: 'ginni' as const, text: t(hadPlan ? 'reading.expired' : 'reading.quotaOut') }, { id: `pw-${uid()}`, kind: 'paywall' as const }]),
       );
       return;
     }
@@ -188,7 +224,6 @@ function ReadingChat() {
     setDrawing(null);
     setRevealing(true);
     timer.current = setTimeout(async () => {
-      const reading = buildReading(intent, ids, lang);
       track('reading_done');
       const mem = recall(await Storage.getHistory(), intent.id, ids);
       const memMsg: Msg[] = mem
@@ -205,7 +240,7 @@ function ReadingChat() {
       // The reading card shows the cards again, so the one-by-one pulled cards make way for it
       const drawPrefix = `draw-${d.id}-`;
       setMessages((prev) => prev.filter((m) => !m.id.startsWith(drawPrefix)));
-      push(...memMsg, { id: uid(), kind: 'reading', question, reading });
+      push(...memMsg, { id: uid(), kind: 'reading', question, intentId: intent.id, cardIds: ids });
       setRevealing(false);
       tap('success');
       await pushReading(uidNow, {
@@ -220,6 +255,27 @@ function ReadingChat() {
     }, 900);
   };
 
+  /** Free follow-ups on a reading — "Tell me more" and "Deeper meaning", once each. */
+  const followUp = (m: ReadingMsg, kind: 'more' | 'deeper') => {
+    if (kind === 'more' ? m.more : m.deeper) return;
+    tap();
+    const intent = getIntent(m.intentId as IntentId);
+    const field: KbField = kind === 'more' ? (intent.field === 'message' ? 'advice' : 'message') : intent.field === 'spiritual' ? 'wellbeing' : 'spiritual';
+    const lines = m.cardIds.map((id) => `• ${getCard(id)?.name}: ${kbText(id, field, lang)}`);
+    setMessages((prev) => prev.map((x) => (x.id === m.id && x.kind === 'reading' ? { ...x, [kind]: true } : x)));
+    push({ id: uid(), kind: 'ginni', text: `${t(kind === 'more' ? 'reading.moreIntro' : 'reading.deeperIntro')}\n\n${lines.join('\n\n')}` });
+  };
+
+  const startOver = () => {
+    if (drawRef.current || revealing || starting.current) return;
+    tap();
+    setMessages([]);
+    setLastReading(null);
+    setInput('');
+  };
+
+  const greeting = profile.name ? t('reading.greetingName', { name: profile.name.split(' ')[0] }) : t('reading.greeting');
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -227,13 +283,20 @@ function ReadingChat() {
           <Text style={{ fontSize: 20 }}>🔮</Text>
         </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{t('reading.title')}</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {t('reading.title')}
+          </Text>
           {access !== 'offline' && (
-            <Text style={styles.subtitle}>
+            <Text style={styles.subtitle} numberOfLines={1}>
               {access === 'active' ? t('reading.unlimited') : access === 'loading' ? t('reading.statusLoading') : t('reading.quotaLeft')}
             </Text>
           )}
         </View>
+        {messages.length > 0 && (
+          <Pressable accessibilityRole="button" accessibilityLabel={t('reading.startOver')} onPress={startOver} hitSlop={10} style={styles.iconBtn}>
+            <Ionicons name="add" size={24} color={Colors.gold} />
+          </Pressable>
+        )}
         <Pressable accessibilityLabel={t('reading.history')} onPress={() => router.push('/history')} hitSlop={10} style={styles.iconBtn}>
           <Ionicons name="time-outline" size={22} color={Colors.gold} />
         </Pressable>
@@ -242,7 +305,7 @@ function ReadingChat() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
         <ScrollView ref={scroll} contentContainerStyle={styles.chat} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* The greeting always follows the selected language */}
-          <MessageView m={{ id: 'hello', kind: 'ginni', text: t('reading.greeting') }} onAgain={() => {}} />
+          <MessageView m={{ id: 'hello', kind: 'ginni', text: greeting }} onAgain={() => {}} />
           {lastReading && messages.length === 0 && (
             <MessageView
               m={{
@@ -254,7 +317,14 @@ function ReadingChat() {
             />
           )}
           {messages.map((m) => (
-            <MessageView key={m.id} m={m} onAgain={() => setMessages([])} active={access === 'active'} onUnlocked={onUnlocked} />
+            <MessageView
+              key={m.id}
+              m={m}
+              onAgain={() => inputRef.current?.focus()}
+              onFollowUp={(kind) => m.kind === 'reading' && followUp(m, kind)}
+              active={access === 'active'}
+              onUnlocked={onUnlocked}
+            />
           ))}
         </ScrollView>
 
@@ -269,7 +339,7 @@ function ReadingChat() {
           ) : (
             <>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-                {(t('reading.chips', { returnObjects: true }) as string[]).map((c) => (
+                {(t('reading.topics', { returnObjects: true }) as string[]).map((c) => (
                   <Pressable key={c} onPress={() => ask(c)} style={styles.chip}>
                     <Text style={styles.chipText}>{c}</Text>
                   </Pressable>
@@ -277,6 +347,7 @@ function ReadingChat() {
               </ScrollView>
               <View style={styles.inputRow}>
                 <TextInput
+                  ref={inputRef}
                   value={input}
                   onChangeText={setInput}
                   placeholder={t('reading.placeholder')}
@@ -340,7 +411,19 @@ function LoginGate() {
   );
 }
 
-function MessageView({ m, onAgain, active = false, onUnlocked = () => {} }: { m: Msg; onAgain: () => void; active?: boolean; onUnlocked?: () => void }) {
+function MessageView({
+  m,
+  onAgain,
+  onFollowUp = () => {},
+  active = false,
+  onUnlocked = () => {},
+}: {
+  m: Msg;
+  onAgain: () => void;
+  onFollowUp?: (kind: 'more' | 'deeper') => void;
+  active?: boolean;
+  onUnlocked?: () => void;
+}) {
   const { t } = useLang();
   if (m.kind === 'user') {
     return (
@@ -369,7 +452,7 @@ function MessageView({ m, onAgain, active = false, onUnlocked = () => {} }: { m:
       />
     );
   }
-  return <ReadingView question={m.question} reading={m.reading} onAgain={onAgain} />;
+  return <ReadingView m={m} onAgain={onAgain} onFollowUp={onFollowUp} />;
 }
 
 function PulledCard({ m }: { m: Extract<Msg, { kind: 'card' }> }) {
@@ -394,8 +477,11 @@ function PulledCard({ m }: { m: Extract<Msg, { kind: 'card' }> }) {
   );
 }
 
-function ReadingView({ question, reading, onAgain }: { question: string; reading: Reading; onAgain: () => void }) {
-  const { t } = useLang();
+function ReadingView({ m, onAgain, onFollowUp }: { m: ReadingMsg; onAgain: () => void; onFollowUp: (kind: 'more' | 'deeper') => void }) {
+  const { t, lang } = useLang();
+  const question = m.question;
+  // Rebuilt in the current language, so switching language shows the same cards in the new language
+  const reading = useMemo(() => buildReading(getIntent(m.intentId as IntentId), m.cardIds, lang), [m.intentId, m.cardIds, lang]);
   const ref = useRef<View>(null);
   const storyRef = useRef<View>(null);
   const tr = (k: string, o?: Record<string, unknown>) => t(k, o) as string;
@@ -457,8 +543,14 @@ function ReadingView({ question, reading, onAgain }: { question: string; reading
           loading={shooting}
           onPress={() => setShooting(true)}
         />
-        <Button label={t('reading.ask')} variant="ghost" icon="refresh" small style={{ flex: 1 }} onPress={onAgain} />
+        <Button label={t('reading.ask')} variant="ghost" icon="chatbubble-ellipses-outline" small style={{ flex: 1 }} onPress={onAgain} />
       </View>
+      {!m.more || !m.deeper ? (
+        <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+          {!m.more && <Button label={t('reading.tellMore')} variant="ghost" icon="add-circle-outline" small style={{ flex: 1 }} onPress={() => onFollowUp('more')} />}
+          {!m.deeper && <Button label={t('reading.deeper')} variant="ghost" icon="eye-outline" small style={{ flex: 1 }} onPress={() => onFollowUp('deeper')} />}
+        </View>
+      ) : null}
       {question ? (
         <Pressable
           accessibilityRole="switch"
@@ -534,9 +626,9 @@ const styles = StyleSheet.create({
   perk: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   perkIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.12)' },
   perkText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 14.5, color: Colors.text },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  title: { fontFamily: Fonts.display, fontSize: 20, color: Colors.text },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text },
   subtitle: { fontFamily: Fonts.body, fontSize: 12.5, color: Colors.gold },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.1)' },
   chat: { padding: Spacing.lg, gap: Spacing.md, maxWidth: 680, width: '100%', alignSelf: 'center' },

@@ -62,15 +62,15 @@ export const INTENTS: Intent[] = [
     field: 'love',
     positions: THREE_LOVE,
     // `ex\b` so the stem suffix (\w*) can't turn "exam"/"expect"/"excited" into an ex-reading
-    patterns: [/\b(ex\b|breakup|break up|broke up|patch ?up|come back|wapas aay|wapas aa|reconcil|move on|bhool)\w*/i, /(ब्रेकअप|वापस आ|पुराना प्यार|सुलह)/],
+    patterns: [/\b(ex\b|breakup|break up|broke up|patch ?up|come back|wapas aay|wapas aa|reconcil|move on|bhool)\w*/i, /(ब्रेकअप|वापस आ|पुराना प्यार|सुलह|एक्स)/],
   },
   {
     id: 'love',
     field: 'love',
     positions: THREE_LOVE,
     patterns: [
-      /\b(love|crush|boyfriend|girlfriend|bf|gf|partner|relationship|pyaar|pyar|mohabbat|ishq|feelings?|soulmate|propose|like me|dating|date)\b/i,
-      /(प्यार|प्रेम|रिश्ते|मोहब्बत|पसंद करता|पसंद करती)/,
+      /\b(love|crush|boyfriend|girlfriend|bf|gf|partner|relationship|pyaar|pyar|mohabbat|ishq|feel|feelings?|soulmate|propose|like me|dating|date|third (person|party)|teesra)\b/i,
+      /(प्यार|प्रेम|रिश्ते|मोहब्बत|पसंद करता|पसंद करती|महसूस|क्रश|पार्टनर|सोलमेट|तीसरा)/,
       // how people actually ask about a person: "hamara rishta", "woh mere baare mein sochta hai?", "usse baat karun?"
       /\b(rishta|rishte|relation\w*|pasand (karta|karti)|mere baare mein soch\w*|yaad (karta|karti)|miss (karta|karti)|(usse|unse|uss?se) baat)\b/i,
     ],
@@ -100,7 +100,7 @@ export const INTENTS: Intent[] = [
     id: 'money',
     field: 'money',
     positions: THREE_TIME,
-    patterns: [/\b(money|paisa|paise|finance|financial|loan|debt|karz|karza|income|salary|savings|invest\w*|property|ghar khareed|wealth|dhan)\b/i, /(पैसा|पैसे|धन|कर्ज़|कर्ज|लोन|आमदनी|संपत्ति)/],
+    patterns: [/\b(money|paisa|paise|finances?|financial|loan|debt|karz|karza|income|salary|savings|invest\w*|property|ghar khareed|wealth|dhan)\b/i, /(पैसा|पैसे|धन|कर्ज़|कर्ज|लोन|आमदनी|संपत्ति)/],
   },
   {
     id: 'health',
@@ -118,7 +118,7 @@ export const INTENTS: Intent[] = [
     id: 'family',
     field: 'family',
     positions: THREE_TIME,
-    patterns: [/\b(family|parents?|mother|father|mummy|papa|maa|mom|dad|in-?laws?|sasural|saas|brother|sister|bhai|behen|beti|beta|kids?|children|ghar)\b/i, /(परिवार|माँ|मां|पिता|पापा|ससुराल|सास|भाई|बहन|बच्चे)/],
+    patterns: [/\b(family|parents?|mother|father|mummy|papa|maa|mom|dad|in-?laws?|sasural|saas|brother|sister|bhai|behen|beti|beta|kids?|children|ghar|baby|babies|baccha|bachcha|bacha|santan|pregnan\w*)\b/i, /(परिवार|माँ|मां|पिता|पापा|ससुराल|सास|भाई|बहन|बच्चे|बच्चा|संतान)/],
   },
   {
     id: 'friendship',
@@ -130,7 +130,7 @@ export const INTENTS: Intent[] = [
     id: 'spiritual',
     field: 'spiritual',
     positions: ['mind', 'body', 'spirit'],
-    patterns: [/\b(spiritual|soul|purpose|karma|god|bhagwan|universe|meditat\w*|dharma|life purpose|intuition|manifest\w*)\b/i, /(आध्यात्म|आत्मा|भगवान|कर्म|ध्यान|उद्देश्य)/],
+    patterns: [/\b(spiritual|soul|purpose|karma|god|bhagwan|universe|meditat\w*|dharma|life purpose|intuition|manifest\w*)\b/i, /(आध्यात्म|आत्मा|भगवान|कर्म|ध्यान|उद्देश्य|ब्रह्मांड|यूनिवर्स)/],
   },
   {
     id: 'timing',

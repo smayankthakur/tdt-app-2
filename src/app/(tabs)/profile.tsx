@@ -451,6 +451,8 @@ export default function ProfileScreen() {
         {StorePolicy.personalReadingLink && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
         <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => router.push('/support')} />
         <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => router.push('/privacy')} />
+        <ListRow icon="document-text-outline" label={t('legal.termsTitle')} onPress={() => router.push('/terms')} />
+        <ListRow icon="receipt-outline" label={t('legal.refundTitle')} onPress={() => router.push('/refunds')} />
         <ListRow icon="information-circle-outline" label={t('profile.about')} onPress={() => router.push('/about')} />
       </Group>
 
@@ -463,6 +465,7 @@ export default function ProfileScreen() {
 
       {user && (
         <Group>
+          <ListRow icon="key-outline" label={t('password.title')} onPress={() => router.push('/change-password')} />
           <ListRow icon="log-out-outline" label={t('common.signOut')} onPress={() => signOut()} />
           <ListRow icon="trash-outline" label={t('profile.deleteAccount')} onPress={doDelete} danger />
         </Group>

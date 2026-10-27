@@ -100,7 +100,8 @@
           "project": "tdt-app",
           "url": "https://sentry.io/"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
