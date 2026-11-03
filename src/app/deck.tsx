@@ -1,10 +1,11 @@
-import { router, Stack } from 'expo-router';
+import { Redirect, router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CardFront } from '@/components/tarot-card';
 import { Backdrop, Chip } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
+import { StorePolicy } from '@/constants/config';
 import { DECK } from '@/data/cards';
 import { useLang, type Lang } from '@/i18n';
 
@@ -16,7 +17,12 @@ const LABELS: Record<Lang, Record<Filter | 'title', string>> = {
   hinglish: { title: 'Card Library', All: 'Sab', Major: 'Major', Wands: 'Wands', Cups: 'Cups', Swords: 'Swords', Pentacles: 'Pentacles' },
 };
 
-export default function DeckScreen() {
+/** Switched off (StorePolicy.cardLibrary): an old link or notification opens Home instead. */
+export default function DeckRoute() {
+  return StorePolicy.cardLibrary ? <DeckScreen /> : <Redirect href="/" />;
+}
+
+function DeckScreen() {
   const { width } = useWindowDimensions();
   const { lang } = useLang();
   const L = LABELS[lang];

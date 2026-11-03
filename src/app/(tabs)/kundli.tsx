@@ -17,6 +17,7 @@ import { getMoonProfile, matchKundli, type MatchResult, type MoonProfile } from 
 import { usePremium } from '@/lib/premium';
 import { hasEntitlement } from '@/lib/quota';
 import { useSession } from '@/lib/session';
+import { useBookingsOpen } from '@/lib/use-bookings-open';
 import { readJSON, Storage, writeJSON } from '@/lib/storage';
 
 type Person = { name: string; dob: string; tob: string; unknownTime: boolean; place: City | null };
@@ -36,6 +37,7 @@ export default function KundliScreen() {
 
 function KundliForm() {
   const { t, lang } = useLang();
+  const bookingsOpen = useBookingsOpen();
   const { version } = useSession();
   const [boy, setBoy] = useState<Person>(EMPTY);
   const [girl, setGirl] = useState<Person>(EMPTY);
@@ -187,7 +189,7 @@ function KundliForm() {
           <Body muted style={{ fontSize: 12.5, lineHeight: 19 }}>
             {t('kundli.disclaimer')}
           </Body>
-          <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => router.push('/booking')} />
+          {bookingsOpen && <Button label={t('profile.personal')} variant="ghost" icon="call-outline" onPress={() => router.push('/booking')} />}
         </Animated.View>
       )}
     </Screen>

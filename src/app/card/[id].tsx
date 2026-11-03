@@ -1,12 +1,14 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { LockedLine, PremiumLock } from '@/components/premium-lock';
 import { CardFront } from '@/components/tarot-card';
 import { Body, Card, Eyebrow, Screen } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang, type Lang } from '@/i18n';
 import { kbText } from '@/lib/ginni/kb';
+import { teaser, usePremium } from '@/lib/premium';
 
 type Labels = { major: string; minor: string; suits: Record<string, string>; love: string; career: string; money: string; wellbeing: string; family: string; spiritual: string };
 const LABELS: Record<Lang, Labels> = {
@@ -30,6 +32,9 @@ export default function CardDetail() {
   const { width } = useWindowDimensions();
   const { t, lang } = useLang();
   const card = id ? getCard(id) : undefined;
+  // A card's full meaning is a reading: without the ₹199 plan only the name, keywords and a short preview show
+  const premium = usePremium();
+  const locked = !premium.premium;
 
   if (!card) {
     return (
@@ -61,13 +66,27 @@ export default function CardDetail() {
       <Eyebrow>{group}</Eyebrow>
       <Text style={styles.name}>{card.name}</Text>
       <Text style={styles.keywords}>{card.keywords.join(' · ')}</Text>
-      <Text style={styles.message}>{kbText(card.id, 'message', lang)}</Text>
-      {sections.map((s) => (
-        <Card key={s.field}>
-          <Text style={styles.h}>{s.title}</Text>
-          <Body>{kbText(card.id, s.field, lang)}</Body>
-        </Card>
-      ))}
+      <Text style={styles.message}>{locked ? teaser(kbText(card.id, 'message', lang)) : kbText(card.id, 'message', lang)}</Text>
+      {locked ? (
+        <>
+          <LockedLine text={t('premium.cardLocked')} />
+          <Card style={{ gap: Spacing.xs }}>
+            {sections.map((s) => (
+              <Text key={s.field} style={styles.lockedRow}>
+                🔒 {s.title}
+              </Text>
+            ))}
+          </Card>
+          {!premium.loading && <PremiumLock what={t('premium.whatCard')} />}
+        </>
+      ) : (
+        sections.map((s) => (
+          <Card key={s.field}>
+            <Text style={styles.h}>{s.title}</Text>
+            <Body>{kbText(card.id, s.field, lang)}</Body>
+          </Card>
+        ))
+      )}
     </Screen>
   );
 }
@@ -77,4 +96,5 @@ const styles = StyleSheet.create({
   keywords: { fontFamily: Fonts.bodyMedium, fontSize: 13.5, color: Colors.textMuted },
   message: { fontFamily: Fonts.serifItalic, fontSize: 19, lineHeight: 27, color: Colors.goldSoft, marginVertical: Spacing.sm },
   h: { fontFamily: Fonts.bodySemi, fontSize: 15, color: Colors.gold },
+  lockedRow: { fontFamily: Fonts.bodyMedium, fontSize: 14, color: Colors.textMuted, paddingVertical: 2 },
 });

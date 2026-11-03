@@ -23,7 +23,10 @@ import { useJournalToday } from '@/lib/journal';
 import { openDeveloperSite, openSocial } from '@/lib/links';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
-import { usePremium } from '@/lib/premium';
+import { teaser, usePremium } from '@/lib/premium';
+import { useBookingsOpen } from '@/lib/use-bookings-open';
+import { LockedLine } from '@/components/premium-lock';
+import { SocialFollow } from '@/components/social-follow';
 import { notificationsAvailable, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { shareStory } from '@/lib/share';
 import { Storage, type DailyDraw, type Streak } from '@/lib/storage';
@@ -61,6 +64,8 @@ export default function HomeScreen() {
   const today = useToday();
   const numerology = useNumerology();
   const premium = usePremium();
+  // Personal Reading follows the booking admin: hidden while every reading is switched off there
+  const bookingsOpen = useBookingsOpen();
   const journal = useJournalToday();
   const mantra = todayMantra(new Date(today.now), lang);
 
@@ -111,6 +116,8 @@ export default function HomeScreen() {
 
   const { control, banner } = useStarRefresh(pullRefresh);
   const dailyCard = daily ? getCard(daily.cardId) : undefined;
+  // Free: a short preview of today's message (shared stories too); the plan shows all of it
+  const cotdText = dailyCard ? (premium.premium ? kbText(dailyCard.id, 'message', lang) : teaser(kbText(dailyCard.id, 'message', lang), 70)) : '';
   const contentW = Math.min(width, 640) - Spacing.lg * 2; // card trio + testimonials
 
   // A second tap while today's card is still flipping must not open the card page halfway through the animation
@@ -167,8 +174,8 @@ export default function HomeScreen() {
     { icon: 'school', label: t('home.featCourses'), onPress: () => router.navigate('/courses') },
     { icon: 'moon', label: t('today.horoscopeTitle'), onPress: () => router.push('/horoscope') },
     { icon: 'calendar', label: t('panchang.title'), onPress: () => router.push('/panchang') },
-    ...(StorePolicy.personalReadingLink ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => router.push('/booking') }] : []),
-    { icon: 'library', label: t('home.featLibrary'), onPress: () => router.push('/deck') },
+    ...(bookingsOpen ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => router.push('/booking') }] : []),
+    ...(StorePolicy.cardLibrary ? [{ icon: 'library' as IconName, label: t('home.featLibrary'), onPress: () => router.push('/deck') }] : []),
   ];
 
   return (
@@ -218,6 +225,9 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* New here? Who Bharti Singh is — YouTube, Instagram, Facebook */}
+        <SocialFollow />
+
         {/* Your day: horoscope + panchang */}
         <SectionTitle>{t('today.title')}</SectionTitle>
         {today.birth.loaded &&
@@ -244,14 +254,21 @@ export default function HomeScreen() {
             {daily?.revealed && dailyCard ? (
               <>
                 <Text style={styles.cotdName}>{dailyCard.name}</Text>
-                <Text style={styles.cotdMsg}>{kbText(dailyCard.id, 'message', lang)}</Text>
-                <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                {/* Free: a preview only. The full message and the card's reading need the ₹199 plan. */}
+                <Text style={styles.cotdMsg}>{cotdText}</Text>
+                {!premium.premium && <LockedLine text={t('premium.cotdLocked')} />}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.md, rowGap: 4 }}>
                   <Pressable onPress={() => router.push(`/card/${dailyCard.id}`)} hitSlop={8}>
-                    <Text style={styles.link}>{t('reading.advice')} →</Text>
+                    <Text style={styles.link}>{premium.premium ? t('reading.advice') : `🔒 ${t('premium.fullReading')}`} →</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => shareStory(dailyShot, `${t('home.cotdTitle')}: ${dailyCard.name}\n${kbText(dailyCard.id, 'message', lang)}\n\n${t('share.footer')}`)}
+                    onPress={() =>
+                      shareStory(
+                        dailyShot,
+                        `${t('home.cotdTitle')}: ${dailyCard.name}\n${cotdText}\n\n${t('share.footer')}`,
+                      )
+                    }
                     hitSlop={8}>
                     <Text style={styles.link}>{t('common.share')}</Text>
                   </Pressable>
@@ -335,7 +352,14 @@ export default function HomeScreen() {
             })}
           </View>
           <Text style={styles.ckmGuidanceTitle}>{t('home.ckmGuidance')}</Text>
-          <Text style={styles.ckmGuidance}>{kbText(trio[1], 'advice', lang)}</Text>
+          {premium.premium ? (
+            <Text style={styles.ckmGuidance}>{kbText(trio[1], 'advice', lang)}</Text>
+          ) : (
+            <>
+              <Text style={styles.ckmGuidance}>{teaser(kbText(trio[1], 'advice', lang), 60)}</Text>
+              <LockedLine text={t('premium.guidanceLocked')} />
+            </>
+          )}
         </LinearGradient>
 
         {/* Testimonials — managed by the client in the admin panel; hidden when empty */}
@@ -384,7 +408,7 @@ export default function HomeScreen() {
             <CardFront card={dailyCard} width={170} />
           </View>
           <Text style={storyStyles.title}>{dailyCard.name}</Text>
-          <Text style={storyStyles.text}>{kbText(dailyCard.id, 'message', lang)}</Text>
+          <Text style={storyStyles.text}>{cotdText}</Text>
         </StoryFrame>
       )}
 
@@ -413,7 +437,7 @@ export default function HomeScreen() {
             <View style={storyStyles.row}>
               <CardFront card={dailyCard} width={120} />
             </View>
-            <Text style={storyStyles.text}>{kbText(dailyCard.id, 'message', lang)}</Text>
+            <Text style={storyStyles.text}>{cotdText}</Text>
           </StoryFrame>
         )}
       </Sheet>

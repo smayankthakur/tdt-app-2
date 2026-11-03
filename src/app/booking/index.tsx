@@ -3,30 +3,34 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { EmailSheet } from '@/components/email-sheet';
 import { ErrorNote, WebsiteFallback } from '@/components/form';
 import { Body, Button, Card, Eyebrow, Screen, tap } from '@/components/ui';
-import { AppInfo, BookingPrices, Links, SiteImages } from '@/constants/config';
+import { AppInfo, Links, SiteImages } from '@/constants/config';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { TERMS } from '@/data/booking';
 import { formatINR } from '@/data/courses';
 import { useLang } from '@/i18n';
 import {
+  asTier,
   BookingError,
   bookingStatus,
   createBooking,
   formatSlotDate,
   formatSlotTime,
-  nextSlot,
+  isQuestionTier,
+  isUrgentTier,
+  loadReadings,
   refreshBookings,
   rememberBooking,
   savedBookings,
+  TIER_MINS,
   verifyBooking,
+  type ReadingOffer,
   type SavedBooking,
-  type Slot,
   type Tier,
 } from '@/lib/booking';
 import { openCheckout } from '@/lib/payments/checkout';
@@ -47,28 +51,22 @@ export default function BookingScreenRoute() {
 function BookingScreen() {
   const { t } = useLang();
   const { user, profile } = useSession();
-  // undefined = checking, null = the server said no free slot, 'error' = couldn't ask (offline / timeout) — paying stays possible
-  const [slots, setSlots] = useState<Record<Tier, Slot | null | undefined | 'error'>>({ standard: undefined, urgent: undefined });
+  // The readings switched ON in the booking admin, with its prices / offer and the next free slot.
+  // undefined = loading, 'error' = couldn't ask (offline), [] = all bookings are switched off (like the website).
+  const [readings, setReadings] = useState<ReadingOffer[] | 'error' | undefined>(undefined);
   const [mine, setMine] = useState<SavedBooking[]>([]);
   const [busy, setBusy] = useState<Tier | null>(null);
   const [error, setError] = useState('');
   const [terms, setTerms] = useState(false);
   // The email is asked before paying (as on the website): the form link and "payment received" mail go there.
-  const [askFor, setAskFor] = useState<Tier | null>(null);
+  const [askFor, setAskFor] = useState<ReadingOffer | null>(null);
   const [savedEmail, setSavedEmail] = useState('');
   useEffect(() => {
     Storage.getBookingEmail().then((e) => setSavedEmail(e || user?.email || ''));
   }, [user?.email]);
 
-  const [offerOn] = useState(() => Date.now() <= BookingPrices.offer.until);
-  const standardPrice = offerOn ? BookingPrices.offer.price : BookingPrices.regular;
-
   const loadSlots = useCallback(() => {
-    (['standard', 'urgent'] as const).forEach((tier) =>
-      nextSlot(tier)
-        .then((r) => setSlots((s) => ({ ...s, [tier]: r.available ? r.next : null })))
-        .catch((e) => setSlots((s) => ({ ...s, [tier]: e instanceof BookingError && e.code === 'no_slots' ? null : 'error' }))),
-    );
+    loadReadings().then(setReadings, () => setReadings((r) => (Array.isArray(r) ? r : 'error')));
   }, []);
 
   // This phone's bookings, refreshed from the server (a payment that finished late shows up as paid here).
@@ -77,7 +75,7 @@ function BookingScreen() {
     setMine(await refreshBookings());
   }, []);
 
-  // Slots are (re)checked on focus and when the app returns to the foreground, so a failed check retries by itself.
+  // Readings are (re)checked on focus and when the app returns to the foreground: an admin change shows up by itself.
   useFocusEffect(
     useCallback(() => {
       loadSlots();
@@ -92,24 +90,26 @@ function BookingScreen() {
   const errorText = (e: unknown) => {
     const code = e instanceof BookingError ? e.code : 'server';
     if (code === 'no_slots') return (e as BookingError).message || t('booking.errNoSlots');
+    if (code === 'tier_off' || code === 'all_off') return (e as BookingError).message || t('booking.tierMoved');
+    if (code === 'coupon') return (e as BookingError).message || t('booking.errServer');
     if (code === 'network') return t('booking.errNetwork');
     if (code === 'not_found') return t('booking.errUnavailable');
     return t('booking.errServer');
   };
 
-  const book = (tier: Tier) => {
+  const book = (r: ReadingOffer) => {
     setError('');
-    setAskFor(tier);
+    setAskFor(r);
   };
 
-  const pay = async (tier: Tier, email: string) => {
+  const pay = async (tier: Tier, email: string, coupon?: string) => {
     setAskFor(null);
     setSavedEmail(email);
     Storage.setBookingEmail(email);
     setError('');
     setBusy(tier);
     try {
-      const order = await createBooking(tier, email);
+      const order = await createBooking(tier, email, coupon);
       track('booking_start', { tier });
       const saved: SavedBooking = { token: order.token, bid: order.bid, tier, createdAt: Date.now() };
       await rememberBooking(saved);
@@ -156,30 +156,26 @@ function BookingScreen() {
       else setError(t('booking.errNotPaid'));
     } catch (e) {
       setError(errorText(e));
-      if (e instanceof BookingError && e.code === 'no_slots') loadSlots();
+      const code = e instanceof BookingError ? e.code : '';
+      if (code === 'no_slots' || code === 'tier_off' || code === 'all_off') loadSlots();
     } finally {
       setBusy(null);
       loadMine();
     }
   };
 
-  const slotLine = (tier: Tier) => {
-    const s = slots[tier];
-    if (s === undefined) return t('booking.checking');
-    if (s === 'error') return t('booking.errNetwork');
-    if (!s) return t('booking.noSlot');
-    return t('booking.nextFree', { when: `${formatSlotDate(s.date)}, ${formatSlotTime(s.time)}` });
-  };
+  const slotLine = (r: ReadingOffer) =>
+    r.slot ? t('booking.nextFree', { when: `${formatSlotDate(r.slot.date)}, ${formatSlotTime(r.slot.time)}` }) : t('booking.noSlot');
 
+  const list = Array.isArray(readings) ? readings : [];
+  const urgentOn = list.find((r) => r.tier === 'urgent');
+  const offerOn = list.find((r) => r.offerName);
   const fill = (p: string) =>
     p
-      .replace('{urgent}', formatINR(BookingPrices.urgent))
-      .replace(
-        '{offer}',
-        offerOn
-          ? `${BookingPrices.offer.name}: the ${formatINR(BookingPrices.offer.price)} price applies to payments made till ${BookingPrices.offer.untilText} (IST). After that the regular price of ${formatINR(BookingPrices.regular)} applies. The Urgent reading is not part of the offer.`
-          : '',
-      );
+      .replace(/ If you need the reading sooner, book the Urgent reading \(\{urgent\}\), which gets a slot within 48 hours of payment\./, urgentOn ? ' If you need the reading sooner, book the Urgent reading ({urgent}), which gets a slot within 48 hours of payment.' : '')
+      .replace('{urgent}', urgentOn ? formatINR(urgentOn.price) : '')
+      .replace('{offer}', offerOn ? `${offerOn.offerName}: the offer prices shown above apply to payments made till ${untilText(offerOn.offerUntil)} (IST). After that the regular prices apply.` : '');
+  const mins = list.length ? [...new Set(list.map((r) => TIER_MINS[r.tier]))].sort((a, b) => a - b) : [40];
 
   return (
     <Screen edges={[]}>
@@ -198,7 +194,7 @@ function BookingScreen() {
       <View style={styles.stats}>
         {[
           ['7L+', t('booking.stat1')],
-          ['40 min', t('booking.stat2')],
+          [`${mins.join('–')} min`, t('booking.stat2')],
           ['100%', t('booking.stat3')],
         ].map(([v, l]) => (
           <View key={l} style={styles.stat}>
@@ -218,7 +214,9 @@ function BookingScreen() {
                   <Ionicons name="calendar" size={18} color={Colors.gold} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.mineTitle}>{t('booking.bookedFor', { date: formatSlotDate(b.done.date), time: formatSlotTime(b.done.time) })}</Text>
-                    <Text style={styles.mineSub}>#{b.bid}</Text>
+                    <Text style={styles.mineSub}>
+                      {t(`booking.tiers.${asTier(b.tier)}.title`)} · #{b.bid}
+                    </Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
@@ -239,33 +237,31 @@ function BookingScreen() {
 
       <ErrorNote text={error} />
 
-      {/* Standard */}
-      <Card style={[styles.tier, offerOn && styles.tierOffer]}>
-        {offerOn && <Text style={styles.ribbon}>🪔 {t('booking.offerUntil', { name: BookingPrices.offer.name, date: BookingPrices.offer.untilText })}</Text>}
-        <Text style={styles.badge}>{t('booking.standardBadge')}</Text>
-        <Text style={styles.tierTitle}>{t('booking.standard')}</Text>
-        <View style={styles.priceRow}>
-          {offerOn && <Text style={styles.oldPrice}>{formatINR(BookingPrices.regular)}</Text>}
-          <Text style={styles.price}>{formatINR(standardPrice)}</Text>
-        </View>
-        {[t('booking.standardWhen'), t('booking.people'), t('booking.formAfter'), t('booking.noRefund')].map((x) => (
-          <Bullet key={x} text={x} />
-        ))}
-        <SlotLine text={slotLine('standard')} failed={slots.standard === 'error'} onRetry={loadSlots} />
-        <Button label={t('booking.pay', { price: formatINR(standardPrice) })} icon="sparkles" onPress={() => book('standard')} loading={busy === 'standard'} disabled={!!busy || slots.standard === null} />
-      </Card>
-
-      {/* Urgent */}
-      <Card style={[styles.tier, styles.tierUrgent]}>
-        <Text style={[styles.badge, { color: Colors.coral }]}>⚡ {t('booking.urgentBadge')}</Text>
-        <Text style={styles.tierTitle}>{t('booking.urgent')}</Text>
-        <Text style={styles.price}>{formatINR(BookingPrices.urgent)}</Text>
-        {[t('booking.urgentWhen'), t('booking.people'), t('booking.formAfter'), t('booking.noRefund')].map((x) => (
-          <Bullet key={x} text={x} />
-        ))}
-        <SlotLine text={slotLine('urgent')} failed={slots.urgent === 'error'} onRetry={loadSlots} />
-        <Button label={t('booking.pay', { price: formatINR(BookingPrices.urgent) })} icon="flash" onPress={() => book('urgent')} loading={busy === 'urgent'} disabled={!!busy || slots.urgent === null} />
-      </Card>
+      {readings === undefined ? (
+        <Card style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
+          <ActivityIndicator color={Colors.gold} />
+          <Text style={[styles.slot, { marginTop: Spacing.sm }]}>{t('booking.checking')}</Text>
+        </Card>
+      ) : readings === 'error' ? (
+        <Card style={{ gap: Spacing.sm, alignItems: 'center' }}>
+          <Body muted style={{ textAlign: 'center' }}>
+            {t('booking.loadError')}
+          </Body>
+          <Button small variant="ghost" label={t('common.retry')} icon="refresh" onPress={loadSlots} />
+        </Card>
+      ) : readings.length === 0 ? (
+        // Every reading is switched off in the booking admin — the website says the same
+        <Card style={{ gap: Spacing.sm, alignItems: 'center' }}>
+          <Ionicons name="moon-outline" size={32} color={Colors.gold} />
+          <Text style={[styles.h, { textAlign: 'center' }]}>{t('booking.closedTitle')}</Text>
+          <Body muted style={{ textAlign: 'center' }}>
+            {t('booking.closedBody')}
+          </Body>
+          <Button small label={t('home.heroCta')} icon="sparkles" onPress={() => router.navigate('/reading')} />
+        </Card>
+      ) : (
+        readings.map((r) => <TierCard key={r.tier} r={r} slotText={slotLine(r)} busy={busy} onBook={() => book(r)} />)
+      )}
 
       <Card style={{ gap: Spacing.sm }}>
         <Text style={styles.h}>{t('booking.readFirst')}</Text>
@@ -292,28 +288,56 @@ function BookingScreen() {
       </Card>
 
       <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
-      <EmailSheet key={askFor ?? 'closed'} visible={!!askFor} initial={savedEmail} onClose={() => setAskFor(null)} onContinue={(email) => askFor && pay(askFor, email)} />
+      <EmailSheet
+        key={askFor?.tier ?? 'closed'}
+        visible={!!askFor}
+        initial={savedEmail}
+        reading={askFor}
+        onClose={() => setAskFor(null)}
+        onContinue={(email, coupon) => askFor && pay(askFor.tier, email, coupon)}
+      />
     </Screen>
   );
 }
 
-/** The next-free-slot line; after a failed check it offers a retry (paying still works — the server picks the slot). */
-function SlotLine({ text, failed, onRetry }: { text: string; failed: boolean; onRetry: () => void }) {
+/** "Valid till 30 Nov 2026" from the admin's YYYY-MM-DD. */
+function untilText(d: string | null) {
+  if (!d) return '';
+  const x = new Date(`${d}T00:00:00Z`);
+  return Number.isNaN(x.getTime()) ? d : x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/** One reading type, as on the website's price cards (texts per type; price / offer / on-off from the admin). */
+function TierCard({ r, slotText, busy, onBook }: { r: ReadingOffer; slotText: string; busy: Tier | null; onBook: () => void }) {
   const { t } = useLang();
-  if (!failed) return <Text style={styles.slot}>{text}</Text>;
+  const info = t(`booking.tiers.${r.tier}`, { returnObjects: true }) as Record<string, string>;
+  const urgent = isUrgentTier(r.tier);
+  const offer = !!r.offerName && r.price < r.regular;
+  const bullets = [info.b1, info.b2, info.b3, isQuestionTier(r.tier) ? t('booking.topicsHint') : '', t('booking.formAfter'), t('booking.noRefund')].filter(Boolean);
+  // A normal reading can still be booked with no free slot shown (the server assigns one later); an urgent one cannot.
+  const full = !r.slot && urgent;
   return (
-    <View style={styles.slotRow}>
-      <Text style={[styles.slot, { flex: 1, color: Colors.textMuted }]}>{text}</Text>
-      <Pressable
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={() => {
-          tap();
-          onRetry();
-        }}>
-        <Text style={[styles.slot, styles.link]}>{t('common.retry')}</Text>
-      </Pressable>
-    </View>
+    <Card style={[styles.tier, offer && styles.tierOffer, urgent && styles.tierUrgent]}>
+      {offer && <Text style={styles.ribbon}>🪔 {t('booking.offerUntil', { name: r.offerName, date: untilText(r.offerUntil) })}</Text>}
+      <Text style={[styles.badge, urgent && { color: Colors.coral }]}>{info.badge}</Text>
+      <Text style={styles.tierTitle}>{info.title}</Text>
+      <View style={styles.priceRow}>
+        {offer && <Text style={styles.oldPrice}>{formatINR(r.regular)}</Text>}
+        <Text style={styles.price}>{formatINR(r.price)}</Text>
+      </View>
+      <Text style={styles.sub}>{info.sub}</Text>
+      {bullets.map((x) => (
+        <Bullet key={x} text={x} />
+      ))}
+      <Text style={styles.slot}>{slotText}</Text>
+      <Button
+        label={t('booking.pay', { price: formatINR(r.price) })}
+        icon={urgent ? 'flash' : r.tier === 'video' ? 'videocam' : 'sparkles'}
+        onPress={onBook}
+        loading={busy === r.tier}
+        disabled={!!busy || full}
+      />
+    </Card>
   );
 }
 
@@ -347,6 +371,7 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm },
   oldPrice: { fontFamily: Fonts.body, fontSize: 17, color: Colors.textDim, textDecorationLine: 'line-through' },
   price: { fontFamily: Fonts.display, fontSize: 30, color: Colors.goldSoft },
+  sub: { fontFamily: Fonts.body, fontSize: 13, lineHeight: 18, color: Colors.textDim },
   bullet: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
   bulletText: { flex: 1, fontFamily: Fonts.body, fontSize: 14, lineHeight: 20, color: Colors.textMuted },
   slot: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: Colors.goldSoft, marginTop: 4 },

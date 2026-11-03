@@ -258,6 +258,13 @@ function ReadingChat() {
   /** Free follow-ups on a reading — "Tell me more" and "Deeper meaning", once each. */
   const followUp = (m: ReadingMsg, kind: 'more' | 'deeper') => {
     if (kind === 'more' ? m.more : m.deeper) return;
+    // A reading kept in the chat from an earlier plan: more of it is part of the plan too
+    if (access !== 'active') {
+      tap('light');
+      setMessages((prev) => prev.filter((x) => !x.id.startsWith('pw-')));
+      push({ id: `pw-${uid()}`, kind: 'ginni', text: t('reading.followLocked') }, { id: `pw-${uid()}`, kind: 'paywall' });
+      return;
+    }
     tap();
     const intent = getIntent(m.intentId as IntentId);
     const field: KbField = kind === 'more' ? (intent.field === 'message' ? 'advice' : 'message') : intent.field === 'spiritual' ? 'wellbeing' : 'spiritual';

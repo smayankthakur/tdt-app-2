@@ -3,6 +3,7 @@ import { router, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { SocialFollow } from '@/components/social-follow';
 import { Body, Button, Card, Eyebrow, Screen } from '@/components/ui';
 import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { ABOUT } from '@/data/about';
@@ -21,6 +22,7 @@ export default function AboutScreen() {
         <Text style={styles.subtitle}>{a.subtitle}</Text>
       </Animated.View>
       <Body>{a.intro}</Body>
+      <SocialFollow showAbout={false} />
       <View style={{ gap: Spacing.sm }}>
         {a.badges.map(([h, d]) => (
           <Card key={h} style={styles.badge}>

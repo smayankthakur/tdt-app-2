@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import { BookingApi } from '@/constants/config';
-import { Storage } from '@/lib/storage';
+import { readJSON, Storage, writeJSON } from '@/lib/storage';
 
 /**
  * Personal Reading booking — the same backend as booking.thedivinetarotonline.com (slots, Google Meet link,
@@ -16,7 +16,23 @@ import { Storage } from '@/lib/storage';
  * The booking token travels in the x-tdt-booking header; the server never trusts a booking ID from the app.
  * Tokens are kept in the phone's secure storage (Keychain / Keystore), not in plain app storage.
  */
-export type Tier = 'standard' | 'urgent';
+/**
+ * Reading types — the same five as the website, each switched on/off and priced in booking.thedivinetarotonline.com/admin:
+ *  standard = 40-min voice call, up to 3 people · urgent = the same within 48 h · video = 30-min Google Meet video,
+ *  one person, 3 written questions · q3 = 30-min voice call, one person, 3 written questions · q3urgent = q3 within 48 h.
+ * The app shows only the readings that are ON, at the admin's price / offer — like the website.
+ */
+export type Tier = 'standard' | 'urgent' | 'video' | 'q3' | 'q3urgent';
+export const TIERS: Tier[] = ['standard', 'urgent', 'video', 'q3', 'q3urgent'];
+export const TIER_MINS: Record<Tier, number> = { standard: 40, urgent: 40, video: 30, q3: 30, q3urgent: 30 };
+export const isUrgentTier = (t?: string) => t === 'urgent' || t === 'q3urgent';
+/** One person, 3 written questions (video, q3, q3urgent) instead of reason + other people. */
+export const isQuestionTier = (t?: string) => t === 'video' || t === 'q3' || t === 'q3urgent';
+export const asTier = (t?: string | null): Tier => (TIERS.includes(t as Tier) ? (t as Tier) : 'standard');
+/** Question topics — sent exactly like this (the server checks them). */
+export const QUESTION_TOPICS = ['Love life', 'Career', 'Koi aur issue'] as const;
+export const QUESTION_CHARS = 100;
+export const MAX_QUESTIONS = 3;
 export type Slot = { date: string; time: string };
 export type BookingOrder = { bid: string; token: string; orderId: string; amount: number; currency: 'INR'; keyId: string; tier: Tier; description: string; email?: string | null };
 /** Saved answers + edit window for a submitted form (raw = the form's own field names). */
@@ -38,7 +54,7 @@ export type BookingStatus = {
 export class BookingError extends Error {
   constructor(
     message: string,
-    public code: 'no_slots' | 'network' | 'not_found' | 'not_paid' | 'already_done' | 'invalid' | 'server',
+    public code: 'no_slots' | 'network' | 'not_found' | 'not_paid' | 'already_done' | 'invalid' | 'server' | 'tier_off' | 'all_off' | 'coupon',
   ) {
     super(message);
   }
@@ -80,6 +96,9 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
   if (!res.ok || !data) {
     const msg = noDirectContact(data?.error ?? '');
     if (data?.code === 'no_slots') throw new BookingError(msg, 'no_slots');
+    // Switched off in the booking admin (the screen was opened earlier): the list is loaded again
+    if (data?.code === 'tier_off' || data?.code === 'all_off') throw new BookingError(msg, data.code);
+    if (data?.code === 'coupon') throw new BookingError(msg, 'coupon');
     if (res.status === 404) throw new BookingError(msg, 'not_found');
     if (res.status === 402) throw new BookingError(msg, 'not_paid');
     if (res.status === 409) throw new BookingError(msg, 'already_done');
@@ -89,14 +108,91 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
   return data;
 }
 
-/** Whether a slot of this kind is free right now, and the earliest one. */
+/** Whether a slot of this kind is free right now, and the earliest one. `off` = switched off in the booking admin. */
 export function nextSlot(tier: Tier) {
-  return call<{ available: boolean; next: Slot | null }>(`/api/slots?tier=${tier}`);
+  return call<{ available: boolean; next: Slot | null; off?: boolean }>(`/api/slots?tier=${tier}`);
 }
 
-/** `email`: asked before paying, like the website — the "payment received" mail and form link go there. */
-export function createBooking(tier: Tier, email?: string) {
-  return call<BookingOrder>('/api/app/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier, email: email?.trim().toLowerCase() || undefined }) });
+/** The price right now (admin price, seasonal offer, coupon) — the same check the website's popup makes. */
+export type Quote = { tier: Tier; regular: number; price: number; offerName: string | null; offerUntil: string | null; coupon: string | null; discount: number; final: number };
+export async function quoteReading(tier: Tier, coupon?: string): Promise<Quote> {
+  const r = await call<Quote & { ok: true; from?: string }>('/api/coupon', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, code: coupon?.trim() || undefined }),
+  });
+  // The server answers for the most similar reading that is ON when this one is OFF
+  if (r.tier !== tier) throw new BookingError('', 'tier_off');
+  return r;
+}
+
+/** A reading that is ON in the admin, with its price and the next free slot (null = none free right now). */
+export type ReadingOffer = Quote & { slot: Slot | null };
+
+/** Every reading that is ON right now, in the website's order. [] = the admin has switched all bookings off. */
+export async function loadReadings(): Promise<ReadingOffer[]> {
+  const all = await Promise.all(
+    TIERS.map(async (tier): Promise<ReadingOffer | null | 'error'> => {
+      try {
+        const s = await nextSlot(tier);
+        if (s.off) return null;
+        const q = await quoteReading(tier);
+        return { ...q, slot: s.available ? s.next : null };
+      } catch (e) {
+        const code = e instanceof BookingError ? e.code : 'server';
+        if (code === 'tier_off' || code === 'all_off') return null;
+        return 'error';
+      }
+    }),
+  );
+  if (all.every((x) => x === 'error')) throw new BookingError('', 'network');
+  const list = all.filter((x): x is ReadingOffer => !!x && x !== 'error');
+  setOpenCache(list.length > 0);
+  return list;
+}
+
+/* Whether any reading is ON (shows / hides "Personal Reading" around the app). Remembered between app starts. */
+const OPEN_KEY = 'tdt.bookingsOpen.v1';
+let openCache: boolean | null = null;
+const openListeners = new Set<(open: boolean) => void>();
+function setOpenCache(open: boolean) {
+  if (openCache === open) return;
+  openCache = open;
+  writeJSON(OPEN_KEY, open).catch(() => {});
+  openListeners.forEach((l) => l(open));
+}
+export async function bookingsOpenCached(): Promise<boolean> {
+  if (openCache === null) openCache = await readJSON<boolean>(OPEN_KEY, false).catch(() => false);
+  return openCache;
+}
+/** Asks the booking server (one quick call). Offline: the last known answer stays. */
+export async function checkBookingsOpen(): Promise<boolean> {
+  try {
+    await quoteReading('standard').catch((e) => {
+      // standard is OFF but another reading is ON → still open
+      if (e instanceof BookingError && e.code === 'tier_off') return;
+      throw e;
+    });
+    setOpenCache(true);
+  } catch (e) {
+    if (e instanceof BookingError && e.code === 'all_off') setOpenCache(false);
+  }
+  return bookingsOpenCached();
+}
+export function onBookingsOpen(fn: (open: boolean) => void) {
+  openListeners.add(fn);
+  return () => {
+    openListeners.delete(fn);
+  };
+}
+
+/** `email`: asked before paying, like the website — the "payment received" mail and form link go there. `coupon`: from the admin. */
+export function createBooking(tier: Tier, email?: string, coupon?: string) {
+  return call<BookingOrder>('/api/app/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, email: email?.trim().toLowerCase() || undefined, coupon: coupon?.trim() || undefined }),
+  });
 }
 
 /** Sends a 6-digit code to `email` (valid 10 minutes; 45 s between sends, 5 an hour). */
@@ -252,12 +348,13 @@ export const formatSlotTime = (t: string) => {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} IST`;
 };
 
-/** "Add to Google Calendar" link for the reading (slot times are IST; the call is 40 minutes). */
-export function calendarLink(date: string, time: string, meetLink: string | null, bid: string) {
+/** "Add to Google Calendar" link for the reading (slot times are IST; 40 or 30 minutes by reading type). */
+export function calendarLink(date: string, time: string, meetLink: string | null, bid: string, tier?: string) {
+  const mins = TIER_MINS[asTier(tier)];
   const start = new Date(`${date}T${time}:00+05:30`);
-  const end = new Date(start.getTime() + 40 * 60_000);
+  const end = new Date(start.getTime() + mins * 60_000);
   const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const details = `Personal tarot reading with Bharti Singh (40 minutes).${meetLink ? `\nGoogle Meet: ${meetLink}` : ''}\nBooking ID: ${bid}`;
+  const details = `Personal tarot reading with Bharti Singh (${mins} minutes).${meetLink ? `\nGoogle Meet: ${meetLink}` : ''}\nBooking ID: ${bid}`;
   const q = new URLSearchParams({ action: 'TEMPLATE', text: 'Tarot reading — The Divine Tarot', dates: `${fmt(start)}/${fmt(end)}`, details, ...(meetLink ? { location: meetLink } : {}) });
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }

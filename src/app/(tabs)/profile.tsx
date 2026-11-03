@@ -23,6 +23,7 @@ import { notificationsAvailable, notificationsGranted, requestNotificationPermis
 import { COURSES } from '@/data/courses';
 import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
+import { useBookingsOpen } from '@/lib/use-bookings-open';
 import { Storage, type Entitlements, type NotifySettings, type PrivacySettings, type Profile, type ReminderSettings } from '@/lib/storage';
 
 const TIMES = [
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
   // finished meanwhile (birth details from the account) is never overwritten by the older copy in the editor.
   const [base, setBase] = useState<Profile>(profile);
   const [editing, setEditing] = useState(false);
+  const bookingsOpen = useBookingsOpen();
   const startEditing = () => {
     setDraft(profile);
     setBase(profile);
@@ -476,8 +478,8 @@ export default function ProfileScreen() {
         <ListRow icon="moon-outline" label={t('today.horoscopeTitle')} onPress={() => router.push('/horoscope')} />
         <ListRow icon="calendar-outline" label={t('panchang.title')} onPress={() => router.push('/panchang')} />
         {owner && <ListRow icon="stats-chart-outline" label="Business numbers" onPress={() => router.push('/admin')} />}
-        <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />
-        {StorePolicy.personalReadingLink && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
+        {StorePolicy.cardLibrary && <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />}
+        {bookingsOpen && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
         <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => router.push('/support')} />
         <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => router.push('/privacy')} />
         <ListRow icon="document-text-outline" label={t('legal.termsTitle')} onPress={() => router.push('/terms')} />

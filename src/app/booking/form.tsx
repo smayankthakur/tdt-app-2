@@ -11,12 +11,17 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { CONCERNS, needsPartner } from '@/data/booking';
 import { useLang } from '@/i18n';
 import {
+  asTier,
   assignedSlot,
   BookingError,
   bookingStatus,
   calendarLink,
   formatSlotDate,
   formatSlotTime,
+  isQuestionTier,
+  MAX_QUESTIONS,
+  QUESTION_CHARS,
+  QUESTION_TOPICS,
   rememberBooking,
   savedBookings,
   sendEmailOtp,
@@ -75,6 +80,9 @@ export default function BookingFormScreen() {
   const [step, setStep] = useState(0);
   const [me, setMe] = useState<Person & { phone: string; email: string }>({ ...EMPTY, phone: '', email: '' });
   const [others, setOthers] = useState<Person[]>([]);
+  // Video call / 3-question readings: one person, up to 3 written questions with a topic each (no reason / other people)
+  const [questions, setQuestions] = useState<{ text: string; topic: string }[]>(() => Array.from({ length: MAX_QUESTIONS }, () => ({ text: '', topic: '' })));
+  const [serverTier, setServerTier] = useState<string | undefined>(undefined);
   const [concern, setConcern] = useState('');
   const [concernOther, setConcernOther] = useState('');
   const [notes, setNotes] = useState('');
@@ -119,6 +127,7 @@ export default function BookingFormScreen() {
       try {
         const s = await bookingStatus(b.token);
         setEdit(s.edit ?? null);
+        if (s.tier) setServerTier(s.tier);
         if (s.formDone && s.date && s.time) {
           const done = { ...b, paid: true, done: { date: s.date, time: s.time, meetLink: s.meetLink ?? null, email: s.email } };
           await rememberBooking(done);
@@ -149,6 +158,7 @@ export default function BookingFormScreen() {
     }
     if (needsPartner(r.concern || '') && !list.length) list.push({ ...EMPTY });
     setOthers(list);
+    setQuestions(Array.from({ length: MAX_QUESTIONS }, (_, i) => ({ text: r[`q${i + 1}`] || '', topic: r[`qt${i + 1}`] || '' })));
     setConcern(r.concern || '');
     setConcernOther(r.concernOther || '');
     setNotes(r.notes || '');
@@ -166,7 +176,10 @@ export default function BookingFormScreen() {
     () => [...CONCERNS.map((c) => ({ value: c.text, label: c.label, icon: c.icon })), { value: 'Other', label: t('booking.other'), icon: '✍️' }],
     [t],
   );
-  const partner = needsPartner(concern);
+  const tier = asTier(serverTier ?? booking?.tier);
+  const qmode = isQuestionTier(tier);
+  const lastStep = qmode ? 1 : 2;
+  const partner = !qmode && needsPartner(concern);
   // A partner reason needs the partner's details: make sure the card is there.
   const pickConcern = (v: string) => {
     setConcern(v);
@@ -228,6 +241,13 @@ export default function BookingFormScreen() {
       if (!isVerified) return t('booking.verifyFirst');
       if (!editing && !me.photo) return t('booking.photoNeeded');
     }
+    if (s === 1 && qmode) {
+      if (!questions.some((q) => q.text.trim())) return t('booking.qNone');
+      const noTopic = questions.findIndex((q) => q.text.trim() && !q.topic);
+      if (noTopic >= 0) return t('booking.qTopic', { n: noTopic + 1 });
+      return '';
+    }
+    if (qmode) return '';
     if (s === 1 && (!concern || (concern === 'Other' && !concernOther.trim()))) return t('booking.required');
     if (s === 2 && partner) {
       const p = others[0];
@@ -258,7 +278,7 @@ export default function BookingFormScreen() {
   };
 
   const submit = async () => {
-    for (const s of [0, 1, 2]) {
+    for (const s of qmode ? [0, 1] : [0, 1, 2]) {
       const v = checkStep(s);
       if (v) {
         setStep(s);
@@ -276,19 +296,21 @@ export default function BookingFormScreen() {
       place: me.place.trim(),
       ...dateFields('dob', me.dob),
       ...timeFields('tob', me.tob),
-      concern,
-      ...(concern === 'Other' ? { concernOther: concernOther.trim() } : {}),
-      notes: notes.trim(),
+      ...(qmode
+        ? Object.fromEntries(
+            questions.flatMap((q, i) => (q.text.trim() ? [[`q${i + 1}`, q.text.trim().slice(0, QUESTION_CHARS)], [`qt${i + 1}`, q.topic]] : [])),
+          )
+        : { concern, ...(concern === 'Other' ? { concernOther: concernOther.trim() } : {}), notes: notes.trim() }),
     };
-    others.forEach((p, i) => {
+    if (!qmode) others.forEach((p, i) => {
       const n = i + 2;
       if (!p.name.trim()) return;
       Object.assign(fields, { [`name${n}`]: p.name.trim(), [`place${n}`]: p.place.trim(), ...dateFields(`dob${n}`, p.dob), ...timeFields(`tob${n}`, p.tob) });
     });
     const photos = {
       photo1: me.photo ?? undefined,
-      photo2: others[0]?.name.trim() ? (others[0].photo ?? undefined) : undefined,
-      photo3: others[1]?.name.trim() ? (others[1].photo ?? undefined) : undefined,
+      photo2: !qmode && others[0]?.name.trim() ? (others[0].photo ?? undefined) : undefined,
+      photo3: !qmode && others[1]?.name.trim() ? (others[1].photo ?? undefined) : undefined,
     };
     try {
       const r = await submitForm(booking.token, fields, photos, editing);
@@ -375,7 +397,7 @@ export default function BookingFormScreen() {
               variant="ghost"
               label={t('booking.addCalendar')}
               icon="calendar-outline"
-              onPress={() => Linking.openURL(calendarLink(d.date, d.time, d.meetLink, booking.bid))}
+              onPress={() => Linking.openURL(calendarLink(d.date, d.time, d.meetLink, booking.bid, tier))}
               style={{ alignSelf: 'stretch' }}
             />
             <Text style={styles.bid}>#{booking.bid}</Text>
@@ -406,7 +428,9 @@ export default function BookingFormScreen() {
     );
   }
 
-  const stepNames = [t('booking.stepYou'), t('booking.stepReason'), t('booking.stepOthers')];
+  const stepNames = qmode ? [t('booking.stepYou'), t('booking.stepQuestions')] : [t('booking.stepYou'), t('booking.stepReason'), t('booking.stepOthers')];
+  const setQuestion = (i: number, patch: Partial<{ text: string; topic: string }>) => setQuestions((list) => list.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  const topicLabel: Record<string, string> = { 'Love life': t('booking.topicLove'), Career: t('booking.topicCareer'), 'Koi aur issue': t('booking.topicOther') };
   const setOther = (i: number, patch: Partial<Person>) => setOthers((list) => list.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const counter = (v: string) => t('booking.words', { n: wordCount(v), max: MAX_WORDS });
 
@@ -515,7 +539,41 @@ export default function BookingFormScreen() {
         </Card>
       )}
 
-      {step === 1 && (
+      {step === 1 && qmode && (
+        <View style={{ gap: Spacing.md }}>
+          <Text style={styles.h}>{t('booking.questionsTitle')}</Text>
+          <Body muted>{t('booking.questionsHint')}</Body>
+          {questions.map((q, i) => (
+            <Card key={i} style={styles.form}>
+              <FieldLabel required={i === 0}>{t('booking.questionN', { n: i + 1 })}</FieldLabel>
+              <View style={styles.topics}>
+                {QUESTION_TOPICS.map((tp) => (
+                  <Pressable
+                    key={tp}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: q.topic === tp }}
+                    onPress={() => {
+                      tap();
+                      setQuestion(i, { topic: tp });
+                    }}
+                    style={[styles.topic, q.topic === tp && styles.topicOn]}>
+                    <Text style={[styles.topicText, q.topic === tp && { color: Colors.goldSoft }]}>{topicLabel[tp]}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <TextField
+                label={i === 0 ? t('booking.qPlaceholder1') : t('booking.qOptional')}
+                hint={t('booking.chars', { n: q.text.length, max: QUESTION_CHARS })}
+                value={q.text}
+                onChangeText={(v) => setQuestion(i, { text: v.slice(0, QUESTION_CHARS) })}
+                maxLength={QUESTION_CHARS}
+              />
+            </Card>
+          ))}
+        </View>
+      )}
+
+      {step === 1 && !qmode && (
         <Card style={styles.form}>
           <FieldLabel required>{t('booking.concern')}</FieldLabel>
           <ChoiceList options={concernOptions} value={concern} onChange={pickConcern} />
@@ -527,7 +585,7 @@ export default function BookingFormScreen() {
         </Card>
       )}
 
-      {step === 2 && (
+      {step === 2 && !qmode && (
         <View style={{ gap: Spacing.md }}>
           <Body muted>{partner ? t('booking.partnerHint') : t('booking.othersHint')}</Body>
           {others.map((p, i) => {
@@ -566,7 +624,7 @@ export default function BookingFormScreen() {
 
       <ErrorNote text={error} />
 
-      {step === 2 ? (
+      {step === lastStep ? (
         <Pressable accessibilityRole="link" onPress={() => router.push('/privacy')}>
           <Text style={styles.privacy}>{t('booking.privacyLine')}</Text>
         </Pressable>
@@ -574,7 +632,7 @@ export default function BookingFormScreen() {
 
       <View style={styles.nav}>
         {step > 0 && <Button variant="ghost" label={t('booking.back')} icon="arrow-back" onPress={() => go(step - 1)} style={{ flex: 1 }} />}
-        {step < 2 ? (
+        {step < lastStep ? (
           <Button label={t('booking.next')} icon="arrow-forward" onPress={() => go(step + 1)} style={{ flex: 1 }} />
         ) : (
           <Button label={editing ? t('booking.saveEdit') : t('booking.submit')} icon="sparkles" onPress={submit} loading={busy} style={{ flex: 2 }} />
@@ -598,6 +656,10 @@ const styles = StyleSheet.create({
   personHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   remove: { fontFamily: Fonts.bodySemi, fontSize: 13, color: Colors.danger },
   nav: { flexDirection: 'row', gap: Spacing.sm },
+  topics: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  topic: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.03)' },
+  topicOn: { borderColor: Colors.gold, backgroundColor: 'rgba(233,196,106,0.12)' },
+  topicText: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: Colors.textMuted },
   link: { fontFamily: Fonts.bodySemi, fontSize: 14, color: Colors.gold },
   ok: { fontFamily: Fonts.bodySemi, fontSize: 13.5, color: Colors.success },
   otpBox: { gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: 'rgba(233,196,106,0.06)', borderWidth: 1, borderColor: 'rgba(233,196,106,0.25)' },
