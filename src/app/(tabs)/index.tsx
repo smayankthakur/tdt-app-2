@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
@@ -20,7 +19,7 @@ import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, t
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { useJournalToday } from '@/lib/journal';
-import { openDeveloperSite, openSocial } from '@/lib/links';
+import { openDeveloperSite } from '@/lib/links';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
 import { teaser, usePremium } from '@/lib/premium';
@@ -225,9 +224,6 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* New here? Who Bharti Singh is — YouTube, Instagram, Facebook */}
-        <SocialFollow />
-
         {/* Your day: horoscope + panchang */}
         <SectionTitle>{t('today.title')}</SectionTitle>
         {today.birth.loaded &&
@@ -375,25 +371,13 @@ export default function HomeScreen() {
           <Button label={t('home.heroCta')} variant="ghost" icon="arrow-forward" onPress={() => router.navigate('/reading')} style={{ alignSelf: 'stretch' }} />
         </Card>
 
-        {/* Footer: newsletter (same as the website), socials, credit */}
-        <Card style={{ marginTop: Spacing.md }}>
+        {/* Footer: who Bharti Singh is (YouTube, Instagram, Facebook), newsletter (same as the website), credit */}
+        <View style={{ marginTop: Spacing.md }}>
+          <SocialFollow />
+        </View>
+        <Card>
           <Newsletter />
         </Card>
-        <View style={styles.socials}>
-          <Pressable accessibilityRole="link" accessibilityLabel="Instagram" onPress={() => openSocial('instagram')} hitSlop={10}>
-            <Ionicons name="logo-instagram" size={24} color={Colors.textMuted} />
-          </Pressable>
-          <Pressable accessibilityRole="link" accessibilityLabel="Facebook" onPress={() => openSocial('facebook')} hitSlop={10}>
-            <Ionicons name="logo-facebook" size={24} color={Colors.textMuted} />
-          </Pressable>
-          <Pressable accessibilityRole="link" accessibilityLabel="YouTube" onPress={() => openSocial('youtube')} hitSlop={10}>
-            <Ionicons name="logo-youtube" size={24} color={Colors.textMuted} />
-          </Pressable>
-          <Pressable accessibilityRole="link" accessibilityLabel={t('home.youtube2')} onPress={() => openSocial('youtube2')} hitSlop={10} style={styles.yt2}>
-            <Ionicons name="logo-youtube" size={24} color={Colors.textMuted} />
-            <Text style={styles.yt2Badge}>2</Text>
-          </Pressable>
-        </View>
         <Text style={styles.disclaimer}>{t('home.disclaimer')}</Text>
         <Pressable accessibilityRole="link" onPress={openDeveloperSite} hitSlop={8} style={{ alignSelf: 'center' }}>
           <Text style={styles.credit}>
@@ -571,10 +555,7 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
   dotActive: { backgroundColor: Colors.gold, width: 16 },
   ctaTitle: { fontFamily: Fonts.serifItalic, fontSize: 20, color: Colors.goldSoft, textAlign: 'center', marginBottom: Spacing.sm },
-  socials: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.xl, marginTop: Spacing.lg },
   disclaimer: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
   credit: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
   creditLink: { fontFamily: Fonts.bodyMedium, color: Colors.gold, textDecorationLine: 'underline' },
-  yt2: { flexDirection: 'row', alignItems: 'flex-start' },
-  yt2Badge: { fontFamily: Fonts.bodyMedium, fontSize: 10, color: Colors.textMuted, marginLeft: 1, marginTop: -2 },
 });
