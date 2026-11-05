@@ -28,7 +28,6 @@ export const Links = {
   youtube2: 'https://www.youtube.com/@thedivineetarot',
   /** The website's newsletter (Resend contacts + welcome email), same as the website footer */
   newsletterApi: 'https://thedivinetarotonline.com/api/subscribe',
-  developer: 'https://sitelytc.com/',
   /** Opens Google Play or the App Store, whichever fits the phone (support site route /app) */
   getApp: 'https://support.thedivinetarotonline.com/app',
   playStore: 'https://play.google.com/store/apps/details?id=com.thedivinetarotonline.app',

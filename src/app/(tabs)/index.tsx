@@ -15,11 +15,10 @@ import { SiteImages, StorePolicy } from '@/constants/config';
 import { Colors, Fonts, Gradients, Radius, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
-import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, todayKey, weeklyTrio } from '@/lib/daily';
+import { claimMilestone, getStreak, getTodaysDraw, nextMilestone, revealToday, todayKey } from '@/lib/daily';
 import { loadTestimonials, type Testimonial } from '@/lib/cloud/db';
 import { kbText } from '@/lib/ginni/kb';
 import { useJournalToday } from '@/lib/journal';
-import { openDeveloperSite } from '@/lib/links';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
 import { teaser, usePremium } from '@/lib/premium';
@@ -59,7 +58,6 @@ export default function HomeScreen() {
   const [picking, setPicking] = useState(false);
   const streakShot = useRef<View>(null);
   const dailyShot = useRef<View>(null);
-  const trio = weeklyTrio();
   const today = useToday();
   const numerology = useNumerology();
   const premium = usePremium();
@@ -330,34 +328,6 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Cards Ka Message — the deep-violet panel */}
-        <LinearGradient colors={Gradients.violetPanel} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ckm}>
-          <Text style={styles.ckmTitle}>✨ {t('home.ckmTitle')}</Text>
-          <Text style={styles.ckmSub}>{t('home.ckmSub')}</Text>
-          <View style={styles.trio}>
-            {trio.map((id) => {
-              const c = getCard(id)!;
-              return (
-                <Pressable key={id} onPress={() => router.push(`/card/${id}`)} style={{ alignItems: 'center', gap: 6, flex: 1 }}>
-                  <CardFront card={c} width={(contentW - 64) / 3} />
-                  <Text style={styles.trioName} numberOfLines={2}>
-                    {c.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.ckmGuidanceTitle}>{t('home.ckmGuidance')}</Text>
-          {premium.premium ? (
-            <Text style={styles.ckmGuidance}>{kbText(trio[1], 'advice', lang)}</Text>
-          ) : (
-            <>
-              <Text style={styles.ckmGuidance}>{teaser(kbText(trio[1], 'advice', lang), 60)}</Text>
-              <LockedLine text={t('premium.guidanceLocked')} />
-            </>
-          )}
-        </LinearGradient>
-
         {/* Testimonials — managed by the client in the admin panel; hidden when empty */}
         {testimonials.length > 0 && (
           <>
@@ -366,12 +336,13 @@ export default function HomeScreen() {
           </>
         )}
 
-        <Card style={{ alignItems: 'center', marginTop: Spacing.md }}>
+        <Card style={{ alignItems: 'center', marginTop: Spacing.md, borderColor: 'rgba(233,196,106,0.6)' }}>
           <Text style={styles.ctaTitle}>{t('home.ctaTitle')}</Text>
-          <Button label={t('home.heroCta')} variant="ghost" icon="arrow-forward" onPress={() => router.navigate('/reading')} style={{ alignSelf: 'stretch' }} />
+          {/* The main action on Home: same golden button as the hero, so it stands out */}
+          <Button label={t('home.heroCta')} icon="sparkles" onPress={() => router.navigate('/reading')} style={{ alignSelf: 'stretch' }} />
         </Card>
 
-        {/* Footer: who Bharti Singh is (YouTube, Instagram, Facebook), newsletter (same as the website), credit */}
+        {/* Footer: who Bharti Singh is (YouTube, Instagram, Facebook), newsletter (same as the website) */}
         <View style={{ marginTop: Spacing.md }}>
           <SocialFollow />
         </View>
@@ -379,11 +350,6 @@ export default function HomeScreen() {
           <Newsletter />
         </Card>
         <Text style={styles.disclaimer}>{t('home.disclaimer')}</Text>
-        <Pressable accessibilityRole="link" onPress={openDeveloperSite} hitSlop={8} style={{ alignSelf: 'center' }}>
-          <Text style={styles.credit}>
-            {t('home.designedBy')} <Text style={styles.creditLink}>Sitelytc</Text> (sitelytc.com)
-          </Text>
-        </Pressable>
       </View>
 
       {daily?.revealed && dailyCard && (
@@ -542,13 +508,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
   },
   featureLabel: { fontFamily: Fonts.bodySemi, fontSize: 12.5, color: Colors.text, textAlign: 'center' },
-  ckm: { borderRadius: Radius.xl, padding: Spacing.lg, gap: Spacing.sm, marginTop: Spacing.md, borderWidth: 1, borderColor: 'rgba(182,123,214,0.35)' },
-  ckmTitle: { fontFamily: Fonts.display, fontSize: 20, color: Colors.text },
-  ckmSub: { fontFamily: Fonts.body, fontSize: 13, color: '#D6C4EC' },
-  trio: { flexDirection: 'row', gap: Spacing.md, marginVertical: Spacing.sm },
-  trioName: { fontFamily: Fonts.bodyMedium, fontSize: 11.5, color: Colors.text, textAlign: 'center' },
-  ckmGuidanceTitle: { fontFamily: Fonts.bodySemi, fontSize: 13, color: Colors.goldSoft, marginTop: 4 },
-  ckmGuidance: { fontFamily: Fonts.serifItalic, fontSize: 15.5, lineHeight: 23, color: Colors.text },
   quote: { fontFamily: Fonts.serifItalic, fontSize: 16, lineHeight: 24, color: Colors.text },
   quoteBy: { fontFamily: Fonts.bodySemi, fontSize: 13, color: Colors.gold },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: Spacing.sm },
@@ -556,6 +515,4 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: Colors.gold, width: 16 },
   ctaTitle: { fontFamily: Fonts.serifItalic, fontSize: 20, color: Colors.goldSoft, textAlign: 'center', marginBottom: Spacing.sm },
   disclaimer: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
-  credit: { fontFamily: Fonts.body, fontSize: 11.5, color: Colors.textDim, textAlign: 'center' },
-  creditLink: { fontFamily: Fonts.bodyMedium, color: Colors.gold, textDecorationLine: 'underline' },
 });

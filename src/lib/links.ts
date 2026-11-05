@@ -66,7 +66,3 @@ export function openSocial(kind: 'instagram' | 'youtube' | 'youtube2' | 'faceboo
   }
 }
 
-/** The developer's own website (credit in the Home footer) opens in the phone's browser. */
-export function openDeveloperSite() {
-  Linking.openURL(Links.developer).catch(() => {});
-}

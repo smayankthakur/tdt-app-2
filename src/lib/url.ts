@@ -44,7 +44,7 @@ export function isFrameOnlyUrl(url: string): boolean {
 const START_HOSTS = [
   SITE_HOSTS,
   RAZORPAY_HOSTS,
-  /(^|\.)(instagram\.com|facebook\.com|fb\.com|youtube\.com|youtu\.be|sitelytc\.com|forms\.gle|wa\.me)$/i,
+  /(^|\.)(instagram\.com|facebook\.com|fb\.com|youtube\.com|youtu\.be|forms\.gle|wa\.me)$/i,
   /^(docs|forms|meet|play)\.google\.com$/i,
 ];
 
