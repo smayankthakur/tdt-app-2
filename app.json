@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Divine Tarot",
     "slug": "the-divine-tarot",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "divinetarot",
@@ -33,6 +33,7 @@
     },
     "android": {
       "package": "com.thedivinetarotonline.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#4A0E09",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
