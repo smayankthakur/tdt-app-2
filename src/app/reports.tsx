@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, Stack } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -30,7 +30,12 @@ const istNow = () => new Date(Date.now() + 5.5 * 3600e3);
 const dueLabel = (days: number) => new Date(istNow().getTime() + days * 86400e3).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const longDate = (ymd: string) => new Date(`${ymd}T12:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
-export default function ReportsScreen() {
+/** Old links to /reports open the Reports tab. */
+export default function ReportsRedirect() {
+  return <Redirect href="/report" />;
+}
+
+export function ReportsTab() {
   const { t, lang: appLang } = useLang();
   const { user, profile } = useSession();
   const site = useSiteConfig();
@@ -139,8 +144,7 @@ export default function ReportsScreen() {
 
   if (!cfg.enabled || !topics.length || !plans.length) {
     return (
-      <Screen edges={[]}>
-        <Stack.Screen options={{ title: t('reports.title') }} />
+      <Screen tab>
         <Card style={{ alignItems: 'center', gap: Spacing.sm }}>
           <Ionicons name="moon-outline" size={32} color={Colors.gold} />
           <Text style={[styles.h, { textAlign: 'center' }]}>{t('reports.closedTitle')}</Text>
@@ -154,8 +158,7 @@ export default function ReportsScreen() {
   }
 
   return (
-    <Screen edges={[]} scrollRef={scrollRef}>
-      <Stack.Screen options={{ title: t('reports.title') }} />
+    <Screen tab scrollRef={scrollRef}>
       <View style={{ alignItems: 'center', gap: 6 }}>
         <Eyebrow>{t('reports.eyebrow')}</Eyebrow>
         <Title style={{ textAlign: 'center' }}>{t('reports.hero')}</Title>

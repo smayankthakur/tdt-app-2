@@ -413,7 +413,7 @@ function KundliForm() {
               label={t("profile.personal")}
               variant="ghost"
               icon="sparkles-outline"
-              onPress={() => router.push("/booking")}
+              onPress={() => router.navigate('/book')}
             />
           )}
         </Animated.View>

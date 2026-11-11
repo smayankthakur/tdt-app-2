@@ -481,7 +481,7 @@ export default function ProfileScreen() {
         <ListRow icon="calendar-outline" label={t('panchang.title')} onPress={() => router.push('/panchang')} />
         {owner && <ListRow icon="stats-chart-outline" label="Business numbers" onPress={() => router.push('/admin')} />}
         {StorePolicy.cardLibrary && <ListRow icon="library-outline" label={t('profile.library')} onPress={() => router.push('/deck')} />}
-        {bookingsOpen && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.push('/booking')} />}
+        {bookingsOpen && <ListRow icon="call-outline" label={t('profile.personal')} onPress={() => router.navigate('/book')} />}
         <ListRow icon="help-buoy-outline" label={t('profile.support')} onPress={() => router.push('/support')} />
         <ListRow icon="shield-checkmark-outline" label={t('profile.policy')} onPress={() => router.push('/privacy')} />
         <ListRow icon="document-text-outline" label={t('legal.termsTitle')} onPress={() => router.push('/terms')} />
@@ -494,7 +494,7 @@ export default function ProfileScreen() {
         <ListRow icon="chatbubbles-outline" label={t('profile.siteGinni')} onPress={() => router.navigate('/reading')} />
         <ListRow icon="school-outline" label={t('profile.siteCourses')} onPress={() => router.navigate('/courses')} />
         <ListRow icon="heart-outline" label={t('profile.siteKundli')} onPress={() => router.navigate('/kundli')} />
-        {site.reports.enabled && <ListRow icon="document-text-outline" label={t('home.featReports')} onPress={() => router.push('/reports')} />}
+        {site.reports.enabled && <ListRow icon="document-text-outline" label={t('home.featReports')} onPress={() => router.navigate('/report')} />}
       </Group>
 
       {user && (

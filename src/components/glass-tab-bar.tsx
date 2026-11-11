@@ -32,9 +32,12 @@ const ICONS: Record<string, [IconName, IconName]> = {
   index: ['home-outline', 'home'],
   reading: ['sparkles-outline', 'sparkles'],
   courses: ['school-outline', 'school'],
+  book: ['calendar-outline', 'calendar'],
+  report: ['document-text-outline', 'document-text'],
   kundli: ['planet-outline', 'planet'],
-  profile: ['person-circle-outline', 'person-circle'],
 };
+/** Tabs reached another way (Profile = the bubble at the top right): not drawn in the bar. */
+const HIDDEN = new Set(['profile']);
 
 function TabItem({ focused, label, icons, onPress }: { focused: boolean; label: string; icons: [IconName, IconName]; onPress: () => void }) {
   const p = useSharedValue(focused ? 1 : 0);
@@ -60,7 +63,7 @@ function TabItem({ focused, label, icons, onPress }: { focused: boolean; label: 
           <Ionicons name={icons[0]} size={22} color={Colors.textMuted} />
         </Animated.View>
       </View>
-      <Text numberOfLines={1} style={[styles.label, focused && { color: Colors.gold }]}>
+      <Text numberOfLines={2} style={[styles.label, focused && { color: Colors.gold }]}>
         {label}
       </Text>
     </Pressable>
@@ -157,6 +160,9 @@ export function GlassTabBar({ state, descriptors, navigation, blurTarget }: Prop
   const insets = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
   const active = state.routes[state.index];
+  // only the routes drawn in the bar; on a hidden tab (Profile) no bar tab is active and the bubble hides
+  const shown = state.routes.map((r, i) => ({ r, i })).filter(({ r }) => !HIDDEN.has(r.name));
+  const activeShown = shown.findIndex(({ i }) => i === state.index);
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View style={styles.shadow}>
@@ -187,7 +193,7 @@ export function GlassTabBar({ state, descriptors, navigation, blurTarget }: Prop
             end={{ x: 1, y: 0 }}
             style={styles.highlight}
           />
-          {state.routes.map((route, index) => {
+          {shown.map(({ r: route, i: index }) => {
             const focused = state.index === index;
             const label = descriptors[route.key]?.options.title ?? route.name;
             return (
@@ -205,14 +211,14 @@ export function GlassTabBar({ state, descriptors, navigation, blurTarget }: Prop
             );
           })}
         </View>
-        <ActiveNotch index={state.index} count={state.routes.length} width={width} icon={(ICONS[active?.name] ?? ['ellipse-outline', 'ellipse'])[1]} />
+        {activeShown >= 0 && <ActiveNotch index={activeShown} count={shown.length} width={width} icon={(ICONS[active?.name] ?? ['ellipse-outline', 'ellipse'])[1]} />}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 12 },
+  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 8 },
   shadow: {
     maxWidth: 560,
     width: '100%',
@@ -236,7 +242,7 @@ const styles = StyleSheet.create({
   tint: { backgroundColor: 'rgba(28,16,44,0.32)' },
   liteFill: { backgroundColor: 'rgba(14,9,22,0.88)' },
   highlight: { position: 'absolute', top: 0, left: 24, right: 24, height: 1 },
-  item: { flex: 1, alignItems: 'center', gap: 2 },
+  item: { flex: 1, alignItems: 'center', gap: 2, paddingHorizontal: 1 },
   iconWrap: { width: 46, height: 40, alignItems: 'center', justifyContent: 'center' },
   notch: { position: 'absolute', top: -TOP, left: 0, width: NOTCH_W, height: CY + BUBBLE / 2 + 4, alignItems: 'center' },
   bubble: {
@@ -253,5 +259,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  label: { fontFamily: Fonts.bodyMedium, fontSize: 10.5, color: 'rgba(241,236,245,0.72)' },
+  // 6 tabs: a long name ("Kundali Match") takes two short lines instead of being cut
+  label: { fontFamily: Fonts.bodyMedium, fontSize: 10, lineHeight: 12, textAlign: 'center', color: 'rgba(241,236,245,0.72)' },
 });

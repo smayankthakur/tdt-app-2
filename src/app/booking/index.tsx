@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -43,8 +43,13 @@ import { track } from '@/lib/events';
 const HERO = 'https://booking.thedivinetarotonline.com/hero-bharti.jpg';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Personal Reading — the booking website's page, as a native screen. Payment = Razorpay's native sheet. */
-export default function BookingScreenRoute() {
+/** Old links to /booking open the Booking tab. */
+export default function BookingRedirect() {
+  return <Redirect href="/book" />;
+}
+
+/** Personal Reading — the booking website's page, as a native screen (the Booking tab). Payment = Razorpay's native sheet. */
+export function BookingTab() {
   const { t } = useLang();
   if (Platform.OS === 'web') return <WebsiteFallback title={t('booking.title')} body={t('booking.heroSub')} cta={t('booking.title')} url={Links.personalReading} />;
   return <BookingScreen />;
@@ -195,8 +200,7 @@ function BookingScreen() {
   const stat2: [string, string] = onlyWritten ? [t('booking.statQuestions'), t('booking.statWritten')] : [`${(mins.length ? mins : [40]).join('–')} min`, t('booking.stat2')];
 
   return (
-    <Screen edges={[]}>
-      <Stack.Screen options={{ title: t('booking.title') }} />
+    <Screen tab>
 
       <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
         <Image source={{ uri: HERO }} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />

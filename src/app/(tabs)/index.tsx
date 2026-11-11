@@ -170,11 +170,11 @@ export default function HomeScreen() {
     { icon: 'chatbubbles', label: t('home.featGinni'), onPress: () => router.navigate('/reading') },
     { icon: 'sunny', label: t('home.featDaily'), onPress: reveal },
     { icon: 'planet', label: t('home.featKundli'), onPress: () => router.navigate('/kundli') },
-    ...(site.reports.enabled ? [{ icon: 'document-text' as IconName, label: t('home.featReports'), onPress: () => router.push('/reports') }] : []),
+    ...(site.reports.enabled ? [{ icon: 'document-text' as IconName, label: t('home.featReports'), onPress: () => router.navigate('/report') }] : []),
     { icon: 'school', label: t('home.featCourses'), onPress: () => router.navigate('/courses') },
     { icon: 'moon', label: t('today.horoscopeTitle'), onPress: () => router.push('/horoscope') },
     { icon: 'calendar', label: t('panchang.title'), onPress: () => router.push('/panchang') },
-    ...(bookingsOpen ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => router.push('/booking') }] : []),
+    ...(bookingsOpen ? [{ icon: 'call' as IconName, label: t('home.featPersonal'), onPress: () => router.navigate('/book') }] : []),
     ...(StorePolicy.cardLibrary ? [{ icon: 'library' as IconName, label: t('home.featLibrary'), onPress: () => router.push('/deck') }] : []),
   ];
 

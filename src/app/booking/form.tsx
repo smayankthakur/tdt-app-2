@@ -398,7 +398,7 @@ export default function BookingFormScreen() {
       <Screen edges={[]}>
         <Stack.Screen options={{ title: t('booking.formTitle') }} />
         <ErrorNote text={t('booking.errServer')} />
-        <Button label={t('booking.title')} onPress={() => router.replace('/booking')} />
+        <Button label={t('booking.title')} onPress={() => router.navigate('/book')} />
       </Screen>
     );
   }
@@ -417,7 +417,7 @@ export default function BookingFormScreen() {
           </Body>
           <Text style={styles.bid}>#{booking.bid}</Text>
         </Card>
-        <Button label={t('booking.bookNew')} icon="add" onPress={() => router.replace('/booking')} />
+        <Button label={t('booking.bookNew')} icon="add" onPress={() => router.navigate('/book')} />
         <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
       </Screen>
     );

@@ -47,7 +47,8 @@ type ScreenProps = {
 };
 
 export function Screen({ children, scroll = true, edges = ['top'], contentStyle, tab, refreshControl, header, scrollRef }: ScreenProps) {
-  const pad = tab ? { paddingBottom: TAB_BAR_SPACE + Spacing.lg } : null;
+  // tab screens: room for the floating bar below and for the profile bubble at the top right
+  const pad = tab ? { paddingBottom: TAB_BAR_SPACE + Spacing.lg, paddingTop: Spacing.lg + 40 } : null;
   return (
     <View style={[styles.root, !tab && { backgroundColor: Colors.bg }]}>
       {!tab && <Backdrop />}

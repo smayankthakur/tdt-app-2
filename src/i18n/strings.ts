@@ -21,7 +21,7 @@ const en = {
     search: 'Search',
     cardNotFound: 'Card not found.',
   },
-  tabs: { home: 'Home', reading: 'Reading', courses: 'Courses', kundli: 'Kundli', profile: 'Profile' },
+  tabs: { home: 'Home', reading: 'Reading', courses: 'Courses', booking: 'Booking', reports: 'Reports', kundli: 'Kundali Match', profile: 'Profile' },
   refresh: { consulting: 'Consulting the stars…' },
   intro: { tagline: 'Your answers are waiting' },
   home: {
@@ -843,7 +843,7 @@ const hi: Dict = {
     search: 'खोजें',
     cardNotFound: 'कार्ड नहीं मिला।',
   },
-  tabs: { home: 'होम', reading: 'रीडिंग', courses: 'कोर्स', kundli: 'कुंडली', profile: 'प्रोफ़ाइल' },
+  tabs: { home: 'होम', reading: 'रीडिंग', courses: 'कोर्स', booking: 'बुकिंग', reports: 'रिपोर्ट', kundli: 'कुंडली मिलान', profile: 'प्रोफ़ाइल' },
   refresh: { consulting: 'सितारों से पूछ रहे हैं…' },
   intro: { tagline: 'आपके जवाब इंतज़ार कर रहे हैं' },
   home: {
@@ -1663,7 +1663,7 @@ const hinglish: Dict = {
     search: 'Search',
     cardNotFound: 'Card nahi mila.',
   },
-  tabs: { home: 'Home', reading: 'Reading', courses: 'Courses', kundli: 'Kundli', profile: 'Profile' },
+  tabs: { home: 'Home', reading: 'Reading', courses: 'Courses', booking: 'Booking', reports: 'Reports', kundli: 'Kundali Match', profile: 'Profile' },
   refresh: { consulting: 'Sitaron se pooch rahe hain…' },
   intro: { tagline: 'Tumhare jawab intezaar kar rahe hain' },
   home: {

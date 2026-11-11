@@ -637,7 +637,8 @@ const styles = StyleSheet.create({
   perk: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   perkIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(233,196,106,0.12)' },
   perkText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 14.5, color: Colors.text },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  // paddingRight: room for the profile bubble at the top right (src/components/profile-bubble.tsx)
+  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingLeft: Spacing.lg, paddingRight: Spacing.lg + 46, paddingVertical: Spacing.sm },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: Fonts.display, fontSize: 18, color: Colors.text },
   subtitle: { fontFamily: Fonts.body, fontSize: 12.5, color: Colors.gold },

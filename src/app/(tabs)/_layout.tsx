@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { GlassTabBar, type TabBarProps } from '@/components/glass-tab-bar';
+import { ProfileBubble } from '@/components/profile-bubble';
 import { useLang } from '@/i18n';
 
 /**
@@ -28,11 +29,15 @@ export default function TabLayout() {
           <Tabs.Screen name="index" options={{ title: t('tabs.home') }} />
           <Tabs.Screen name="reading" options={{ title: t('tabs.reading') }} />
           <Tabs.Screen name="courses" options={{ title: t('tabs.courses') }} />
+          <Tabs.Screen name="book" options={{ title: t('tabs.booking') }} />
+          <Tabs.Screen name="report" options={{ title: t('tabs.reports') }} />
           <Tabs.Screen name="kundli" options={{ title: t('tabs.kundli') }} />
+          {/* Profile is opened from the bubble at the top right, not from the bar (client, 11 Nov) */}
           <Tabs.Screen name="profile" options={{ title: t('tabs.profile') }} />
         </Tabs>
       </BlurTargetView>
       {bar && <GlassTabBar {...bar} blurTarget={target} />}
+      <ProfileBubble active={bar?.state.routes[bar.state.index]?.name === 'profile'} />
     </View>
   );
 }
