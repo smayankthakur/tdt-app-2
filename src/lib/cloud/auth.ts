@@ -203,7 +203,20 @@ export async function signOut(): Promise<void> {
 
 /** Deletes the account on the server (it is the Ginni website account too), then signs out on this phone. */
 export async function deleteAccount(password?: string): Promise<void> {
-  // The website account first (the password is checked there), then the app's own data
+  // The website account first (the password is checked there), then the app's own data.
+  // No website login on this phone (expired / older app version): log in on the website with the typed password
+  // first, so the website account is deleted too — not only the app's copy.
+  if (password !== undefined && !(await siteToken())) {
+    const { data } = await supabase.auth.getSession();
+    const email = data.session?.user.email;
+    if (email) {
+      try {
+        await siteLogin(email, password);
+      } catch (e) {
+        throw siteAuthError(e);
+      }
+    }
+  }
   if ((await siteToken()) && password !== undefined) {
     try {
       await siteDeleteAccount(password);

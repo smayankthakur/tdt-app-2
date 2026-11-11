@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { DateField, PlaceField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Chip, Group, ListRow, Screen, tap, Title } from '@/components/ui';
@@ -237,7 +237,7 @@ export default function ProfileScreen() {
       flash('✓');
     } catch (e) {
       const code = (e as Error).message;
-      setDelErr(code === 'invalid-credentials' ? t('auth.err.invalid-credentials') : code === 'auth_required' ? t('auth.err.sessionExpired') : t('auth.err.network'));
+      setDelErr(code === 'invalid-credentials' ? t('profile.deleteWrongPw') : code === 'auth_required' ? t('auth.err.sessionExpired') : t('auth.err.network'));
     } finally {
       setDelBusy(false);
     }
