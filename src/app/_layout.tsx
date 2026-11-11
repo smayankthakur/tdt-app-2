@@ -10,6 +10,7 @@ import { AppState, View } from 'react-native';
 
 import { IntroSplash } from '@/components/intro-splash';
 import { Starfield } from '@/components/starfield';
+import { UpdatePrompt } from '@/components/update-prompt';
 import { Colors, Fonts } from '@/constants/theme';
 import i18n, { loadSavedLanguage } from '@/i18n';
 import { initCrashReporting, wrapRoot } from '@/lib/crash';
@@ -141,6 +142,7 @@ function RootLayout() {
           </Stack>
           <IntroSplash />
           <CheckoutHost />
+          <UpdatePrompt />
         </View>
       </ThemeProvider>
     </SessionProvider>

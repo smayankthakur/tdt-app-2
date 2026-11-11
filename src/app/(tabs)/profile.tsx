@@ -21,6 +21,7 @@ import { MILESTONES } from '@/lib/daily';
 import { track } from '@/lib/events';
 import { notificationsAvailable, notificationsGranted, requestNotificationPermission, syncNotifications } from '@/lib/notifications';
 import { COURSES } from '@/data/courses';
+import { checkForUpdate, selfUpdates, showUpdate } from '@/lib/app-update';
 import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
 import { useSiteConfig } from '@/lib/site-config';
@@ -533,12 +534,39 @@ export default function ProfileScreen() {
         </Group>
       )}
 
+      {selfUpdates ? <UpdateCheck /> : null}
       <Text style={styles.footer}>
         The Divine Tarot · v{Application.nativeApplicationVersion ?? '1.0.0'}
         {'\n'}
         {t('home.disclaimer')}
       </Text>
     </Screen>
+  );
+}
+
+/** Website-installed Android app: asks GitHub for a newer version and opens the update sheet (src/components/update-prompt.tsx). */
+function UpdateCheck() {
+  const { t } = useLang();
+  const [state, setState] = useState<'idle' | 'busy' | 'latest' | 'failed'>('idle');
+  const run = async () => {
+    setState('busy');
+    try {
+      const info = await checkForUpdate({ reportErrors: true });
+      if (info) {
+        setState('idle');
+        showUpdate(info);
+      } else setState('latest');
+    } catch {
+      setState('failed');
+    }
+  };
+  return (
+    <View style={{ alignItems: 'center', marginTop: Spacing.lg }}>
+      <Button small variant="ghost" icon="refresh-outline" label={state === 'busy' ? t('update.checking') : t('update.check')} loading={state === 'busy'} onPress={run} />
+      {state === 'latest' || state === 'failed' ? (
+        <Text style={[styles.footer, { marginTop: Spacing.xs }]}>{t(state === 'latest' ? 'update.latest' : 'update.failed')}</Text>
+      ) : null}
+    </View>
   );
 }
 
