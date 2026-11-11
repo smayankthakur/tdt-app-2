@@ -22,6 +22,7 @@ import { useJournalToday } from '@/lib/journal';
 import { todayMantra } from '@/lib/mantra';
 import { useNumerology } from '@/lib/numerology';
 import { teaser, usePremium } from '@/lib/premium';
+import { useSiteConfig } from '@/lib/site-config';
 import { useBookingsOpen } from '@/lib/use-bookings-open';
 import { LockedLine } from '@/components/premium-lock';
 import { SocialFollow } from '@/components/social-follow';
@@ -164,10 +165,12 @@ export default function HomeScreen() {
   }, []);
 
 
+  const site = useSiteConfig();
   const features: { icon: IconName; label: string; onPress: () => void }[] = [
     { icon: 'chatbubbles', label: t('home.featGinni'), onPress: () => router.navigate('/reading') },
     { icon: 'sunny', label: t('home.featDaily'), onPress: reveal },
     { icon: 'planet', label: t('home.featKundli'), onPress: () => router.navigate('/kundli') },
+    ...(site.reports.enabled ? [{ icon: 'document-text' as IconName, label: t('home.featReports'), onPress: () => router.push('/reports') }] : []),
     { icon: 'school', label: t('home.featCourses'), onPress: () => router.navigate('/courses') },
     { icon: 'moon', label: t('today.horoscopeTitle'), onPress: () => router.push('/horoscope') },
     { icon: 'calendar', label: t('panchang.title'), onPress: () => router.push('/panchang') },

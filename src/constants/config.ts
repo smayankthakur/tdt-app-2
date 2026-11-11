@@ -35,6 +35,8 @@ export const Links = {
 
 /** Personal Reading booking backend (booking.thedivinetarotonline.com) — its app routes, see src/lib/booking.ts */
 export const BookingApi = 'https://booking.thedivinetarotonline.com';
+/** thedivinetarotonline.com — Tarot Report and Kundli Milan orders go through its API (src/lib/site-orders.ts). */
+export const MainSiteApi = 'https://thedivinetarotonline.com';
 /** Other website backends the native screens use (same APIs the websites use) */
 export const SupportApi = 'https://support.thedivinetarotonline.com/api/support';
 export const GinniForgotPasswordApi = 'https://reading.thedivinetarotonline.com/api/auth/forgot-password';

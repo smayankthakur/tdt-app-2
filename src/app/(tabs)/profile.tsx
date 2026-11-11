@@ -23,6 +23,7 @@ import { notificationsAvailable, notificationsGranted, requestNotificationPermis
 import { COURSES } from '@/data/courses';
 import { courseProduct } from '@/lib/payments/purchase';
 import { useSession } from '@/lib/session';
+import { useSiteConfig } from '@/lib/site-config';
 import { useBookingsOpen } from '@/lib/use-bookings-open';
 import { Storage, type Entitlements, type NotifySettings, type PrivacySettings, type Profile, type ReminderSettings } from '@/lib/storage';
 
@@ -52,6 +53,7 @@ export default function ProfileScreen() {
   const [base, setBase] = useState<Profile>(profile);
   const [editing, setEditing] = useState(false);
   const bookingsOpen = useBookingsOpen();
+  const site = useSiteConfig();
   const startEditing = () => {
     setDraft(profile);
     setBase(profile);
@@ -492,6 +494,7 @@ export default function ProfileScreen() {
         <ListRow icon="chatbubbles-outline" label={t('profile.siteGinni')} onPress={() => router.navigate('/reading')} />
         <ListRow icon="school-outline" label={t('profile.siteCourses')} onPress={() => router.navigate('/courses')} />
         <ListRow icon="heart-outline" label={t('profile.siteKundli')} onPress={() => router.navigate('/kundli')} />
+        {site.reports.enabled && <ListRow icon="document-text-outline" label={t('home.featReports')} onPress={() => router.push('/reports')} />}
       </Group>
 
       {user && (

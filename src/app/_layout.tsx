@@ -133,6 +133,7 @@ function RootLayout() {
             <Stack.Screen name="admin" options={{ title: '' }} />
             <Stack.Screen name="terms" options={{ title: '' }} />
             <Stack.Screen name="refunds" options={{ title: '' }} />
+            <Stack.Screen name="reports" options={{ title: '' }} />
             <Stack.Screen name="change-password" options={{ title: '' }} />
             <Stack.Screen name="web" options={{ headerShown: false, contentStyle: { backgroundColor: Colors.bg } }} />
             {/* transparent so the starfield shows behind the login card */}
