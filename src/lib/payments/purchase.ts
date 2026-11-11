@@ -6,6 +6,7 @@ import { callFunction, cloudReady, type AppUser } from '@/lib/cloud/supabase';
 import { track } from '@/lib/events';
 import { openCheckout } from '@/lib/payments/checkout';
 import { grantEntitlement } from '@/lib/quota';
+import { premiumUntil, siteCheckOrder, siteCreateOrder, siteToken, siteVerifyPayment, SiteError } from '@/lib/ginni/site';
 import { Storage } from '@/lib/storage';
 
 /** Anything the app sells: Ginni Unlimited, the Kundli report, or a course (see courseProduct). */
@@ -48,10 +49,14 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
     } else return 'pending';
   }
 
+  // The ₹199 plan is sold by the Ginni website (reading.thedivinetarotonline.com) on the website account
+  const site = product.id === Products.ginniUnlimited.id;
+  if (site && !(await siteToken())) return 'sign-in-required';
   let order: { orderId: string; amount: number; keyId: string };
   try {
-    order = await callFunction('tdt-payments', { action: 'createOrder', productId: product.id });
+    order = site ? await siteCreateOrder() : await callFunction('tdt-payments', { action: 'createOrder', productId: product.id });
   } catch (e) {
+    if (e instanceof SiteError) return e.code === 'auth' ? 'sign-in-required' : 'failed';
     return (e as Error).message === 'auth_required' ? 'sign-in-required' : 'failed';
   }
   // Remembered until confirmed, so a payment that completes late (UPI / bank) is still unlocked later.
@@ -77,7 +82,9 @@ export async function purchase(product: Product, user: AppUser | null, prefillNa
 
   if (result.status === 'success') {
     try {
-      const v = await callFunction<{ expiresAt: number }>('tdt-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
+      const v = site
+        ? { expiresAt: premiumUntil((await siteVerifyPayment(result.data)).access) || undefined }
+        : await callFunction<{ expiresAt: number }>('tdt-payments', { action: 'verifyPayment', productId: product.id, ...result.data });
       await grantEntitlement(product.id, product.days, v.expiresAt);
       await Storage.removePendingOrder(order.orderId);
       track('payment_success', { product: product.id });
@@ -112,7 +119,7 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
   for (const wait of waits) {
     if (wait) await new Promise((r) => setTimeout(r, wait));
     try {
-      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('tdt-payments', { action: 'checkOrder', orderId, productId: product.id });
+      const r = await checkOrder(orderId, product.id);
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
         await Storage.removePendingOrder(orderId);
@@ -123,6 +130,21 @@ async function confirmOrder(orderId: string, product: Product, waits: number[]):
     }
   }
   return false;
+}
+
+/** Asks the server that sold it (Ginni website for the ₹199 plan, tdt-payments for the rest) whether the order is paid. */
+async function checkOrder(orderId: string, productId: string): Promise<{ paid: boolean; expiresAt?: number }> {
+  if (productId === Products.ginniUnlimited.id) {
+    try {
+      const r = await siteCheckOrder(orderId);
+      return { paid: r.paid, expiresAt: premiumUntil(r.access) || undefined };
+    } catch (e) {
+      // map to the codes recheckPendingOrders understands
+      if (e instanceof SiteError) throw new Error(e.code === 'auth' ? 'auth_required' : e.code === 'forbidden' ? 'order_mismatch' : e.code === 'invalid' ? 'bad_order_id' : 'server_error');
+      throw e;
+    }
+  }
+  return callFunction<{ paid: boolean; expiresAt?: number }>('tdt-payments', { action: 'checkOrder', orderId, productId });
 }
 
 const PENDING_MAX_AGE = 3 * 86_400_000;
@@ -155,7 +177,7 @@ export async function recheckPendingOrders(uid: string): Promise<boolean> {
       continue;
     }
     try {
-      const r = await callFunction<{ paid: boolean; expiresAt?: number }>('tdt-payments', { action: 'checkOrder', orderId: o.orderId, productId: o.productId });
+      const r = await checkOrder(o.orderId, o.productId);
       if (r.paid) {
         await grantEntitlement(product.id, product.days, r.expiresAt);
         await Storage.removePendingOrder(o.orderId);

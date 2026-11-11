@@ -9,6 +9,7 @@ import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { getCard } from '@/data/cards';
 import { useLang } from '@/i18n';
 import { removeReading, syncReadings } from '@/lib/cloud/db';
+import { topicLabel } from '@/lib/ginni/topic-label';
 import { useSession } from '@/lib/session';
 import { Storage, type SavedReading } from '@/lib/storage';
 
@@ -52,7 +53,7 @@ export default function HistoryScreen() {
             <Card key={r.id}>
               <View style={styles.head}>
                 <Text style={styles.date}>
-                  {t(`intents.${r.intentId}`)} · {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {topicLabel(t, r.intentId)} · {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Text>
                 <Pressable accessibilityLabel={t('common.delete')} onPress={() => remove(r.id)} hitSlop={10}>
                   <Ionicons name="trash-outline" size={18} color={Colors.textDim} />
@@ -70,6 +71,11 @@ export default function HistoryScreen() {
                   </Pressable>
                 ))}
               </View>
+              {r.text ? (
+                <Text style={styles.text} numberOfLines={8}>
+                  {r.text}
+                </Text>
+              ) : null}
             </Card>
           );
         })
@@ -85,4 +91,5 @@ const styles = StyleSheet.create({
   cards: { flexDirection: 'row', justifyContent: 'space-around', marginTop: Spacing.sm },
   pos: { fontFamily: Fonts.bodySemi, fontSize: 11, color: Colors.textMuted },
   cardName: { fontFamily: Fonts.bodyMedium, fontSize: 12, color: Colors.text, textAlign: 'center' },
+  text: { fontFamily: Fonts.body, fontSize: 13.5, lineHeight: 20, color: Colors.textMuted, marginTop: Spacing.sm },
 });

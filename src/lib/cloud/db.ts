@@ -1,5 +1,6 @@
 import { Products, TestimonialsUrl } from '@/constants/config';
 import { supabase } from '@/lib/cloud/supabase';
+import { premiumUntil, siteMe, siteToken } from '@/lib/ginni/site';
 import { mergeEntitlements } from '@/lib/quota';
 import { EMPTY_PROFILE, Storage, type Profile, type SavedReading } from '@/lib/storage';
 
@@ -158,13 +159,14 @@ export async function syncReadings(uid: string): Promise<void> {
 export async function syncEntitlements(uid: string): Promise<void> {
   try {
     const remote: Record<string, number> = {};
-    const [own, status] = await Promise.all([
+    const [own, me] = await Promise.all([
       supabase.from('tdt_entitlements').select('product_id,expires_at').eq('user_id', uid),
-      supabase.rpc('tdt_reading_status'),
+      siteToken().then((tk) => (tk ? siteMe().catch(() => null) : null)),
     ]);
     for (const row of own.data ?? []) remote[row.product_id] = Date.parse(row.expires_at) || 0;
-    // Ginni access follows the server's answer exactly (website Premium + app purchases, which can end early)
-    const ginni = status.error ? undefined : Number((status.data as { premiumUntil?: number } | null)?.premiumUntil) || 0;
+    // The ₹199 plan is the Ginni website account's (reading.thedivinetarotonline.com): it follows the website exactly,
+    // so the website admin's Extend / End / Refund apply in the app too
+    const ginni = me?.loggedIn ? premiumUntil(me) : undefined;
     delete remote[Products.ginniUnlimited.id];
     await mergeEntitlements(remote, ginni);
   } catch {

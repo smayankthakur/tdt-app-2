@@ -215,23 +215,31 @@ export default function ProfileScreen() {
     await Storage.setPrivacy(next);
   };
 
+  // Deleting needs the account password (the website checks it before anything is removed)
+  const [delPw, setDelPw] = useState<string | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
+  const [delErr, setDelErr] = useState('');
   const doDelete = () => {
-    const run = async () => {
-      try {
-        await deleteAccount();
-        flash('✓');
-      } catch (e) {
-        const code = (e as Error).message;
-        Alert.alert(t('profile.deleteAccount'), code === 'auth_required' ? t('auth.err.sessionExpired') : t('auth.err.network'));
-      }
-    };
-    if (Platform.OS === 'web') {
-      if (window.confirm(t('profile.deleteConfirm'))) run();
-    } else
-      Alert.alert(t('profile.deleteAccount'), t('profile.deleteConfirm'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: run },
-      ]);
+    setDelErr('');
+    setDelPw('');
+  };
+  const runDelete = async () => {
+    if (!delPw) {
+      setDelErr(t('profile.deletePwNeeded'));
+      return;
+    }
+    setDelBusy(true);
+    setDelErr('');
+    try {
+      await deleteAccount(delPw);
+      setDelPw(null);
+      flash('✓');
+    } catch (e) {
+      const code = (e as Error).message;
+      setDelErr(code === 'invalid-credentials' ? t('auth.err.invalid-credentials') : code === 'auth_required' ? t('auth.err.sessionExpired') : t('auth.err.network'));
+    } finally {
+      setDelBusy(false);
+    }
   };
 
   const who = user?.email || user?.phoneNumber || user?.displayName || ''; // the name is the title; this line says which account
@@ -502,6 +510,26 @@ export default function ProfileScreen() {
           <ListRow icon="key-outline" label={t('password.title')} onPress={() => router.push('/change-password')} />
           <ListRow icon="log-out-outline" label={t('common.signOut')} onPress={() => signOut()} />
           <ListRow icon="trash-outline" label={t('profile.deleteAccount')} onPress={doDelete} danger />
+        {delPw !== null ? (
+          <Card style={{ gap: Spacing.sm, margin: Spacing.sm }}>
+            <Text style={styles.delText}>{t('profile.deleteConfirm')}</Text>
+            <TextInput
+              value={delPw}
+              onChangeText={setDelPw}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+              placeholder={t('auth.password')}
+              placeholderTextColor={Colors.textDim}
+              style={styles.delInput}
+            />
+            {delErr ? <Text style={styles.delErr}>{delErr}</Text> : null}
+            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+              <Button small variant="ghost" label={t('common.cancel')} onPress={() => setDelPw(null)} style={{ flex: 1 }} />
+              <Button small label={t('common.delete')} icon="trash-outline" loading={delBusy} onPress={runDelete} style={{ flex: 1 }} />
+            </View>
+          </Card>
+        ) : null}
         </Group>
       )}
 
@@ -556,6 +584,9 @@ function ChipRow<T extends string>({ label, options, value, onChange, render }: 
 }
 
 const styles = StyleSheet.create({
+  delText: { fontFamily: Fonts.body, fontSize: 13.5, lineHeight: 19, color: Colors.textMuted },
+  delInput: { minHeight: 46, paddingHorizontal: Spacing.md, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.cardBorder, color: Colors.text, fontFamily: Fonts.body, fontSize: 15 },
+  delErr: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: Colors.danger },
   blocked: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,7 +8,13 @@ import { CHAT_PREFIX, readJSON, writeJSON } from '@/lib/storage';
 export type SavedMsg =
   | { id: string; kind: 'ginni'; text: string }
   | { id: string; kind: 'user'; text: string }
-  | { id: string; kind: 'reading'; question: string; intentId: string; cardIds: string[]; more?: boolean; deeper?: boolean };
+  | { id: string; kind: 'reading'; question: string; intentId: string; cardIds: string[]; more?: boolean; deeper?: boolean; site?: SiteReading };
+
+/**
+ * A reading from the Ginni website (reading.thedivinetarotonline.com): the text comes from the website. `pickToken`
+ * lets the same card be shown in another language for 20 minutes; after that the texts already fetched are shown.
+ */
+export type SiteReading = { topic: number | 'ai'; card: string; pickToken: string; at: number; texts: Partial<Record<'en' | 'hi' | 'hinglish', string>> };
 
 const KEEP = 30;
 const key = (uid: string) => `${CHAT_PREFIX}${uid}.v1`;

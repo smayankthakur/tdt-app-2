@@ -16,9 +16,12 @@ import { Colors, Fonts, Gradients, Radius, Spacing, TAB_BAR_SPACE } from '@/cons
 import { DECK, getCard, shuffle } from '@/data/cards';
 import { useLang } from '@/i18n';
 import { pushReading, syncReadings } from '@/lib/cloud/db';
-import { loadChat, saveChat, type SavedMsg } from '@/lib/ginni/chat';
+import { loadChat, saveChat, type SavedMsg, type SiteReading } from '@/lib/ginni/chat';
 import { buildReading, readingToText } from '@/lib/ginni/engine';
-import { classify, getIntent, type Intent, type IntentId, type KbField } from '@/lib/ginni/intents';
+import { getIntent, type IntentId, type KbField } from '@/lib/ginni/intents';
+import { siteFollowup, siteLang, sitePick, siteReveal, SiteError } from '@/lib/ginni/site';
+import { getClosing, getGreeting, isOffTopicChitchat, SITE_TOPICS, siteIntentId, siteTopicFor } from '@/lib/ginni/site-topics';
+import { topicLabel } from '@/lib/ginni/topic-label';
 import { kbText } from '@/lib/ginni/kb';
 import { smallTalk } from '@/lib/ginni/smalltalk';
 import { track } from '@/lib/events';
@@ -40,7 +43,8 @@ const keepable = (m: Msg): m is SavedMsg => (m.kind === 'ginni' || m.kind === 'u
 
 const uid = () => Math.random().toString(36).slice(2);
 
-type Drawing = { id: string; intent: Intent; question: string; deck: string[]; picked: number[] };
+/** A website reading being drawn: one card (as on reading.thedivinetarotonline.com). */
+type Drawing = { id: string; topic: number | 'ai'; question: string; deck: string[]; picked: number[]; total: number };
 
 /** Ginni needs a login. The chat is keyed by account, so nobody ever sees the previous user's chat. */
 export default function ReadingScreen() {
@@ -147,7 +151,7 @@ function ReadingChat() {
     }
     if (drawRef.current || revealing || starting.current) return;
     // "hi", "kaise ho", "thanks": Ginni answers in character — no cards, nothing checked or charged
-    const st = again ? null : smallTalk(question);
+    const st = again ? null : (smallTalk(question) ?? (isOffTopicChitchat(question) ? 'hello' : null));
     if (st) {
       tap();
       setInput('');
@@ -165,6 +169,11 @@ function ReadingChat() {
     const check = await checkReading(uidNow);
     starting.current = false;
     setMessages((prev) => prev.filter((m) => m.id !== waitId));
+    if (check === 'relogin') {
+      setAccess('relogin');
+      setInput(question);
+      return;
+    }
     if (check === 'offline') {
       push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
       setInput(question); // ready to send again
@@ -186,15 +195,17 @@ function ReadingChat() {
     }
     setAccess('active');
     pendingQ.current = null;
-    const intent = classify(question);
+    // The website's own "understanding" step (lib/classify.js): a topic 1–16, or its fallback reading
+    const topic = siteTopicFor(question);
     track('reading_start');
-    const count = intent.positions.length;
+    const meta = topic === 'ai' ? null : SITE_TOPICS.find((x) => x.id === topic);
+    const first = (profile.name || user?.displayName || '').split(' ')[0] || (lang === 'en' ? 'friend' : 'dost');
     push({
       id: uid(),
       kind: 'ginni',
-      text: t(count === 1 ? 'reading.understood' : 'reading.understoodPlural', { intent: t(`intents.${intent.id}`), count }),
+      text: `${meta ? `${meta.title} 🔮\n` : ''}${getGreeting(first, siteLang(lang), { cards: 1 }, Math.floor(Math.random() * 3))}`,
     });
-    setDrawing({ id: uid(), intent, question, deck: shuffle(DECK.map((c) => c.id)), picked: [] });
+    setDrawing({ id: uid(), topic, question, deck: shuffle(DECK.map((c) => c.id)), picked: [], total: 1 });
   };
 
   // Paid (from the paywall card, or confirmed later when the app comes back): answer the question that was waiting
@@ -212,47 +223,53 @@ function ReadingChat() {
     const d = drawRef.current;
     if (!d || d.picked.includes(index)) return;
     const picked = [...d.picked, index];
-    const total = d.intent.positions.length;
     const cardId = d.deck[index];
-    push({ id: `draw-${d.id}-${picked.length}`, kind: 'card', cardId, position: d.intent.positions[picked.length - 1], n: picked.length, total });
-    if (picked.length < total) {
+    push({ id: `draw-${d.id}-${picked.length}`, kind: 'card', cardId, position: 'card', n: picked.length, total: d.total });
+    if (picked.length < d.total) {
       setDrawing({ ...d, picked });
       return;
     }
-    const { intent, question } = d;
-    const ids = picked.map((i) => d.deck[i]);
+    const { topic, question } = d;
     setDrawing(null);
     setRevealing(true);
-    timer.current = setTimeout(async () => {
-      track('reading_done');
-      const mem = recall(await Storage.getHistory(), intent.id, ids);
-      const memMsg: Msg[] = mem
-        ? [
-            {
-              id: uid(),
-              kind: 'ginni',
-              text: `💭 ${t('memory.lastTime', { date: shortDate(mem.date), topic: t(`intents.${mem.topicId}`), card: mem.card })} ${t(`memory.${mem.trend}`)}${
-                mem.count >= 3 ? ` ${t('memory.nth', { count: mem.count, topic: t(`intents.${intent.id}`) })}` : ''
-              }`,
-            },
-          ]
-        : [];
-      // The reading card shows the cards again, so the one-by-one pulled cards make way for it
-      const drawPrefix = `draw-${d.id}-`;
-      setMessages((prev) => prev.filter((m) => !m.id.startsWith(drawPrefix)));
-      push(...memMsg, { id: uid(), kind: 'reading', question, intentId: intent.id, cardIds: ids });
-      setRevealing(false);
-      tap('success');
-      await pushReading(uidNow, {
-        id: `${Date.now()}`,
-        createdAt: Date.now(),
-        question,
-        intentId: intent.id,
-        lang,
-        cardIds: ids,
-        positions: intent.positions,
-      });
-    }, 900);
+    const drawPrefix = `draw-${d.id}-`;
+    const intentId = siteIntentId(topic);
+    (async () => {
+      const card = getCard(cardId)!.name;
+      try {
+        // The website charges the reading here (or lets a ₹199 plan through) and hands back a 20-minute reveal token
+        const p = await sitePick(topic, card, question);
+        const r = await siteReveal(p.pickToken, lang);
+        const text = (r.available && r.text) || r.fallbackMessage || t('reading.siteUnavailable');
+        track('reading_done');
+        const mem = recall(await Storage.getHistory(), intentId, [cardId]);
+        const memMsg: Msg[] = mem
+          ? [{ id: uid(), kind: 'ginni', text: `💭 ${t('memory.lastTime', { date: shortDate(mem.date), topic: topicLabel(t, mem.topicId), card: mem.card })} ${t(`memory.${mem.trend}`)}` }]
+          : [];
+        const site: SiteReading = { topic, card, pickToken: p.pickToken, at: Date.now(), texts: { [lang]: text } };
+        setMessages((prev) => prev.filter((m) => !m.id.startsWith(drawPrefix)));
+        const first = (profile.name || user?.displayName || '').split(' ')[0] || (lang === 'en' ? 'friend' : 'dost');
+        push(...memMsg, { id: uid(), kind: 'reading', question, intentId, cardIds: [cardId], site }, { id: uid(), kind: 'ginni', text: getClosing(first, siteLang(lang), Math.floor(Math.random() * 3)) });
+        tap('success');
+        await pushReading(uidNow, { id: `${Date.now()}`, createdAt: Date.now(), question, intentId, lang, cardIds: [cardId], positions: ['card'], text });
+      } catch (e) {
+        const code = e instanceof SiteError ? e.code : 'server';
+        setMessages((prev) => prev.filter((m) => !m.id.startsWith(drawPrefix)));
+        if (code === 'limit') {
+          setAccess('none');
+          pendingQ.current = question;
+          setMessages((prev) => prev.filter((m) => !m.id.startsWith('pw-')));
+          push({ id: `pw-${uid()}`, kind: 'ginni', text: t('reading.quotaOut') }, { id: `pw-${uid()}`, kind: 'paywall' });
+        } else if (code === 'auth') {
+          setAccess('relogin');
+        } else {
+          push({ id: uid(), kind: 'ginni', text: t(code === 'network' ? 'reading.offline' : 'reading.siteUnavailable') });
+          setInput(question);
+        }
+      } finally {
+        setRevealing(false);
+      }
+    })();
   };
 
   /** Free follow-ups on a reading — "Tell me more" and "Deeper meaning", once each. */
@@ -266,6 +283,20 @@ function ReadingChat() {
       return;
     }
     tap();
+    if (m.site) {
+      // The website's free follow-ups: "Tell me more" = Universe Message, "Deeper meaning" = spiritual journey
+      const card = m.site.card;
+      setMessages((prev) => prev.map((x) => (x.id === m.id && x.kind === 'reading' ? { ...x, [kind]: true } : x)));
+      siteFollowup(card, kind === 'more' ? 'universe' : 'spiritual', lang).then(
+        (r) => push({ id: uid(), kind: 'ginni', text: `${t(kind === 'more' ? 'reading.moreIntro' : 'reading.deeperIntro')}\n\n${card}: ${(r.available && r.text) || r.fallbackMessage || t('reading.siteUnavailable')}` }),
+        (e) => {
+          setMessages((prev) => prev.map((x) => (x.id === m.id && x.kind === 'reading' ? { ...x, [kind]: false } : x)));
+          if (e instanceof SiteError && e.code === 'auth') setAccess('relogin');
+          else push({ id: uid(), kind: 'ginni', text: t('reading.offline') });
+        },
+      );
+      return;
+    }
     const intent = getIntent(m.intentId as IntentId);
     const field: KbField = kind === 'more' ? (intent.field === 'message' ? 'advice' : 'message') : intent.field === 'spiritual' ? 'wellbeing' : 'spiritual';
     const lines = m.cardIds.map((id) => `• ${getCard(id)?.name}: ${kbText(id, field, lang)}`);
@@ -287,6 +318,8 @@ function ReadingChat() {
 
   const greeting = profile.name ? t('reading.greetingName', { name: profile.name.split(' ')[0] }) : t('reading.greeting');
 
+  if (access === 'relogin') return <LoginGate relogin />;
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
       <View style={styles.header}>
@@ -294,7 +327,7 @@ function ReadingChat() {
           <Text style={{ fontSize: 20 }}>🔮</Text>
         </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
             {t('reading.title')}
           </Text>
           {access !== 'offline' && (
@@ -322,7 +355,7 @@ function ReadingChat() {
               m={{
                 id: 'welcome',
                 kind: 'ginni',
-                text: t('memory.welcome', { date: shortDate(lastReading.createdAt), topic: t(`intents.${lastReading.intentId}`) }),
+                text: t('memory.welcome', { date: shortDate(lastReading.createdAt), topic: topicLabel(t, lastReading.intentId) }),
               }}
               onAgain={() => {}}
             />
@@ -342,7 +375,7 @@ function ReadingChat() {
         <View style={{ paddingBottom: TAB_BAR_SPACE }}>
           {drawing ? (
             <Animated.View entering={FadeInDown.duration(400)}>
-              <Text style={styles.pulled}>{t('reading.pulled', { n: drawing.picked.length + 1, total: drawing.intent.positions.length })}</Text>
+              <Text style={styles.pulled}>{t('reading.pulled', { n: drawing.picked.length + 1, total: drawing.total })}</Text>
               <CardFan count={78} picked={drawing.picked} onPick={pick} hint={t('reading.fanHint')} />
             </Animated.View>
           ) : revealing ? (
@@ -350,7 +383,8 @@ function ReadingChat() {
           ) : (
             <>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-                {(t('reading.topics', { returnObjects: true }) as string[]).map((c) => (
+                {/* the website's 16 questions (reading.thedivinetarotonline.com sidebar), in its own words */}
+                {SITE_TOPICS.map((x) => x.title).map((c) => (
                   <Pressable key={c} onPress={() => ask(c)} style={styles.chip}>
                     <Text style={styles.chipText}>{c}</Text>
                   </Pressable>
@@ -383,8 +417,10 @@ function ReadingChat() {
   );
 }
 
-function LoginGate() {
+/** relogin: logged in to the app, but without a (valid) Ginni website login — log in once more with the same password. */
+function LoginGate({ relogin = false }: { relogin?: boolean }) {
   const { t } = useLang();
+  const { signOut } = useSession();
   const perks: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
     ['sparkles-outline', t('reading.gatePerkFree', { price: Products.ginniUnlimited.price, days: Products.ginniUnlimited.days })],
     ['bookmark-outline', t('reading.gatePerkSaved')],
@@ -398,7 +434,7 @@ function LoginGate() {
             <Text style={{ fontSize: 44 }}>🔮</Text>
           </LinearGradient>
           <Text style={styles.gateTitle}>{t('reading.gateTitle')}</Text>
-          <Text style={styles.gateBody}>{t('reading.gateBody')}</Text>
+          <Text style={styles.gateBody}>{relogin ? t('reading.reloginBody') : t('reading.gateBody')}</Text>
         </Animated.View>
         <Animated.View entering={FadeInDown.duration(500).delay(120)} style={styles.gateCard}>
           {perks.map(([icon, text]) => (
@@ -409,13 +445,21 @@ function LoginGate() {
               <Text style={styles.perkText}>{text}</Text>
             </View>
           ))}
-          <Button label={t('auth.login')} icon="log-in-outline" onPress={() => router.push('/login')} />
           <Button
+            label={t('auth.login')}
+            icon="log-in-outline"
+            onPress={async () => {
+              // the app's own login is replaced by a fresh one that includes the website's
+              if (relogin) await signOut();
+              router.push('/login');
+            }}
+          />
+          {relogin ? null : <Button
             label={t('auth.createAccount')}
             variant="ghost"
             icon="person-add-outline"
             onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })}
-          />
+          />}
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -488,11 +532,39 @@ function PulledCard({ m }: { m: Extract<Msg, { kind: 'card' }> }) {
   );
 }
 
+/** A website reading's text in `lang`: asks the website again while the reveal token is valid (20 min), else shows
+ *  the text already fetched (in the language it was read in). */
+function useSiteText(site: SiteReading | undefined, lang: 'en' | 'hi' | 'hinglish'): string {
+  const [extra, setExtra] = useState<Partial<Record<string, string>>>({});
+  const have = site?.texts[lang] ?? extra[lang];
+  useEffect(() => {
+    if (!site || have || Date.now() - site.at > 19 * 60_000) return;
+    let alive = true;
+    siteReveal(site.pickToken, lang).then(
+      (r) => alive && r.available && r.text && setExtra((x) => ({ ...x, [lang]: r.text! })),
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, [site, have, lang]);
+  if (!site) return '';
+  return have ?? site.texts.hinglish ?? site.texts.en ?? site.texts.hi ?? '';
+}
+
 function ReadingView({ m, onAgain, onFollowUp }: { m: ReadingMsg; onAgain: () => void; onFollowUp: (kind: 'more' | 'deeper') => void }) {
   const { t, lang } = useLang();
   const question = m.question;
-  // Rebuilt in the current language, so switching language shows the same cards in the new language
-  const reading = useMemo(() => buildReading(getIntent(m.intentId as IntentId), m.cardIds, lang), [m.intentId, m.cardIds, lang]);
+  // Website readings: the text in the current language (fetched again with the 20-minute token, else the one we have)
+  const siteText = useSiteText(m.site, lang);
+  // App readings are rebuilt in the current language, so switching language shows the same cards in the new language
+  const reading = useMemo(
+    () =>
+      m.site
+        ? { intentId: m.intentId as IntentId, lang, cards: [{ cardId: m.cardIds[0], position: 'card' as const, text: siteText }], advice: '', timing: '' }
+        : buildReading(getIntent(m.intentId as IntentId), m.cardIds, lang),
+    [m.site, m.intentId, m.cardIds, lang, siteText],
+  );
   const ref = useRef<View>(null);
   const storyRef = useRef<View>(null);
   const tr = (k: string, o?: Record<string, unknown>) => t(k, o) as string;
@@ -535,13 +607,15 @@ function ReadingView({ m, onAgain, onFollowUp }: { m: ReadingMsg; onAgain: () =>
             <Text style={styles.readingText}>{c.text}</Text>
           </View>
         ))}
-        <View style={styles.adviceBox}>
-          <Text style={styles.adviceTitle}>{t('reading.advice')}</Text>
-          <Text style={styles.readingText}>{reading.advice}</Text>
-          <Text style={styles.timing}>
-            ⏳ {t('reading.timing')}: {reading.timing}
-          </Text>
-        </View>
+        {reading.advice ? (
+          <View style={styles.adviceBox}>
+            <Text style={styles.adviceTitle}>{t('reading.advice')}</Text>
+            <Text style={styles.readingText}>{reading.advice}</Text>
+            <Text style={styles.timing}>
+              ⏳ {t('reading.timing')}: {reading.timing}
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.watermark}>The Divine Tarot · thedivinetarotonline.com</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
@@ -587,9 +661,9 @@ function ReadingView({ m, onAgain, onFollowUp }: { m: ReadingMsg; onAgain: () =>
               </View>
             ))}
           </View>
-          <Text style={storyStyles.label}>{t('reading.advice')}</Text>
+          {reading.advice ? <Text style={storyStyles.label}>{t('reading.advice')}</Text> : null}
           <Text style={storyStyles.text} numberOfLines={6}>
-            {reading.advice}
+            {reading.advice || reading.cards[0]?.text}
           </Text>
         </StoryFrame>
       )}

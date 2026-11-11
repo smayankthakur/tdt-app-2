@@ -4,6 +4,12 @@
 //   { action: "login",  email, password }        → { ok, email, token_hash: <single-use login token> }
 //   { action: "signup", name, email, password }  → same; also creates the website account
 //   { action: "change_password", password, new_password } + the app's login (Authorization) → { ok }
+//   { action: "site", token }                     → same as login, for an account of the Ginni WEBSITE's own database
+//
+// Since 11 Nov 2026 the app logs in on reading.thedivinetarotonline.com itself (its /api/auth/login returns a session
+// token to the app) and then calls { action: "site", token }: the token is checked with the website (/api/auth/me),
+// and the matching "User" row here (created with a random password if the person only has a website account) gets
+// the Supabase Auth login the app uses for its own data (profile, saved readings, purchases, support).
 //
 // The password is checked against the website's "User" table (bcrypt). The function then makes sure a matching
 // Supabase Auth user exists (linked in tdt_accounts) and returns a single-use login token for it (an admin magic
@@ -98,11 +104,48 @@ async function changePassword(req: Request, body: Record<string, unknown>) {
   return { ok: true };
 }
 
+const GINNI_SITE = "https://reading.thedivinetarotonline.com";
+
+/** Website login token → the website account's email + name (the website decides whether the token is valid). */
+async function siteAccount(token: string): Promise<{ email: string; name: string | null }> {
+  if (!/^[\w-]+\.[\w-]+\.[\w-]+$/.test(token) || token.length > 2000) throw new HttpError(400, "invalid_credentials");
+  const r = await fetch(`${GINNI_SITE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }).catch(() => null);
+  if (!r || !r.ok) throw new HttpError(503, "site_unavailable");
+  const me = await r.json().catch(() => null);
+  const email = String(me?.email ?? "").trim().toLowerCase();
+  if (!me?.loggedIn || !isEmail(email)) throw new HttpError(400, "invalid_credentials");
+  return { email, name: typeof me.name === "string" ? me.name : null };
+}
+
+/** This project's "User" row for the email (made with a random password when the person only has a website account). */
+async function mirrorUser(email: string, name: string | null): Promise<{ id: string; email: string; name: string | null }> {
+  const find = async () => (await rest(`User?email=eq.${encodeURIComponent(email)}&select=id,email,name&limit=1`))?.[0];
+  let acc = await find();
+  if (!acc) {
+    try {
+      await rpc("tdt_create_user", { p_email: email, p_password: randomPassword(), p_name: (name || email.split("@")[0]).slice(0, 120) });
+    } catch (e) {
+      if (!String(e).includes("already_registered") && !String(e).includes("23505")) throw e;
+    }
+    acc = await find();
+  }
+  if (!acc) throw new Error("mirror_user_missing");
+  return { id: acc.id, email: String(acc.email).toLowerCase(), name: acc.name ?? name };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
     if (body.action === "change_password") return json(await changePassword(req, body));
+    if (body.action === "site") {
+      const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+      await rateLimit(`ip:${ip}`, MAX_PER_IP);
+      const site = await siteAccount(String(body.token ?? ""));
+      const acc = await mirrorUser(site.email, site.name);
+      const authId = await ensureAuthUser(acc.id, acc.email, acc.name);
+      return json({ ok: true, email: acc.email, token_hash: await loginToken(authId, acc.email), name: site.name ?? acc.name ?? "" });
+    }
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     if (!isEmail(email)) throw new HttpError(400, "invalid_email");

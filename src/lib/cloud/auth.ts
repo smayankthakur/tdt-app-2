@@ -3,12 +3,14 @@ import { Platform } from 'react-native';
 import { GinniForgotPasswordApi, Links, SupabaseKey, SupabaseUrl } from '@/constants/config';
 import { callFunction, supabase } from '@/lib/cloud/supabase';
 import { track } from '@/lib/events';
+import { setSiteToken, siteChangePassword, siteDeleteAccount, SiteError, siteLogin, siteSignup, siteToken } from '@/lib/ginni/site';
 
 /**
  * Login = the Ginni Ki Baatein website account (reading.thedivinetarotonline.com): same email and password.
- * The server function tdt-auth checks the password against the website's accounts, then hands the app a
- * single-use login token for Supabase Auth, which keeps the app logged in (and refreshes the login) on this phone.
- * Logging in on one phone never signs the user out on another.
+ * 1. The app logs in on the website itself (its API returns a session token to the app → Ginni readings, the ₹199
+ *    plan and the website admin all work on this one account).
+ * 2. tdt-auth checks that website token and hands the app a single-use Supabase Auth login (project ginni2) for the
+ *    app's own data — profile, saved readings, purchases, support. Logging in on one phone never signs out another.
  */
 
 /** Short codes the login screen turns into friendly text (strings: auth.err.<code>). */
@@ -70,20 +72,63 @@ async function websiteAccount(body: Record<string, string>): Promise<string> {
 }
 
 async function startSession(body: Record<string, string>): Promise<void> {
-  const tokenHash = await websiteAccount(body);
+  let tokenHash: string;
+  try {
+    tokenHash = await websiteAccount(body);
+  } catch (e) {
+    // A server that doesn't know { action: "site" } yet answers invalid_email → the older password check
+    if (body.action === 'site' && body.email && e instanceof AuthError && e.code === 'invalid-email') tokenHash = await websiteAccount({ action: 'login', email: body.email, password: body.password });
+    else throw e;
+  }
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
   if (error) throw mapError(error);
 }
 
+/** Website errors → the login screen's codes. */
+function siteAuthError(e: unknown, signup = false): AuthError {
+  if (!(e instanceof SiteError)) return new AuthError('unknown');
+  if (e.code === 'network') return new AuthError('network');
+  if (e.code === 'auth') return new AuthError('invalid-credentials');
+  if (e.code === 'conflict') return new AuthError('already-registered');
+  if (e.code === 'invalid') return new AuthError(/password/i.test(e.message) ? (signup ? 'weak-password' : 'invalid-credentials') : /email/i.test(e.message) ? 'invalid-email' : signup ? 'unknown' : 'invalid-credentials');
+  return new AuthError('unknown');
+}
+
 /** Log in with the Ginni website email + password. */
 export async function signIn(email: string, password: string): Promise<void> {
-  await startSession({ action: 'login', email: email.trim().toLowerCase(), password });
+  const mail = email.trim().toLowerCase();
+  let token: string;
+  try {
+    await siteLogin(mail, password);
+    token = (await siteToken())!;
+  } catch (e) {
+    throw siteAuthError(e);
+  }
+  try {
+    await startSession({ action: 'site', token, email: mail, password });
+  } catch (e) {
+    await setSiteToken(null); // both logins or neither
+    throw e;
+  }
   track('login');
 }
 
-/** Creates the account (it works on the Ginni website too) and logs in. */
+/** Creates the website account (Ginni Ki Baatein) and logs in. */
 export async function signUp(name: string, email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
-  await startSession({ action: 'signup', name: name.trim(), email: email.trim().toLowerCase(), password });
+  const mail = email.trim().toLowerCase();
+  let token: string;
+  try {
+    await siteSignup(name.trim(), mail, password);
+    token = (await siteToken())!;
+  } catch (e) {
+    throw siteAuthError(e, true);
+  }
+  try {
+    await startSession({ action: 'site', token, email: mail, password });
+  } catch (e) {
+    await setSiteToken(null);
+    throw e;
+  }
   track('signup');
   return 'signed-in';
 }
@@ -120,6 +165,16 @@ export async function resetPassword(email: string): Promise<'sent' | 'opened'> {
  * checked on the server; the app is then signed out on every other phone, while this phone stays logged in.
  */
 export async function changePassword(current: string, next: string): Promise<void> {
+  // The password belongs to the website account
+  if (await siteToken()) {
+    try {
+      await siteChangePassword(current, next);
+      return;
+    } catch (e) {
+      if (e instanceof SiteError && e.code === 'invalid') throw new AuthError(/current/i.test(e.message) ? 'invalid-credentials' : 'weak-password');
+      throw siteAuthError(e);
+    }
+  }
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new AuthError('invalid-credentials');
@@ -142,11 +197,22 @@ export async function changePassword(current: string, next: string): Promise<voi
 
 /** Signs out on THIS phone only — the website and other phones stay logged in. */
 export async function signOut(): Promise<void> {
+  await setSiteToken(null);
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
 
 /** Deletes the account on the server (it is the Ginni website account too), then signs out on this phone. */
-export async function deleteAccount(): Promise<void> {
+export async function deleteAccount(password?: string): Promise<void> {
+  // The website account first (the password is checked there), then the app's own data
+  if ((await siteToken()) && password !== undefined) {
+    try {
+      await siteDeleteAccount(password);
+    } catch (e) {
+      if (e instanceof SiteError && e.code === 'invalid') throw new AuthError('invalid-credentials');
+      if (!(e instanceof SiteError && e.code === 'auth')) throw siteAuthError(e); // auth: already gone on the website
+    }
+  }
   await callFunction('tdt-delete-account', {});
+  await setSiteToken(null);
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }

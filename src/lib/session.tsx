@@ -24,7 +24,8 @@ type SessionValue = {
   /** Sign out and remove this person's data from the phone */
   signOut: () => Promise<void>;
   /** Delete the account (cloud + phone) */
-  deleteAccount: () => Promise<void>;
+  /** password: the website account's (checked there before anything is deleted) */
+  deleteAccount: (password?: string) => Promise<void>;
 };
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -180,8 +181,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await clearAfterQueue();
   }, [clearAfterQueue]);
 
-  const deleteAccount = useCallback(async () => {
-    await cloudDelete();
+  const deleteAccount = useCallback(async (password?: string) => {
+    await cloudDelete(password);
     await clearAfterQueue();
   }, [clearAfterQueue]);
 

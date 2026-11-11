@@ -1,5 +1,5 @@
 import { Products } from '@/constants/config';
-import { serverUsage, spendReadingOnServer } from '@/lib/cloud/ginni';
+import { premiumUntil, setSiteToken, siteMe, siteToken, SiteError } from '@/lib/ginni/site';
 import { Storage } from '@/lib/storage';
 
 /**
@@ -34,27 +34,58 @@ export async function mergeEntitlements(remote: Record<string, number>, ginniFro
   await Storage.setEntitlements(e);
 }
 
-/** What the Ginni chat header shows. 'offline' = the server couldn't be reached (not "you have no plan"). */
-export type Access = 'loading' | 'active' | 'none' | 'offline';
+/**
+ * What the Ginni chat header shows. 'offline' = the website couldn't be reached (not "you have no plan").
+ * 'relogin' = this phone has no (valid) Ginni website login — logged in with an older app version, or the website
+ * removed the account (its daily clean-up deletes accounts that never paid after 24 hours).
+ */
+export type Access = 'loading' | 'active' | 'none' | 'offline' | 'relogin';
 
-/** Read-only look at Ginni access, from the server. Logged-out users have none. */
+/** Read-only look at Ginni access, from the website account (reading.thedivinetarotonline.com). */
 export async function getAccess(uid?: string | null): Promise<Access> {
   if (!uid) return 'none';
-  const s = await serverUsage(uid);
-  if (!s) return 'offline';
-  await mergeEntitlements({}, s.premiumUntil);
-  return s.premiumUntil > Date.now() ? 'active' : 'none';
+  if (!(await siteToken())) return 'relogin';
+  try {
+    const me = await siteMe();
+    if (!me.loggedIn) {
+      await setSiteToken(null);
+      return 'relogin';
+    }
+    const until = premiumUntil(me);
+    await mergeEntitlements({}, until);
+    return until > Date.now() ? 'active' : 'none';
+  } catch (e) {
+    if (e instanceof SiteError && e.code === 'auth') {
+      await setSiteToken(null);
+      return 'relogin';
+    }
+    return 'offline';
+  }
 }
 
-export type ReadingCheck = 'ok' | 'limit' | 'offline';
+export type ReadingCheck = 'ok' | 'limit' | 'offline' | 'relogin';
 
-/** Asks the server whether this user may have a reading now. Called before the cards are drawn. */
+/**
+ * Before any card is drawn: may this account have a reading now? The website decides (₹199 plan, or referral bonus
+ * readings); the reading itself is charged by the website when the card is picked (/api/reading/pick).
+ */
 export async function checkReading(uid?: string | null): Promise<ReadingCheck> {
   if (!uid) return 'limit';
-  const r = await spendReadingOnServer();
-  if (!r) return 'offline';
-  // Not allowed: keep the (past) end date so the chat can still say "renew" to someone whose plan ran out
-  const until = r.premiumUntil || 0;
-  await mergeEntitlements({}, r.allowed ? until : Math.min(until, Date.now() - 1));
-  return r.allowed ? 'ok' : 'limit';
+  if (!(await siteToken())) return 'relogin';
+  try {
+    const me = await siteMe();
+    if (!me.loggedIn) {
+      await setSiteToken(null);
+      return 'relogin';
+    }
+    const until = premiumUntil(me);
+    await mergeEntitlements({}, me.hasAccess ? until : Math.min(until, Date.now() - 1));
+    return me.hasAccess ? 'ok' : 'limit';
+  } catch (e) {
+    if (e instanceof SiteError && e.code === 'auth') {
+      await setSiteToken(null);
+      return 'relogin';
+    }
+    return 'offline';
+  }
 }

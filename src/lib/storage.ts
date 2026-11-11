@@ -65,6 +65,8 @@ export type SavedReading = {
   lang: string;
   cardIds: string[];
   positions: string[];
+  /** Website (Ginni Ki Baatein) readings: the reading text as shown, in `lang` */
+  text?: string;
 };
 
 export type DailyDraw = { date: string; cardId: string; revealed: boolean };
