@@ -19,10 +19,12 @@ import {
   BookingError,
   bookingStatus,
   createBooking,
+  formatDeliverBy,
   formatSlotDate,
   formatSlotTime,
   isQuestionTier,
   isUrgentTier,
+  isWrittenTier,
   loadReadings,
   refreshBookings,
   rememberBooking,
@@ -57,7 +59,7 @@ function BookingScreen() {
   const [mine, setMine] = useState<SavedBooking[]>([]);
   const [busy, setBusy] = useState<Tier | null>(null);
   const [error, setError] = useState('');
-  const [terms, setTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   // The email is asked before paying (as on the website): the form link and "payment received" mail go there.
   const [askFor, setAskFor] = useState<ReadingOffer | null>(null);
   const [savedEmail, setSavedEmail] = useState('');
@@ -90,6 +92,7 @@ function BookingScreen() {
   const errorText = (e: unknown) => {
     const code = e instanceof BookingError ? e.code : 'server';
     if (code === 'no_slots') return (e as BookingError).message || t('booking.errNoSlots');
+    // The server names the reading that replaces a switched-off one (it is in the reloaded list)
     if (code === 'tier_off' || code === 'all_off') return (e as BookingError).message || t('booking.tierMoved');
     if (code === 'coupon') return (e as BookingError).message || t('booking.errServer');
     if (code === 'network') return t('booking.errNetwork');
@@ -165,17 +168,31 @@ function BookingScreen() {
   };
 
   const slotLine = (r: ReadingOffer) =>
-    r.slot ? t('booking.nextFree', { when: `${formatSlotDate(r.slot.date)}, ${formatSlotTime(r.slot.time)}` }) : t('booking.noSlot');
+    isWrittenTier(r.tier)
+      ? t(r.tier === 'writtenurgent' ? 'booking.deliver48' : 'booking.deliver7')
+      : r.slot
+        ? t('booking.nextFree', { when: `${formatSlotDate(r.slot.date)}, ${formatSlotTime(r.slot.time)}` })
+        : t('booking.noSlot');
 
   const list = Array.isArray(readings) ? readings : [];
   const urgentOn = list.find((r) => r.tier === 'urgent');
+  const wurgentOn = list.find((r) => r.tier === 'writtenurgent');
   const offerOn = list.find((r) => r.offerName);
-  const fill = (p: string) =>
-    p
-      .replace(/ If you need the reading sooner, book the Urgent reading \(\{urgent\}\), which gets a slot within 48 hours of payment\./, urgentOn ? ' If you need the reading sooner, book the Urgent reading ({urgent}), which gets a slot within 48 hours of payment.' : '')
-      .replace('{urgent}', urgentOn ? formatINR(urgentOn.price) : '')
-      .replace('{offer}', offerOn ? `${offerOn.offerName}: the offer prices shown above apply to payments made till ${untilText(offerOn.offerUntil)} (IST). After that the regular prices apply.` : '');
-  const mins = list.length ? [...new Set(list.map((r) => TIER_MINS[r.tier]))].sort((a, b) => a - b) : [40];
+  // Terms change with what is on sale (as on the website): call rules only with a call reading, delivery rules with a written one
+  const callsOn = list.some((r) => !isWrittenTier(r.tier));
+  const writtenOn = list.some((r) => isWrittenTier(r.tier));
+  const onlyWritten = writtenOn && !callsOn;
+  const terms = TERMS.filter((x) => !x.on || (x.on === 'calls' ? callsOn || !list.length : x.on === 'written' ? writtenOn : !callsOn && !!list.length))
+    .map((x) =>
+      x.p
+        .replace(/ If you need the reading sooner, book the Urgent reading \(\{urgent\}\), which gets a slot within 48 hours of payment\./, urgentOn ? ' If you need the reading sooner, book the Urgent reading ({urgent}), which gets a slot within 48 hours of payment.' : '')
+        .replace('{urgent}', urgentOn ? formatINR(urgentOn.price) : '')
+        .replace('{wurgent}', wurgentOn ? ` — or within 48 hours for the Urgent reading (${formatINR(wurgentOn.price)})` : '')
+        .replace('{offer}', offerOn ? `${offerOn.offerName}: the offer prices shown above apply to payments made till ${untilText(offerOn.offerUntil)} (IST). After that the regular prices apply.` : ''),
+    )
+    .filter(Boolean);
+  const mins = [...new Set(list.filter((r) => !isWrittenTier(r.tier)).map((r) => TIER_MINS[r.tier]))].sort((a, b) => a - b);
+  const stat2: [string, string] = onlyWritten ? [t('booking.statQuestions'), t('booking.statWritten')] : [`${(mins.length ? mins : [40]).join('–')} min`, t('booking.stat2')];
 
   return (
     <Screen edges={[]}>
@@ -187,14 +204,14 @@ function BookingScreen() {
         <View style={styles.heroText}>
           <Eyebrow>{t('booking.eyebrow', { reader: AppInfo.reader })}</Eyebrow>
           <Text style={styles.heroTitle}>{t('booking.hero')}</Text>
-          <Body muted>{t('booking.heroSub')}</Body>
+          <Body muted>{onlyWritten ? t('booking.heroSubWritten') : t('booking.heroSub')}</Body>
         </View>
       </Animated.View>
 
       <View style={styles.stats}>
         {[
           ['7L+', t('booking.stat1')],
-          [`${mins.join('–')} min`, t('booking.stat2')],
+          stat2,
           ['100%', t('booking.stat3')],
         ].map(([v, l]) => (
           <View key={l} style={styles.stat}>
@@ -204,16 +221,32 @@ function BookingScreen() {
         ))}
       </View>
 
-      {mine.some((b) => b.paid || b.done) && (
+      {mine.some((b) => b.paid || b.done || b.cancelled) && (
         <Card style={{ gap: Spacing.sm }}>
           <Text style={styles.h}>{t('booking.yours')}</Text>
           {mine.map((b) =>
-            b.done ? (
+            b.cancelled ? (
+              <View key={b.bid} style={styles.mine}>
+                <Ionicons name="close-circle" size={18} color={Colors.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.mineTitle}>{t('booking.cancelledTitle')}</Text>
+                  <Text style={styles.mineSub}>
+                    {t(`booking.tiers.${asTier(b.tier)}.title`)} · #{b.bid}
+                  </Text>
+                </View>
+              </View>
+            ) : b.done ? (
               <View key={b.bid} style={{ gap: Spacing.sm }}>
                 <View style={styles.mine}>
-                  <Ionicons name="calendar" size={18} color={Colors.gold} />
+                  <Ionicons name={isWrittenTier(b.tier) ? 'mail' : 'calendar'} size={18} color={Colors.gold} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.mineTitle}>{t('booking.bookedFor', { date: formatSlotDate(b.done.date), time: formatSlotTime(b.done.time) })}</Text>
+                    <Text style={styles.mineTitle}>
+                      {isWrittenTier(b.tier)
+                        ? b.done.deliverBy
+                          ? t('booking.answersOn', { date: formatDeliverBy(b.done.deliverBy) })
+                          : t('booking.confirmedWritten')
+                        : t('booking.bookedFor', { date: formatSlotDate(b.done.date), time: formatSlotTime(b.done.time) })}
+                    </Text>
                     <Text style={styles.mineSub}>
                       {t(`booking.tiers.${asTier(b.tier)}.title`)} · #{b.bid}
                     </Text>
@@ -227,7 +260,7 @@ function BookingScreen() {
             ) : b.paid ? (
               <View key={b.bid} style={styles.mine}>
                 <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
-                <Text style={[styles.mineTitle, { flex: 1 }]}>{t('booking.paidFill')}</Text>
+                <Text style={[styles.mineTitle, { flex: 1 }]}>{isWrittenTier(b.tier) ? t('booking.paidFillWritten') : t('booking.paidFill')}</Text>
                 <Button small label={t('booking.fillForm')} onPress={() => router.push({ pathname: '/booking/form', params: { bid: b.bid } })} />
               </View>
             ) : null,
@@ -270,16 +303,14 @@ function BookingScreen() {
           accessibilityRole="button"
           onPress={() => {
             tap();
-            setTerms((x) => !x);
+            setShowTerms((x) => !x);
           }}
           style={styles.termsToggle}>
           <Text style={styles.link}>{t('booking.fullTerms')}</Text>
-          <Ionicons name={terms ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.gold} />
+          <Ionicons name={showTerms ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.gold} />
         </Pressable>
-        {terms &&
-          TERMS.map(fill)
-            .filter(Boolean)
-            .map((p, i) => (
+        {showTerms &&
+          terms.map((p, i) => (
               <Text key={i} style={styles.term}>
                 {p}
               </Text>
@@ -313,9 +344,12 @@ function TierCard({ r, slotText, busy, onBook }: { r: ReadingOffer; slotText: st
   const info = t(`booking.tiers.${r.tier}`, { returnObjects: true }) as Record<string, string>;
   const urgent = isUrgentTier(r.tier);
   const offer = !!r.offerName && r.price < r.regular;
-  const bullets = [info.b1, info.b2, info.b3, isQuestionTier(r.tier) ? t('booking.topicsHint') : '', t('booking.formAfter'), t('booking.noRefund')].filter(Boolean);
-  // A normal reading can still be booked with no free slot shown (the server assigns one later); an urgent one cannot.
-  const full = !r.slot && urgent;
+  const written = isWrittenTier(r.tier);
+  const bullets = written
+    ? [info.b1, info.b2, info.b3, info.b4, info.b5, t('booking.formAfterWritten'), t('booking.noRefundWritten')].filter(Boolean)
+    : [info.b1, info.b2, info.b3, isQuestionTier(r.tier) ? t('booking.topicsHint') : '', t('booking.formAfter'), t('booking.noRefund')].filter(Boolean);
+  // No free slot shown: the button stays (as on the website) — a normal reading gets a slot later, and for an urgent one
+  // with nothing free in 48 hours the server's message explains it.
   return (
     <Card style={[styles.tier, offer && styles.tierOffer, urgent && styles.tierUrgent]}>
       {offer && <Text style={styles.ribbon}>🪔 {t('booking.offerUntil', { name: r.offerName, date: untilText(r.offerUntil) })}</Text>}
@@ -332,10 +366,10 @@ function TierCard({ r, slotText, busy, onBook }: { r: ReadingOffer; slotText: st
       <Text style={styles.slot}>{slotText}</Text>
       <Button
         label={t('booking.pay', { price: formatINR(r.price) })}
-        icon={urgent ? 'flash' : r.tier === 'video' ? 'videocam' : 'sparkles'}
+        icon={urgent ? 'flash' : r.tier === 'video' ? 'videocam' : written ? 'mail' : 'sparkles'}
         onPress={onBook}
         loading={busy === r.tier}
-        disabled={!!busy || full}
+        disabled={!!busy}
       />
     </Card>
   );

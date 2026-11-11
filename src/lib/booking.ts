@@ -17,17 +17,26 @@ import { readJSON, Storage, writeJSON } from '@/lib/storage';
  * Tokens are kept in the phone's secure storage (Keychain / Keystore), not in plain app storage.
  */
 /**
- * Reading types — the same five as the website, each switched on/off and priced in booking.thedivinetarotonline.com/admin:
- *  standard = 40-min voice call, up to 3 people · urgent = the same within 48 h · video = 30-min Google Meet video,
- *  one person, 3 written questions · q3 = 30-min voice call, one person, 3 written questions · q3urgent = q3 within 48 h.
- * The app shows only the readings that are ON, at the admin's price / offer — like the website.
+ * Reading types — the same seven as the website (booking repo lib/slots.ts), each switched on/off and priced in
+ * booking.thedivinetarotonline.com/admin:
+ *  written = 3 questions, the answers are written by Bharti Singh and EMAILED within 7 days of the form (no call)
+ *  writtenurgent = the same within 48 hours · standard = 40-min voice call, up to 3 people · urgent = the same within 48 h
+ *  video = 30-min Google Meet video, one person, 3 questions · q3 = 30-min voice call, 3 questions · q3urgent = q3 within 48 h.
+ * The app shows only the readings that are ON, at the admin's price / offer, in the website's order.
  */
-export type Tier = 'standard' | 'urgent' | 'video' | 'q3' | 'q3urgent';
-export const TIERS: Tier[] = ['standard', 'urgent', 'video', 'q3', 'q3urgent'];
-export const TIER_MINS: Record<Tier, number> = { standard: 40, urgent: 40, video: 30, q3: 30, q3urgent: 30 };
-export const isUrgentTier = (t?: string) => t === 'urgent' || t === 'q3urgent';
-/** One person, 3 written questions (video, q3, q3urgent) instead of reason + other people. */
-export const isQuestionTier = (t?: string) => t === 'video' || t === 'q3' || t === 'q3urgent';
+export type Tier = 'written' | 'writtenurgent' | 'standard' | 'urgent' | 'video' | 'q3' | 'q3urgent';
+/** The website's order (components/Landing.tsx). */
+export const TIERS: Tier[] = ['written', 'writtenurgent', 'standard', 'q3', 'video', 'urgent', 'q3urgent'];
+export const TIER_MINS: Record<Tier, number> = { written: 0, writtenurgent: 0, standard: 40, urgent: 40, video: 30, q3: 30, q3urgent: 30 };
+export const isUrgentTier = (t?: string) => t === 'urgent' || t === 'q3urgent' || t === 'writtenurgent';
+/** One person, 3 written questions (video, q3, q3urgent, written, writtenurgent) instead of reason + other people. */
+export const isQuestionTier = (t?: string) => t === 'video' || t === 'q3' || t === 'q3urgent' || t === 'written' || t === 'writtenurgent';
+/** Written readings: the answers come by email — no call, no Google Meet, no calendar invite. */
+export const isWrittenTier = (t?: string) => t === 'written' || t === 'writtenurgent';
+/** Hours after the form within which the written answers are promised. */
+export const deliveryHours = (t?: string) => (t === 'writtenurgent' ? 48 : t === 'written' ? 7 * 24 : 0);
+/** Languages for the written answers — sent exactly like this (the server checks them). */
+export const LANGUAGES = ['Hindi', 'Hinglish', 'English'] as const;
 export const asTier = (t?: string | null): Tier => (TIERS.includes(t as Tier) ? (t as Tier) : 'standard');
 /** Question topics — sent exactly like this (the server checks them). */
 export const QUESTION_TOPICS = ['Love life', 'Career', 'Koi aur issue'] as const;
@@ -38,7 +47,8 @@ export type BookingOrder = { bid: string; token: string; orderId: string; amount
 /** Saved answers + edit window for a submitted form (raw = the form's own field names). */
 export type BookingEdit = { until: number; raw: Record<string, string>; hadPartner: boolean; emailVerified: boolean };
 export type BookingStatus = {
-  status: 'unknown' | 'created' | 'paid';
+  /** cancelled = cancelled from the booking admin */
+  status: 'unknown' | 'created' | 'paid' | 'cancelled';
   bid?: string;
   tier?: Tier;
   formDone?: boolean;
@@ -47,6 +57,9 @@ export type BookingStatus = {
   date?: string | null;
   time?: string | null;
   meetLink?: string | null;
+  /** Written readings: latest time (ms) the answers are promised, and the answer language. */
+  deliverBy?: number | null;
+  lang?: string | null;
   /** Present while the submitted form can still be edited (24 h after submitting, closes 3 h before the slot). */
   edit?: BookingEdit | null;
 };
@@ -55,6 +68,9 @@ export class BookingError extends Error {
   constructor(
     message: string,
     public code: 'no_slots' | 'network' | 'not_found' | 'not_paid' | 'already_done' | 'invalid' | 'server' | 'tier_off' | 'all_off' | 'coupon',
+    /** The server's own code (verify_email, lang, q_topic, partner …) and, for tier_off, the reading it offers instead. */
+    public server?: string,
+    public alt?: Tier | null,
   ) {
     super(message);
   }
@@ -95,15 +111,17 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
   const data = (await res.json().catch(() => null)) as (T & { error?: string; code?: string }) | null;
   if (!res.ok || !data) {
     const msg = noDirectContact(data?.error ?? '');
-    if (data?.code === 'no_slots') throw new BookingError(msg, 'no_slots');
+    const sc = data?.code;
+    const alt = (data as { alt?: string | null } | null)?.alt;
+    if (sc === 'no_slots') throw new BookingError(msg, 'no_slots', sc);
     // Switched off in the booking admin (the screen was opened earlier): the list is loaded again
-    if (data?.code === 'tier_off' || data?.code === 'all_off') throw new BookingError(msg, data.code);
-    if (data?.code === 'coupon') throw new BookingError(msg, 'coupon');
-    if (res.status === 404) throw new BookingError(msg, 'not_found');
-    if (res.status === 402) throw new BookingError(msg, 'not_paid');
-    if (res.status === 409) throw new BookingError(msg, 'already_done');
-    if (res.status === 400) throw new BookingError(msg, 'invalid');
-    throw new BookingError(msg, 'server');
+    if (sc === 'tier_off' || sc === 'all_off') throw new BookingError(msg, sc, sc, alt && TIERS.includes(alt as Tier) ? (alt as Tier) : null);
+    if (sc === 'coupon') throw new BookingError(msg, 'coupon', sc);
+    if (res.status === 404) throw new BookingError(msg, 'not_found', sc);
+    if (res.status === 402) throw new BookingError(msg, 'not_paid', sc);
+    if (res.status === 409) throw new BookingError(msg, 'already_done', sc);
+    if (res.status === 400) throw new BookingError(msg, 'invalid', sc);
+    throw new BookingError(msg, 'server', sc);
   }
   return data;
 }
@@ -228,7 +246,7 @@ export function submitForm(token: string, fields: Record<string, string>, photos
     // React Native's FormData takes { uri, name, type } for a file on the phone
     if (p) body.append(k, p as unknown as Blob);
   }
-  return call<{ ok: true; date: string; time: string; meetLink: string | null; edited?: boolean }>('/api/form', { method: 'POST', token, body });
+  return call<{ ok: true; date: string; time: string; meetLink: string | null; edited?: boolean; deliverBy?: number | null; lang?: string | null }>('/api/form', { method: 'POST', token, body });
 }
 
 /* ── the booking in progress on this phone (so an app restart never loses a paid booking) ── */
@@ -239,8 +257,17 @@ export type SavedBooking = {
   tier: Tier;
   createdAt: number;
   paid?: boolean;
-  done?: { date: string; time: string; meetLink: string | null; email?: string };
+  /** For a written reading date/time is only the reader's work plan (never shown): deliverBy + lang are. */
+  done?: { date: string; time: string; meetLink: string | null; email?: string; deliverBy?: number | null; lang?: string | null };
+  /** Cancelled from the booking admin. */
+  cancelled?: boolean;
 };
+
+/** The saved "done" part from a booking status (null while the form isn't submitted). */
+export function doneFrom(s: BookingStatus, email?: string): SavedBooking['done'] | null {
+  if (!s.formDone || !s.date || !s.time) return null;
+  return { date: s.date, time: s.time, meetLink: s.meetLink ?? null, email: s.email || email, deliverBy: s.deliverBy ?? null, lang: s.lang ?? null };
+}
 
 /* Tokens live in secure storage (one item per booking); the list in app storage holds everything else.
    The web build has no secure storage, so there the token stays in the list. */
@@ -306,18 +333,19 @@ export async function refreshBookings(): Promise<SavedBooking[]> {
   const list = await loadList();
   const out: SavedBooking[] = [];
   for (const b of list) {
-    if (b.done) {
+    // Finished readings are still checked for a while: the admin may reschedule or cancel them.
+    if (b.cancelled || (b.done && finishedLongAgo(b))) {
       out.push(b);
       continue;
     }
     let next = b;
     try {
       const s = await bookingStatus(b.token);
-      next = {
-        ...b,
-        paid: b.paid || s.status === 'paid',
-        done: s.formDone && s.date && s.time ? { date: s.date, time: s.time, meetLink: s.meetLink ?? null, email: s.email } : b.done,
-      };
+      if (s.status === 'cancelled') {
+        out.push({ ...b, cancelled: true });
+        continue;
+      }
+      next = { ...b, paid: b.paid || s.status === 'paid', done: doneFrom(s, b.done?.email) ?? b.done };
       if (s.status === 'unknown' || (!next.paid && Date.now() - b.createdAt > DAY)) continue; // never paid
     } catch {
       // offline — keep it
@@ -333,13 +361,24 @@ export async function refreshBookings(): Promise<SavedBooking[]> {
       const was = list.find((x) => x.bid === n.bid)!;
       const now = latest.find((x) => x.bid === n.bid);
       if (!now) return [];
-      return [{ ...now, paid: now.paid || n.paid, done: same(now.done, was.done) ? n.done : now.done }];
+      return [{ ...now, paid: now.paid || n.paid, cancelled: now.cancelled || n.cancelled, done: same(now.done, was.done) ? n.done : now.done }];
     });
     const merged = [...latest.filter((x) => !list.some((y) => y.bid === x.bid)), ...checked];
     await saveList(merged);
     return merged;
   });
 }
+
+/** A reading whose call / delivery is more than 3 days in the past: no need to ask the server again. */
+function finishedLongAgo(b: SavedBooking) {
+  const d = b.done!;
+  const at = d.deliverBy || new Date(`${d.date}T${d.time}:00+05:30`).getTime();
+  return Number.isFinite(at) && at < Date.now() - 3 * DAY;
+}
+
+/** "Sunday, 15 November 2026" for a written reading's answer date (ms). */
+export const formatDeliverBy = (ms: number) =>
+  new Date(ms).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
 export const formatSlotDate = (d: string) =>
   new Date(`${d}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });

@@ -16,9 +16,13 @@ import {
   BookingError,
   bookingStatus,
   calendarLink,
+  doneFrom,
+  formatDeliverBy,
   formatSlotDate,
   formatSlotTime,
   isQuestionTier,
+  isWrittenTier,
+  LANGUAGES,
   MAX_QUESTIONS,
   QUESTION_CHARS,
   QUESTION_TOPICS,
@@ -83,6 +87,7 @@ export default function BookingFormScreen() {
   // Video call / 3-question readings: one person, up to 3 written questions with a topic each (no reason / other people)
   const [questions, setQuestions] = useState<{ text: string; topic: string }[]>(() => Array.from({ length: MAX_QUESTIONS }, () => ({ text: '', topic: '' })));
   const [serverTier, setServerTier] = useState<string | undefined>(undefined);
+  const [lang, setLang] = useState(''); // written readings: the language of the answers
   const [concern, setConcern] = useState('');
   const [concernOther, setConcernOther] = useState('');
   const [notes, setNotes] = useState('');
@@ -128,8 +133,15 @@ export default function BookingFormScreen() {
         const s = await bookingStatus(b.token);
         setEdit(s.edit ?? null);
         if (s.tier) setServerTier(s.tier);
-        if (s.formDone && s.date && s.time) {
-          const done = { ...b, paid: true, done: { date: s.date, time: s.time, meetLink: s.meetLink ?? null, email: s.email } };
+        if (s.status === 'cancelled') {
+          const c = { ...b, cancelled: true };
+          await rememberBooking(c);
+          setBooking(c);
+          return;
+        }
+        const d = doneFrom(s, b.done?.email);
+        if (d) {
+          const done = { ...b, paid: true, cancelled: false, done: d };
           await rememberBooking(done);
           setBooking(done);
           return;
@@ -159,6 +171,7 @@ export default function BookingFormScreen() {
     if (needsPartner(r.concern || '') && !list.length) list.push({ ...EMPTY });
     setOthers(list);
     setQuestions(Array.from({ length: MAX_QUESTIONS }, (_, i) => ({ text: r[`q${i + 1}`] || '', topic: r[`qt${i + 1}`] || '' })));
+    setLang(r.lang || '');
     setConcern(r.concern || '');
     setConcernOther(r.concernOther || '');
     setNotes(r.notes || '');
@@ -178,6 +191,7 @@ export default function BookingFormScreen() {
   );
   const tier = asTier(serverTier ?? booking?.tier);
   const qmode = isQuestionTier(tier);
+  const written = isWrittenTier(tier);
   const lastStep = qmode ? 1 : 2;
   const partner = !qmode && needsPartner(concern);
   // A partner reason needs the partner's details: make sure the card is there.
@@ -245,6 +259,7 @@ export default function BookingFormScreen() {
       if (!questions.some((q) => q.text.trim())) return t('booking.qNone');
       const noTopic = questions.findIndex((q) => q.text.trim() && !q.topic);
       if (noTopic >= 0) return t('booking.qTopic', { n: noTopic + 1 });
+      if (written && !(LANGUAGES as readonly string[]).includes(lang)) return t('booking.langNeeded');
       return '';
     }
     if (qmode) return '';
@@ -300,6 +315,10 @@ export default function BookingFormScreen() {
         ? Object.fromEntries(
             questions.flatMap((q, i) => (q.text.trim() ? [[`q${i + 1}`, q.text.trim().slice(0, QUESTION_CHARS)], [`qt${i + 1}`, q.topic]] : [])),
           )
+        : {}),
+      ...(written ? { lang } : {}),
+      ...(qmode
+        ? {}
         : { concern, ...(concern === 'Other' ? { concernOther: concernOther.trim() } : {}), notes: notes.trim() }),
     };
     if (!qmode) others.forEach((p, i) => {
@@ -314,7 +333,11 @@ export default function BookingFormScreen() {
     };
     try {
       const r = await submitForm(booking.token, fields, photos, editing);
-      const done = { ...booking, paid: true, done: { date: r.date, time: r.time, meetLink: r.meetLink, email: fields.email } };
+      const done = {
+        ...booking,
+        paid: true,
+        done: { date: r.date, time: r.time, meetLink: r.meetLink, email: fields.email, deliverBy: r.deliverBy ?? booking.done?.deliverBy ?? null, lang: r.lang ?? (written ? lang : null) },
+      };
       await rememberBooking(done);
       tap('success');
       setBooking(done);
@@ -331,14 +354,24 @@ export default function BookingFormScreen() {
       if (code === 'already_done' && !editing) {
         // submitted before (e.g. the answer got lost on a bad network): show what the server has
         const s = await bookingStatus(booking.token).catch(() => null);
-        if (s?.formDone && s.date && s.time) {
-          const done = { ...booking, paid: true, done: { date: s.date, time: s.time, meetLink: s.meetLink ?? null, email: s.email } };
+        const d = s ? doneFrom(s, fields.email) : null;
+        if (s && d) {
+          const done = { ...booking, paid: true, done: d };
           await rememberBooking(done);
           setEdit(s.edit ?? null);
           setBooking(done);
           return;
         }
       }
+      // Send the person to the step the server complained about (as the website does)
+      const sc = e instanceof BookingError ? e.server : undefined;
+      if (sc === 'verify_email') {
+        setVerified('');
+        setOtpFor('');
+        setCode('');
+        setStep(0);
+      } else if (sc === 'lang' || sc === 'q_topic' || sc === 'q_none' || sc === 'q_long') setStep(1);
+      else if (sc === 'partner') setStep(2);
       setError(
         code === 'network'
           ? t('booking.errNetwork')
@@ -366,6 +399,77 @@ export default function BookingFormScreen() {
         <Stack.Screen options={{ title: t('booking.formTitle') }} />
         <ErrorNote text={t('booking.errServer')} />
         <Button label={t('booking.title')} onPress={() => router.replace('/booking')} />
+      </Screen>
+    );
+  }
+
+  if (booking.cancelled) {
+    return (
+      <Screen edges={[]}>
+        <Stack.Screen options={{ title: t('booking.title') }} />
+        <Card style={{ gap: Spacing.md, alignItems: 'center', paddingVertical: Spacing.xl }}>
+          <View style={styles.doneIcon}>
+            <Ionicons name="close" size={34} color={Colors.danger} />
+          </View>
+          <Text style={styles.doneTitle}>{t('booking.cancelledTitle')}</Text>
+          <Body muted style={{ textAlign: 'center' }}>
+            {t('booking.cancelledBody')}
+          </Body>
+          <Text style={styles.bid}>#{booking.bid}</Text>
+        </Card>
+        <Button label={t('booking.bookNew')} icon="add" onPress={() => router.replace('/booking')} />
+        <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
+      </Screen>
+    );
+  }
+
+  if (booking.done && !editing && written) {
+    const d = booking.done;
+    const canEdit = !!edit && edit.until > openedAt;
+    const until = canEdit
+      ? new Date(edit!.until).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+      : '';
+    const email = d.email || me.email;
+    return (
+      <Screen edges={[]}>
+        <Stack.Screen options={{ title: t('booking.title') }} />
+        <Animated.View entering={FadeInDown.duration(450)}>
+          <Card style={{ gap: Spacing.md, alignItems: 'center', paddingVertical: Spacing.xl }}>
+            <View style={styles.doneIcon}>
+              <Ionicons name="mail" size={34} color={Colors.gold} />
+            </View>
+            <Text style={styles.doneTitle}>{saved ? t('booking.edited') : t('booking.confirmedWritten')}</Text>
+            {d.deliverBy ? (
+              <>
+                <Text style={styles.when}>{t('booking.answersBy')}</Text>
+                <Text style={styles.whenTime}>{formatDeliverBy(d.deliverBy)}</Text>
+              </>
+            ) : (
+              <Text style={styles.when}>{t(tier === 'writtenurgent' ? 'booking.deliverWithin48' : 'booking.deliverWithin7')}</Text>
+            )}
+            <Body muted style={{ textAlign: 'center' }}>
+              {t('booking.confirmedWrittenSub', { email: email || '—', lang: d.lang ? t('booking.inLang', { lang: d.lang }) : '' })}
+            </Body>
+            <Text style={styles.bid}>#{booking.bid}</Text>
+          </Card>
+        </Animated.View>
+
+        <Card style={{ gap: Spacing.sm }}>
+          {[t('booking.wrule1'), t('booking.wrule2'), t('booking.wrule3')].map((x) => (
+            <View key={x} style={styles.noteRow}>
+              <Ionicons name="star" size={12} color={Colors.gold} style={{ marginTop: 4 }} />
+              <Text style={styles.noteText}>{x}</Text>
+            </View>
+          ))}
+        </Card>
+
+        {canEdit ? (
+          <Card style={{ gap: Spacing.sm }}>
+            <Body muted>{t('booking.editUntil', { when: until })}</Body>
+            <Button variant="ghost" label={t('booking.editForm')} icon="create-outline" onPress={startEdit} />
+          </Card>
+        ) : null}
+        <Button variant="ghost" label={t('booking.needHelp')} icon="help-buoy-outline" onPress={() => router.push('/support')} />
       </Screen>
     );
   }
@@ -448,7 +552,13 @@ export default function BookingFormScreen() {
         ))}
       </View>
 
-      {!editing && slot && step === 0 ? (
+      {!editing && written && step === 0 ? (
+        <Animated.View entering={FadeIn} style={styles.slotNote}>
+          <Ionicons name="mail-outline" size={16} color={Colors.gold} />
+          <Text style={styles.slotText}>{t(tier === 'writtenurgent' ? 'booking.deliverWithin48' : 'booking.deliverWithin7')}</Text>
+        </Animated.View>
+      ) : null}
+      {!editing && !written && slot && step === 0 ? (
         <Animated.View entering={FadeIn} style={styles.slotNote}>
           <Ionicons name="time-outline" size={16} color={Colors.gold} />
           <Text style={styles.slotText}>{t('booking.yourSlot', { when: `${formatSlotDate(slot.date)}, ${formatSlotTime(slot.time)}` })}</Text>
@@ -464,7 +574,7 @@ export default function BookingFormScreen() {
           <TextField
             label={t('booking.email')}
             required
-            hint={t('booking.emailHint')}
+            hint={written ? t('booking.emailHintWritten') : t('booking.emailHint')}
             icon="mail-outline"
             value={me.email}
             onChangeText={(v) => {
@@ -514,7 +624,7 @@ export default function BookingFormScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.otpNote}>{t('booking.otpWhy')}</Text>
+                  <Text style={styles.otpNote}>{written ? t('booking.otpWhyWritten') : t('booking.otpWhy')}</Text>
                   <Button small label={t('booking.sendOtp')} icon="mail" onPress={sendCode} loading={otpBusy === 'send'} disabled={wait > 0} />
                 </>
               )}
@@ -570,6 +680,26 @@ export default function BookingFormScreen() {
               />
             </Card>
           ))}
+          {written ? (
+            <Card style={styles.form}>
+              <FieldLabel required>{t('booking.langTitle')}</FieldLabel>
+              <View style={styles.topics}>
+                {LANGUAGES.map((l) => (
+                  <Pressable
+                    key={l}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: lang === l }}
+                    onPress={() => {
+                      tap();
+                      setLang(l);
+                    }}
+                    style={[styles.topic, lang === l && styles.topicOn]}>
+                    <Text style={[styles.topicText, lang === l && { color: Colors.goldSoft }]}>{l}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
+          ) : null}
         </View>
       )}
 
@@ -635,7 +765,7 @@ export default function BookingFormScreen() {
         {step < lastStep ? (
           <Button label={t('booking.next')} icon="arrow-forward" onPress={() => go(step + 1)} style={{ flex: 1 }} />
         ) : (
-          <Button label={editing ? t('booking.saveEdit') : t('booking.submit')} icon="sparkles" onPress={submit} loading={busy} style={{ flex: 2 }} />
+          <Button label={editing ? t('booking.saveEdit') : written ? t('booking.submitWritten') : t('booking.submit')} icon="sparkles" onPress={submit} loading={busy} style={{ flex: 2 }} />
         )}
       </View>
       {editing ? <Button variant="ghost" label={t('common.cancel')} onPress={() => setEditing(false)} /> : null}
