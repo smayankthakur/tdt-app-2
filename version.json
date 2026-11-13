@@ -1,0 +1,11 @@
+{
+  "versionCode": 5,
+  "versionName": "1.1.2",
+  "url": "https://github.com/devthedivinetarot/new-updated/releases/download/android-app/The-Divine-Tarot.apk",
+  "minVersionCode": 0,
+  "notes": {
+    "en": "Important: this update uses a new app signature. First uninstall the old The Divine Tarot app, then install the new one — your account, plan and readings stay safe (just log in again). New: booking form now matches the website exactly; account deletion also removes your website account; fixes.",
+    "hi": "ज़रूरी: इस अपडेट का सिग्नेचर नया है। पहले पुराना The Divine Tarot ऐप अनइंस्टॉल करें, फिर नया इंस्टॉल करें — आपका अकाउंट, प्लान और रीडिंग सुरक्षित रहेंगे (बस फिर से लॉग इन करें)। नया: बुकिंग फ़ॉर्म अब बिल्कुल वेबसाइट जैसा; अकाउंट डिलीट करने पर वेबसाइट अकाउंट भी हटेगा; सुधार।",
+    "hinglish": "Zaroori: is update ka signature naya hai. Pehle purana The Divine Tarot app uninstall karo, phir naya install karo — aapka account, plan aur readings safe rahenge (bas dobara login karna hai). Naya: booking form ab bilkul website jaisa; account delete karne par website account bhi hatega; fixes."
+  }
+}
