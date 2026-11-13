@@ -62,6 +62,8 @@ export type BookingStatus = {
   lang?: string | null;
   /** Present while the submitted form can still be edited (24 h after submitting, closes 3 h before the slot). */
   edit?: BookingEdit | null;
+  /** The form layout from admin → Form Builder (once paid; older servers don't send it). See src/lib/booking-form.ts. */
+  form?: unknown;
 };
 
 export class BookingError extends Error {
@@ -238,13 +240,15 @@ export function assignedSlot(token: string) {
 
 export type FormPhoto = { uri: string; name: string; type: string };
 
-export function submitForm(token: string, fields: Record<string, string>, photos: Partial<Record<'photo1' | 'photo2' | 'photo3', FormPhoto>>, edit = false) {
+export async function submitForm(token: string, fields: Record<string, string>, photos: Record<string, FormPhoto | undefined>, edit = false) {
   const body = new FormData();
   if (edit) body.append('mode', 'edit');
   for (const [k, v] of Object.entries(fields)) body.append(k, v);
   for (const [k, p] of Object.entries(photos)) {
-    // React Native's FormData takes { uri, name, type } for a file on the phone
-    if (p) body.append(k, p as unknown as Blob);
+    if (!p) continue;
+    // React Native's FormData takes { uri, name, type } for a file on the phone; a browser needs the real file
+    if (Platform.OS === 'web') body.append(k, await (await fetch(p.uri)).blob(), p.name);
+    else body.append(k, p as unknown as Blob);
   }
   return call<{ ok: true; date: string; time: string; meetLink: string | null; edited?: boolean; deliverBy?: number | null; lang?: string | null }>('/api/form', { method: 'POST', token, body });
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
+import { StepFields } from '@/components/booking-fields';
 import { ChoiceList, ErrorNote, FieldLabel, PhotoField, TextField, type PickedPhoto } from '@/components/form';
 import { DateField, TimeField } from '@/components/pickers';
 import { Body, Button, Card, Screen, tap } from '@/components/ui';
@@ -35,6 +36,17 @@ import {
   type SavedBooking,
   type Slot,
 } from '@/lib/booking';
+import {
+  checkStep as checkDynStep,
+  dateParts,
+  formValues,
+  photoNames,
+  timeParts,
+  usableForm,
+  visibleSteps,
+  type FormDef,
+  type Values,
+} from '@/lib/booking-form';
 import { emailTypo, isEmailAddress } from '@/lib/email';
 import { useSession } from '@/lib/session';
 import { limitWords, MAX_WORDS, wordCount } from '@/lib/words';
@@ -92,6 +104,11 @@ export default function BookingFormScreen() {
   const [concernOther, setConcernOther] = useState('');
   const [notes, setNotes] = useState('');
   const [slot, setSlot] = useState<Slot | null>(null);
+  // The admin's Form Builder layout (from the server). null = the built-in form below.
+  const [def, setDef] = useState<FormDef | null>(null);
+  const [values, setValues] = useState<Values>({});
+  const [photos, setPhotos] = useState<Record<string, PickedPhoto | null>>({});
+  const [persons, setPersons] = useState({ p2: false, p3: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   // email OTP
@@ -133,6 +150,19 @@ export default function BookingFormScreen() {
         const s = await bookingStatus(b.token);
         setEdit(s.edit ?? null);
         if (s.tier) setServerTier(s.tier);
+        const layout = usableForm(s.form);
+        if (layout) {
+          setDef(layout);
+          // Same starting values as the built-in form: account details, then the payment's phone
+          setValues((v) => ({
+            name: v.name || words(pr.name || u?.displayName || ''),
+            place: v.place || words(pr.birthplace || ''),
+            phone: v.phone || (s.phone ?? '').replace(/^\+91/, ''),
+            ...(pr.dob && !v.dobd ? dateParts('dob', pr.dob) : {}),
+            ...(pr.tob && !v.tobh ? timeParts('tob', pr.tob) : {}),
+            ...v,
+          }));
+        }
         if (s.status === 'cancelled') {
           const c = { ...b, cancelled: true };
           await rememberBooking(c);
@@ -175,6 +205,9 @@ export default function BookingFormScreen() {
     setConcern(r.concern || '');
     setConcernOther(r.concernOther || '');
     setNotes(r.notes || '');
+    setValues({ ...r });
+    setPhotos({});
+    setPersons({ p2: !!(r.name2 || '').trim(), p3: !!(r.name3 || '').trim() });
     setVerified(edit.emailVerified ? (r.email || '').toLowerCase() : '');
     setOtpFor('');
     setCode('');
@@ -192,7 +225,8 @@ export default function BookingFormScreen() {
   const tier = asTier(serverTier ?? booking?.tier);
   const qmode = isQuestionTier(tier);
   const written = isWrittenTier(tier);
-  const lastStep = qmode ? 1 : 2;
+  const dynSteps = useMemo(() => (def ? visibleSteps(def) : []), [def]);
+  const lastStep = def ? Math.max(0, dynSteps.length - 1) : qmode ? 1 : 2;
   const partner = !qmode && needsPartner(concern);
   // A partner reason needs the partner's details: make sure the card is there.
   const pickConcern = (v: string) => {
@@ -248,6 +282,16 @@ export default function BookingFormScreen() {
   };
 
   const checkStep = (s: number): string => {
+    if (def) {
+      const st = dynSteps[s];
+      if (!st) return '';
+      return checkDynStep(
+        st,
+        { ...values, email: emailNow },
+        { editing, emailOk: isVerified, hasPhoto: (n) => !!photos[n], hadPartner: editing && !!edit?.hadPartner, persons },
+        def,
+      );
+    }
     if (s === 0) {
       if (!me.name.trim() || !me.place.trim()) return t('booking.required');
       if (me.phone.replace(/\D/g, '').length < 10) return t('booking.phoneInvalid');
@@ -293,7 +337,7 @@ export default function BookingFormScreen() {
   };
 
   const submit = async () => {
-    for (const s of qmode ? [0, 1] : [0, 1, 2]) {
+    for (const s of def ? dynSteps.map((_, i) => i) : qmode ? [0, 1] : [0, 1, 2]) {
       const v = checkStep(s);
       if (v) {
         setStep(s);
@@ -304,7 +348,9 @@ export default function BookingFormScreen() {
     if (!booking) return;
     setError('');
     setBusy(true);
-    const fields: Record<string, string> = {
+    const fields: Record<string, string> = def
+      ? { ...formValues(def, { ...values, email: emailNow }, persons), email: emailNow }
+      : {
       name: me.name.trim(),
       phone: me.phone.trim(),
       email: emailNow,
@@ -321,22 +367,24 @@ export default function BookingFormScreen() {
         ? {}
         : { concern, ...(concern === 'Other' ? { concernOther: concernOther.trim() } : {}), notes: notes.trim() }),
     };
-    if (!qmode) others.forEach((p, i) => {
+    if (!def && !qmode) others.forEach((p, i) => {
       const n = i + 2;
       if (!p.name.trim()) return;
       Object.assign(fields, { [`name${n}`]: p.name.trim(), [`place${n}`]: p.place.trim(), ...dateFields(`dob${n}`, p.dob), ...timeFields(`tob${n}`, p.tob) });
     });
-    const photos = {
-      photo1: me.photo ?? undefined,
-      photo2: !qmode && others[0]?.name.trim() ? (others[0].photo ?? undefined) : undefined,
-      photo3: !qmode && others[1]?.name.trim() ? (others[1].photo ?? undefined) : undefined,
-    };
+    const files: Record<string, PickedPhoto | undefined> = def
+      ? Object.fromEntries(photoNames(def, persons, values.concern || '').map((n) => [n, photos[n] ?? undefined]))
+      : {
+          photo1: me.photo ?? undefined,
+          photo2: !qmode && others[0]?.name.trim() ? (others[0].photo ?? undefined) : undefined,
+          photo3: !qmode && others[1]?.name.trim() ? (others[1].photo ?? undefined) : undefined,
+        };
     try {
-      const r = await submitForm(booking.token, fields, photos, editing);
+      const r = await submitForm(booking.token, fields, files, editing);
       const done = {
         ...booking,
         paid: true,
-        done: { date: r.date, time: r.time, meetLink: r.meetLink, email: fields.email, deliverBy: r.deliverBy ?? booking.done?.deliverBy ?? null, lang: r.lang ?? (written ? lang : null) },
+        done: { date: r.date, time: r.time, meetLink: r.meetLink, email: fields.email, deliverBy: r.deliverBy ?? booking.done?.deliverBy ?? null, lang: r.lang ?? (written ? (def ? fields.lang || null : lang) : null) },
       };
       await rememberBooking(done);
       tap('success');
@@ -369,7 +417,11 @@ export default function BookingFormScreen() {
         setVerified('');
         setOtpFor('');
         setCode('');
-        setStep(0);
+        setStep(def ? Math.max(0, dynSteps.findIndex((st) => st.fields.some((x) => x.type === 'email'))) : 0);
+      } else if (def && sc === 'invalid') {
+        // the server's check (same as ours): open the first step it would complain about
+        const bad = dynSteps.findIndex((_, i) => checkStep(i));
+        if (bad >= 0) setStep(bad);
       } else if (sc === 'lang' || sc === 'q_topic' || sc === 'q_none' || sc === 'q_long') setStep(1);
       else if (sc === 'partner') setStep(2);
       setError(
@@ -532,11 +584,78 @@ export default function BookingFormScreen() {
     );
   }
 
-  const stepNames = qmode ? [t('booking.stepYou'), t('booking.stepQuestions')] : [t('booking.stepYou'), t('booking.stepReason'), t('booking.stepOthers')];
+  const stepNames = def ? dynSteps.map((st) => st.title) : qmode ? [t('booking.stepYou'), t('booking.stepQuestions')] : [t('booking.stepYou'), t('booking.stepReason'), t('booking.stepOthers')];
   const setQuestion = (i: number, patch: Partial<{ text: string; topic: string }>) => setQuestions((list) => list.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   const topicLabel: Record<string, string> = { 'Love life': t('booking.topicLove'), Career: t('booking.topicCareer'), 'Koi aur issue': t('booking.topicOther') };
   const setOther = (i: number, patch: Partial<Person>) => setOthers((list) => list.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const counter = (v: string) => t('booking.words', { n: wordCount(v), max: MAX_WORDS });
+
+  /** Email + 6-digit code: the same box for the built-in form and the admin's layout. */
+  const emailUI = (label: string, hint?: string) => (
+    <>
+      <TextField
+        label={label}
+        required
+        hint={hint}
+        icon="mail-outline"
+        value={me.email}
+        onChangeText={(v) => {
+          setMe({ ...me, email: v });
+          setOtpMsg('');
+        }}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        right={isVerified ? <Ionicons name="checkmark-circle" size={20} color={Colors.success} accessibilityLabel={t('booking.verified')} /> : undefined}
+      />
+      {typo && !isVerified ? (
+        <Pressable accessibilityRole="button" onPress={() => setMe({ ...me, email: typo })}>
+          <Text style={styles.link}>{t('booking.didYouMean', { email: typo })}</Text>
+        </Pressable>
+      ) : null}
+      {isVerified ? (
+        <Text style={styles.ok}>✓ {t('booking.verified')}</Text>
+      ) : (
+        <View style={styles.otpBox}>
+          {otpFor && otpFor === emailNow ? (
+            <>
+              <Text style={styles.otpNote}>{t('booking.otpSent', { email: otpFor })}</Text>
+              <TextField
+                label={t('booking.otpLabel')}
+                icon="keypad-outline"
+                value={code}
+                onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                maxLength={6}
+              />
+              <View style={styles.otpRow}>
+                <Button small label={t('booking.verify')} icon="checkmark" onPress={checkCode} loading={otpBusy === 'verify'} style={{ flex: 1 }} />
+                <Button
+                  small
+                  variant="ghost"
+                  label={wait > 0 ? t('booking.resendIn', { s: wait }) : t('booking.resendOtp')}
+                  onPress={sendCode}
+                  disabled={wait > 0 || !!otpBusy}
+                  loading={otpBusy === 'send'}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.otpNote}>{written ? t('booking.otpWhyWritten') : t('booking.otpWhy')}</Text>
+              <Button small label={t('booking.sendOtp')} icon="mail" onPress={sendCode} loading={otpBusy === 'send'} disabled={wait > 0} />
+            </>
+          )}
+          {otpMsg ? <Text style={styles.otpErr}>{otpMsg}</Text> : null}
+        </View>
+      )}
+
+    </>
+  );
 
   return (
     <Screen edges={[]}>
@@ -565,72 +684,34 @@ export default function BookingFormScreen() {
         </Animated.View>
       ) : null}
 
+      {def && dynSteps[step] ? (
+        <StepFields
+          def={def}
+          step={dynSteps[step]}
+          values={{ ...values, email: me.email }}
+          set={(patch) => {
+            setValues((v) => ({ ...v, ...patch }));
+            setError('');
+          }}
+          photos={photos}
+          setPhoto={(n, ph) => setPhotos((x) => ({ ...x, [n]: ph }))}
+          persons={persons}
+          setPerson={(id, on) => setPersons((x) => ({ ...x, [id]: on }))}
+          editing={editing}
+          hadPartner={!!edit?.hadPartner}
+          email={(label, hint) => <View style={{ gap: Spacing.sm }}>{emailUI(label, hint)}</View>}
+          photoText={{ add: t('booking.addPhoto'), change: t('booking.changePhoto'), keep: t('booking.photoKeep') }}
+          onPhotoError={() => setError(t('profile.photoFailed'))}
+        />
+      ) : null}
+      {!def ? (
+        <>
       {step === 0 && (
         <Card style={styles.form}>
           <TextField label={t('booking.name')} required icon="person-outline" value={me.name} onChangeText={(v) => setMe({ ...me, name: words(v) })} autoCapitalize="words" autoComplete="name" />
           <TextField label={t('booking.phone')} required icon="logo-whatsapp" value={me.phone} onChangeText={(v) => setMe({ ...me, phone: v })} keyboardType="phone-pad" autoComplete="tel" maxLength={16} />
 
-          {/* Email + 6-digit code */}
-          <TextField
-            label={t('booking.email')}
-            required
-            hint={written ? t('booking.emailHintWritten') : t('booking.emailHint')}
-            icon="mail-outline"
-            value={me.email}
-            onChangeText={(v) => {
-              setMe({ ...me, email: v });
-              setOtpMsg('');
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            right={isVerified ? <Ionicons name="checkmark-circle" size={20} color={Colors.success} accessibilityLabel={t('booking.verified')} /> : undefined}
-          />
-          {typo && !isVerified ? (
-            <Pressable accessibilityRole="button" onPress={() => setMe({ ...me, email: typo })}>
-              <Text style={styles.link}>{t('booking.didYouMean', { email: typo })}</Text>
-            </Pressable>
-          ) : null}
-          {isVerified ? (
-            <Text style={styles.ok}>✓ {t('booking.verified')}</Text>
-          ) : (
-            <View style={styles.otpBox}>
-              {otpFor && otpFor === emailNow ? (
-                <>
-                  <Text style={styles.otpNote}>{t('booking.otpSent', { email: otpFor })}</Text>
-                  <TextField
-                    label={t('booking.otpLabel')}
-                    icon="keypad-outline"
-                    value={code}
-                    onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
-                    keyboardType="number-pad"
-                    autoComplete="one-time-code"
-                    textContentType="oneTimeCode"
-                    maxLength={6}
-                  />
-                  <View style={styles.otpRow}>
-                    <Button small label={t('booking.verify')} icon="checkmark" onPress={checkCode} loading={otpBusy === 'verify'} style={{ flex: 1 }} />
-                    <Button
-                      small
-                      variant="ghost"
-                      label={wait > 0 ? t('booking.resendIn', { s: wait }) : t('booking.resendOtp')}
-                      onPress={sendCode}
-                      disabled={wait > 0 || !!otpBusy}
-                      loading={otpBusy === 'send'}
-                      style={{ flex: 1 }}
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.otpNote}>{written ? t('booking.otpWhyWritten') : t('booking.otpWhy')}</Text>
-                  <Button small label={t('booking.sendOtp')} icon="mail" onPress={sendCode} loading={otpBusy === 'send'} disabled={wait > 0} />
-                </>
-              )}
-              {otpMsg ? <Text style={styles.otpErr}>{otpMsg}</Text> : null}
-            </View>
-          )}
+          {emailUI(t('booking.email'), written ? t('booking.emailHintWritten') : t('booking.emailHint'))}
 
           <TextField label={t('booking.place')} required icon="location-outline" value={me.place} onChangeText={(v) => setMe({ ...me, place: words(v) })} autoCapitalize="words" />
           <DateField label={t('booking.dob')} value={me.dob} onChange={(v) => setMe({ ...me, dob: v })} />
@@ -751,6 +832,9 @@ export default function BookingFormScreen() {
           {others.length < 2 && <Button variant="ghost" label={t('booking.addPerson')} icon="person-add-outline" onPress={() => setOthers((list) => [...list, { ...EMPTY }])} />}
         </View>
       )}
+
+        </>
+      ) : null}
 
       <ErrorNote text={error} />
 
