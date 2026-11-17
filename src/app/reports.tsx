@@ -62,6 +62,9 @@ export function ReportsTab() {
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState<null | { free: boolean; delivered?: boolean; due?: string; email: string }>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Where "2. Your details" starts: picking a topic scrolls there, so the next step is on screen
+  const detailsY = useRef(0);
+  const goToDetails = () => setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, detailsY.current - 56), animated: true }), 150);
 
   useEffect(() => {
     Storage.getBookingEmail().then((e) => setEmail((x) => x || e || ''));
@@ -220,6 +223,7 @@ export function ReportsTab() {
                   onPress={() => {
                     tap();
                     setTopic(x.id);
+                    goToDetails();
                   }}
                   style={[styles.option, on && styles.optionOn]}>
                   <Ionicons name={x.icon as never} size={20} color={on ? Colors.gold : Colors.textDim} />
@@ -232,7 +236,8 @@ export function ReportsTab() {
             })}
           </Step>
 
-          <Step n={2} title={t('reports.step2')}>
+          <View onLayout={(e) => (detailsY.current = e.nativeEvent.layout.y)}>
+            <Step n={2} title={t('reports.step2')}>
             <TextField label={t('reports.name')} required icon="person-outline" value={name} onChangeText={setName} autoCapitalize="words" autoComplete="name" maxLength={60} />
             {tcfg.partner ? <TextField label={t('reports.partner')} required icon="people-outline" value={partner} onChangeText={setPartner} autoCapitalize="words" maxLength={60} /> : null}
             <TextField
@@ -259,7 +264,8 @@ export function ReportsTab() {
                 <Chip key={y} label={t('reports.yearOpt', { year: y })} on={year === y} onPress={() => setYear(y)} />
               ))}
             </View>
-          </Step>
+            </Step>
+          </View>
 
           <Step n={3} title={t('reports.step3')}>
             <View style={styles.chips}>
