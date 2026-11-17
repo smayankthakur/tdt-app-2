@@ -1,0 +1,11 @@
+{
+  "versionCode": 6,
+  "versionName": "1.1.3",
+  "url": "https://github.com/devthedivinetarot/new-updated/releases/download/android-app/The-Divine-Tarot.apk",
+  "minVersionCode": 0,
+  "notes": {
+    "en": "Fixed: in Reports, choosing a topic now takes you straight to your details. If you still have the old app from before 13 Nov, uninstall it first, then install this one — your account and plan stay safe.",
+    "hi": "सुधार: रिपोर्ट्स में टॉपिक चुनते ही अब सीधे आपकी डिटेल्स वाला फ़ॉर्म खुलता है। अगर आपके फ़ोन में 13 नवंबर से पहले वाला पुराना ऐप है, तो पहले उसे अनइंस्टॉल करें, फिर यह इंस्टॉल करें — आपका अकाउंट और प्लान सुरक्षित रहेंगे।",
+    "hinglish": "Fix: Reports mein topic chunte hi ab seedha aapki details wala form khulta hai. Agar phone mein 13 Nov se pehle wala purana app hai, to pehle use uninstall karo, phir ye install karo — account aur plan safe rahenge."
+  }
+}
