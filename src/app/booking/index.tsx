@@ -15,7 +15,6 @@ import { TERMS } from '@/data/booking';
 import { formatINR } from '@/data/courses';
 import { useLang } from '@/i18n';
 import {
-  asTier,
   BookingError,
   bookingStatus,
   createBooking,
@@ -26,10 +25,13 @@ import {
   isUrgentTier,
   isWrittenTier,
   loadReadings,
+  noDirectContact,
   refreshBookings,
   rememberBooking,
   savedBookings,
-  TIER_MINS,
+  tierMins,
+  placeOf,
+  readingInfo,
   verifyBooking,
   type ReadingOffer,
   type SavedBooking,
@@ -41,6 +43,17 @@ import { Storage } from '@/lib/storage';
 import { track } from '@/lib/events';
 
 const HERO = 'https://booking.thedivinetarotonline.com/hero-bharti.jpg';
+
+type TFn = ReturnType<typeof useLang>['t'];
+/** A reading's texts: the app's own (3 languages) for readings it knows, else what the booking server says. */
+function tierTexts(t: TFn, tier: string): Record<string, string> {
+  const own = t(`booking.tiers.${tier}`, { returnObjects: true, defaultValue: null }) as Record<string, string> | null | string;
+  if (own && typeof own === 'object') return own;
+  const i = readingInfo(tier);
+  if (!i) return t('booking.tiers.standard', { returnObjects: true }) as Record<string, string>;
+  return { badge: i.badge, title: i.name, sub: i.session, b1: i.place ? t('booking.meetAt', { place: i.place }) : i.session, b2: t('booking.within', { when: i.when }), b3: '' };
+}
+const tierTitle = (t: TFn, tier: string) => tierTexts(t, tier).title;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Old links to /booking open the Booking tab. */
@@ -99,7 +112,7 @@ function BookingScreen() {
     if (code === 'no_slots') return (e as BookingError).message || t('booking.errNoSlots');
     // The server names the reading that replaces a switched-off one (it is in the reloaded list)
     if (code === 'tier_off' || code === 'all_off') return (e as BookingError).message || t('booking.tierMoved');
-    if (code === 'coupon') return (e as BookingError).message || t('booking.errServer');
+    if (code === 'coupon' || code === 'closed') return noDirectContact((e as BookingError).message) || t('booking.errServer');
     if (code === 'network') return t('booking.errNetwork');
     if (code === 'not_found') return t('booking.errUnavailable');
     return t('booking.errServer');
@@ -175,6 +188,10 @@ function BookingScreen() {
   const slotLine = (r: ReadingOffer) =>
     isWrittenTier(r.tier)
       ? t(r.tier === 'writtenurgent' ? 'booking.deliver48' : 'booking.deliver7')
+      : r.closed
+        ? r.tier === 'callurgent'
+          ? t('booking.urgentHours')
+          : noDirectContact(r.closed)
       : r.slot
         ? t('booking.nextFree', { when: `${formatSlotDate(r.slot.date)}, ${formatSlotTime(r.slot.time)}` })
         : t('booking.noSlot');
@@ -187,17 +204,35 @@ function BookingScreen() {
   const callsOn = list.some((r) => !isWrittenTier(r.tier));
   const writtenOn = list.some((r) => isWrittenTier(r.tier));
   const onlyWritten = writtenOn && !callsOn;
-  const terms = TERMS.filter((x) => !x.on || (x.on === 'calls' ? callsOn || !list.length : x.on === 'written' ? writtenOn : !callsOn && !!list.length))
+  // 1-hour readings (Nov 2026): video / audio call, urgent call in 3 hours, face to face in Mumbai — their own timing rules
+  const has = (x: string) => list.some((r) => r.tier === x);
+  const newCallsOn = has('call') || has('callurgent');
+  const f2fOn = list.some((r) => !!placeOf(r.tier));
+  const oldCallsOn = list.some((r) => !isWrittenTier(r.tier) && !['call', 'callurgent'].includes(r.tier) && !placeOf(r.tier));
+  const meetOn = oldCallsOn || newCallsOn || (!list.length);
+  const show = (on?: string) =>
+    !on ||
+    (on === 'calls' ? meetOn : on === 'oldCalls' ? oldCallsOn || !list.length : on === 'newCalls' ? newCallsOn || f2fOn : on === 'f2f' ? f2fOn : on === 'people' ? callsOn || !list.length : on === 'written' ? writtenOn : !callsOn && !!list.length);
+  const callNames = [has('call') ? 'Video / Audio Call' : '', f2fOn ? 'Face to Face Meeting' : ''].filter(Boolean).join(' or ');
+  const callUrgent = list.find((r) => r.tier === 'callurgent');
+  const terms = TERMS.filter((x) => show(x.on))
     .map((x) =>
       x.p
         .replace(/ If you need the reading sooner, book the Urgent reading \(\{urgent\}\), which gets a slot within 48 hours of payment\./, urgentOn ? ' If you need the reading sooner, book the Urgent reading ({urgent}), which gets a slot within 48 hours of payment.' : '')
         .replace('{urgent}', urgentOn ? formatINR(urgentOn.price) : '')
+        .replace('{newcalls}', callNames ? `a ${callNames} booking gets the earliest free time within 3 days of payment${callUrgent ? '; ' : '.'}` : '')
+        .replace('{callurgent}', callUrgent ? `the Urgent Call (${formatINR(callUrgent.price)}) gets a time within 3 hours of payment and can be booked only between 12 PM and 6 PM IST.` : '')
+        .replace('{meetHow}', newCallsOn ? ' (video or audio, as you prefer)' : '')
         .replace('{wurgent}', wurgentOn ? ` — or within 48 hours for the Urgent reading (${formatINR(wurgentOn.price)})` : '')
         .replace('{offer}', offerOn ? `${offerOn.offerName}: the offer prices shown above apply to payments made till ${untilText(offerOn.offerUntil)} (IST). After that the regular prices apply.` : ''),
     )
     .filter(Boolean);
-  const mins = [...new Set(list.filter((r) => !isWrittenTier(r.tier)).map((r) => TIER_MINS[r.tier]))].sort((a, b) => a - b);
-  const stat2: [string, string] = onlyWritten ? [t('booking.statQuestions'), t('booking.statWritten')] : [`${(mins.length ? mins : [40]).join('–')} min`, t('booking.stat2')];
+  const mins = [...new Set(list.filter((r) => !isWrittenTier(r.tier)).map((r) => tierMins(r.tier)))].sort((a, b) => a - b);
+  const stat2: [string, string] = onlyWritten
+    ? [t('booking.statQuestions'), t('booking.statWritten')]
+    : newCallsOn || f2fOn
+      ? [t('booking.statHour'), newCallsOn && f2fOn ? t('booking.statCallF2f') : f2fOn ? t('booking.statF2f') : t('booking.statCall')]
+      : [`${(mins.length ? mins : [40]).join('–')} min`, t('booking.stat2')];
 
   return (
     <Screen tab>
@@ -208,7 +243,7 @@ function BookingScreen() {
         <View style={styles.heroText}>
           <Eyebrow>{t('booking.eyebrow', { reader: AppInfo.reader })}</Eyebrow>
           <Text style={styles.heroTitle}>{t('booking.hero')}</Text>
-          <Body muted>{onlyWritten ? t('booking.heroSubWritten') : t('booking.heroSub')}</Body>
+          <Body muted>{onlyWritten ? t('booking.heroSubWritten') : newCallsOn || f2fOn ? t('booking.heroSubCall') : t('booking.heroSub')}</Body>
         </View>
       </Animated.View>
 
@@ -235,7 +270,7 @@ function BookingScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.mineTitle}>{t('booking.cancelledTitle')}</Text>
                   <Text style={styles.mineSub}>
-                    {t(`booking.tiers.${asTier(b.tier)}.title`)} · #{b.bid}
+                    {tierTitle(t, b.tier)} · #{b.bid}
                   </Text>
                 </View>
               </View>
@@ -252,12 +287,15 @@ function BookingScreen() {
                         : t('booking.bookedFor', { date: formatSlotDate(b.done.date), time: formatSlotTime(b.done.time) })}
                     </Text>
                     <Text style={styles.mineSub}>
-                      {t(`booking.tiers.${asTier(b.tier)}.title`)} · #{b.bid}
+                      {tierTitle(t, b.tier)} · #{b.bid}
                     </Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                   {b.done.meetLink ? <Button small label={t('booking.joinMeet')} icon="videocam" onPress={() => Linking.openURL(b.done!.meetLink!)} style={{ flex: 1 }} /> : null}
+                  {!b.done.meetLink && placeOf(b.tier) ? (
+                    <Button small label={t('booking.openMap')} icon="location" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeOf(b.tier)!)}`)} style={{ flex: 1 }} />
+                  ) : null}
                   <Button small variant="ghost" label={t('booking.details')} icon="document-text-outline" onPress={() => router.push({ pathname: '/booking/form', params: { bid: b.bid } })} style={{ flex: 1 }} />
                 </View>
               </View>
@@ -345,13 +383,14 @@ function untilText(d: string | null) {
 /** One reading type, as on the website's price cards (texts per type; price / offer / on-off from the admin). */
 function TierCard({ r, slotText, busy, onBook }: { r: ReadingOffer; slotText: string; busy: Tier | null; onBook: () => void }) {
   const { t } = useLang();
-  const info = t(`booking.tiers.${r.tier}`, { returnObjects: true }) as Record<string, string>;
+  const info = tierTexts(t, r.tier);
+  const inPerson = !!placeOf(r.tier);
   const urgent = isUrgentTier(r.tier);
   const offer = !!r.offerName && r.price < r.regular;
   const written = isWrittenTier(r.tier);
   const bullets = written
     ? [info.b1, info.b2, info.b3, info.b4, info.b5, t('booking.formAfterWritten'), t('booking.noRefundWritten')].filter(Boolean)
-    : [info.b1, info.b2, info.b3, isQuestionTier(r.tier) ? t('booking.topicsHint') : '', t('booking.formAfter'), t('booking.noRefund')].filter(Boolean);
+    : [info.b1, info.b2, info.b3, info.b4, isQuestionTier(r.tier) ? t('booking.topicsHint') : '', inPerson ? t('booking.formAfterF2f') : t('booking.formAfter'), inPerson ? t('booking.noRefundF2f') : t('booking.noRefund')].filter(Boolean);
   // No free slot shown: the button stays (as on the website) — a normal reading gets a slot later, and for an urgent one
   // with nothing free in 48 hours the server's message explains it.
   return (
@@ -370,7 +409,7 @@ function TierCard({ r, slotText, busy, onBook }: { r: ReadingOffer; slotText: st
       <Text style={styles.slot}>{slotText}</Text>
       <Button
         label={t('booking.pay', { price: formatINR(r.price) })}
-        icon={urgent ? 'flash' : r.tier === 'video' ? 'videocam' : written ? 'mail' : 'sparkles'}
+        icon={urgent ? 'flash' : inPerson ? 'people' : r.tier === 'video' || r.tier === 'call' ? 'videocam' : written ? 'mail' : 'sparkles'}
         onPress={onBook}
         loading={busy === r.tier}
         disabled={!!busy}

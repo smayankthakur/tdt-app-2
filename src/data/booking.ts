@@ -29,11 +29,13 @@ export const PARTNER_CONCERNS = [
 export const needsPartner = (concern: string) => PARTNER_CONCERNS.includes(concern);
 
 /**
- * Full terms & conditions (English, as on the booking website — components/Landing.tsx). `on` = shown only when a call
- * reading is ON ('calls'), a written reading is ON ('written'), or no call reading is ON ('noCalls').
- * {urgent} / {wurgent} / {offer} are filled in on the screen.
+ * Full terms & conditions (English, as on the booking website — components/Landing.tsx). `on` = shown only when:
+ * 'calls' a Google Meet reading is ON · 'oldCalls' a 30/40-min call reading is ON · 'newCalls' a 1-hour call or face-to-face
+ * meeting is ON · 'f2f' the face-to-face meeting is ON · 'people' any call / meeting is ON · 'written' a written reading is
+ * ON · 'noCalls' only written readings are ON. {urgent} / {wurgent} / {offer} / {newcalls} / {callurgent} / {meetHow} are
+ * filled in on the screen.
  */
-export const TERMS: { p: string; on?: 'calls' | 'written' | 'noCalls' }[] = [
+export const TERMS: { p: string; on?: 'calls' | 'oldCalls' | 'newCalls' | 'f2f' | 'people' | 'written' | 'noCalls' }[] = [
   { p: 'We are certified and experienced in Astrology, Numerology, Psychic Tarot Card Reading, Vedic Kundli Analysis, Candle Wax Reading, Coffee Cup Reading, and other spiritual guidance practices.' },
   { p: 'We do not provide sugar-coated readings. Our purpose is to deliver honest messages as guided by the universe with complete sincerity.' },
   { p: 'We strictly DO NOT offer any services related to Tantra, Vashikaran, black magic, or any unethical practices. Please do not request such services.' },
@@ -43,19 +45,27 @@ export const TERMS: { p: string; on?: 'calls' | 'written' | 'noCalls' }[] = [
     p: 'How your reading is delivered: after payment you fill a short form with your 3 questions and choose the language for your answers (Hindi, Hinglish or English). Bharti Singh personally writes a detailed answer to each question, with guidance, and emails it to the email address in your form within 7 days of submitting the form{wurgent}. This reading is delivered in writing by email; there is no call or meeting to join. Please ask specific questions and check your Spam / Promotions folder.',
   },
   {
-    on: 'calls',
+    on: 'newCalls',
+    p: 'Appointment timing: appointments are given every day between 12 PM and 9 PM IST (one-hour sessions; last session starts at 9 PM). The time is provided by us: {newcalls}{callurgent} No appointments are given on festival days.',
+  },
+  {
+    on: 'f2f',
+    p: 'Face to Face Meeting: the one-hour meeting takes place at the Grand Hyatt Lounge, Mumbai, at the time emailed to you after you submit the form. Please reach 10 minutes early; your own travel is not included. A late arrival does not extend the session, and a missed meeting cannot be rescheduled or refunded.',
+  },
+  {
+    on: 'oldCalls',
     p: 'Appointment timing: slots run every day from 12 PM to 9 PM IST (last slot 9 PM). A standard booking gets the earliest free slot 7–10 days after payment. No appointments are given on festival days. If you need the reading sooner, book the Urgent reading ({urgent}), which gets a slot within 48 hours of payment.',
   },
   { p: '{offer}' },
   {
     on: 'calls',
-    p: 'Your call takes place on Google Meet at the slot assigned to you — the slot, link and schedule are emailed to you as soon as you submit the form after payment. Please join on time from a stable network; if repeated connection issues occur, the appointment may be cancelled.',
+    p: 'Your call takes place on Google Meet{meetHow} at the slot assigned to you — the slot, link and schedule are emailed to you as soon as you submit the form after payment. Please join on time from a stable network; if repeated connection issues occur, the appointment may be cancelled.',
   },
   {
     on: 'calls',
     p: 'Late arrival: we wait a maximum of 5 minutes after your slot starts. If you have not joined the Google Meet by then, the appointment is treated as missed. Once your slot time is over, the appointment cannot be rescheduled, and no refund is given.',
   },
-  { on: 'calls', p: 'You may ask about up to 3 people in one reading, only those whose details you submit in the form.' },
+  { on: 'people', p: 'You may ask about up to 3 people in one reading, only those whose details you submit in the form.' },
   { on: 'noCalls', p: 'Only the 3 questions written in your form are answered, and the reading is about you (the person whose details and photo are in the form).' },
   { p: 'All readings are for guidance purposes only. Please use your own judgment and decision-making.' },
   { p: 'When asking about another person’s feelings, please understand that energies and emotions can change over time, as every individual has free will.' },

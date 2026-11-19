@@ -23,6 +23,7 @@ import {
   formatSlotTime,
   isQuestionTier,
   isWrittenTier,
+  placeOf,
   LANGUAGES,
   MAX_QUESTIONS,
   QUESTION_CHARS,
@@ -549,6 +550,12 @@ export default function BookingFormScreen() {
               </Body>
             ) : null}
             {d.meetLink ? <Button label={t('booking.joinMeet')} icon="videocam" onPress={() => Linking.openURL(d.meetLink!)} style={{ alignSelf: 'stretch' }} /> : null}
+            {!d.meetLink && placeOf(tier) ? (
+              <>
+                <Body style={{ textAlign: 'center' }}>{t('booking.meetingPlace', { place: placeOf(tier) })}</Body>
+                <Button label={t('booking.openMap')} icon="location" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeOf(tier)!)}`)} style={{ alignSelf: 'stretch' }} />
+              </>
+            ) : null}
             <Button
               variant="ghost"
               label={t('booking.addCalendar')}

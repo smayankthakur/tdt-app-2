@@ -24,20 +24,38 @@ import { readJSON, Storage, writeJSON } from '@/lib/storage';
  *  video = 30-min Google Meet video, one person, 3 questions · q3 = 30-min voice call, 3 questions · q3urgent = q3 within 48 h.
  * The app shows only the readings that are ON, at the admin's price / offer, in the website's order.
  */
-export type Tier = 'written' | 'writtenurgent' | 'standard' | 'urgent' | 'video' | 'q3' | 'q3urgent';
+/** Since 19 Nov 2026 also: call = 1-hour Google Meet video / audio call within 3 days · callurgent = the same call within
+ *  3 hours (bookable 12 PM – 6 PM IST) · f2f = 1-hour face-to-face meeting in Mumbai within 3 days (no Meet link).
+ *  The list of readings that are ON comes from the booking server (GET /api/app/readings), so a reading the admin
+ *  adds or switches on shows up without an app update; texts for readings the app doesn't know come from the server. */
+export type KnownTier = 'call' | 'callurgent' | 'f2f' | 'written' | 'writtenurgent' | 'standard' | 'urgent' | 'video' | 'q3' | 'q3urgent';
+export type Tier = KnownTier | (string & {});
 /** The website's order (components/Landing.tsx). */
-export const TIERS: Tier[] = ['written', 'writtenurgent', 'standard', 'q3', 'video', 'urgent', 'q3urgent'];
-export const TIER_MINS: Record<Tier, number> = { written: 0, writtenurgent: 0, standard: 40, urgent: 40, video: 30, q3: 30, q3urgent: 30 };
-export const isUrgentTier = (t?: string) => t === 'urgent' || t === 'q3urgent' || t === 'writtenurgent';
+export const TIERS: KnownTier[] = ['call', 'callurgent', 'f2f', 'written', 'writtenurgent', 'standard', 'q3', 'video', 'urgent', 'q3urgent'];
+const KNOWN_MINS: Record<KnownTier, number> = { call: 60, callurgent: 60, f2f: 60, written: 0, writtenurgent: 0, standard: 40, urgent: 40, video: 30, q3: 30, q3urgent: 30 };
+/** What the booking server says about each reading (filled by loadReadings) — used for readings the app doesn't know. */
+export type ReadingInfo = {
+  name: string; badge: string; mins: number; urgent: boolean; questions: boolean; video: boolean; written: boolean;
+  place: string | null; withinHours: number | null; bookHours: [number, number] | null; when: string; session: string; closed: string | null;
+};
+const serverInfo: Record<string, ReadingInfo> = {};
+export const readingInfo = (t?: string): ReadingInfo | undefined => (t ? serverInfo[t] : undefined);
+export const isKnownTier = (t?: string | null): t is KnownTier => TIERS.includes(t as KnownTier);
+export const tierMins = (t?: string) => (isKnownTier(t) ? KNOWN_MINS[t] : (serverInfo[t ?? '']?.mins ?? 60));
+export const isUrgentTier = (t?: string) => (isKnownTier(t) ? t === 'urgent' || t === 'q3urgent' || t === 'writtenurgent' || t === 'callurgent' : !!readingInfo(t)?.urgent);
 /** One person, 3 written questions (video, q3, q3urgent, written, writtenurgent) instead of reason + other people. */
-export const isQuestionTier = (t?: string) => t === 'video' || t === 'q3' || t === 'q3urgent' || t === 'written' || t === 'writtenurgent';
+export const isQuestionTier = (t?: string) =>
+  isKnownTier(t) ? t === 'video' || t === 'q3' || t === 'q3urgent' || t === 'written' || t === 'writtenurgent' : !!readingInfo(t)?.questions;
 /** Written readings: the answers come by email — no call, no Google Meet, no calendar invite. */
-export const isWrittenTier = (t?: string) => t === 'written' || t === 'writtenurgent';
+export const isWrittenTier = (t?: string) => (isKnownTier(t) ? t === 'written' || t === 'writtenurgent' : !!readingInfo(t)?.written);
+/** Face-to-face meeting: a place instead of a Google Meet link. */
+export const placeOf = (t?: string, fromServer?: string | null) =>
+  fromServer || readingInfo(t)?.place || (t === 'f2f' ? 'Grand Hyatt Lounge, Mumbai' : null);
 /** Hours after the form within which the written answers are promised. */
 export const deliveryHours = (t?: string) => (t === 'writtenurgent' ? 48 : t === 'written' ? 7 * 24 : 0);
 /** Languages for the written answers — sent exactly like this (the server checks them). */
 export const LANGUAGES = ['Hindi', 'Hinglish', 'English'] as const;
-export const asTier = (t?: string | null): Tier => (TIERS.includes(t as Tier) ? (t as Tier) : 'standard');
+export const asTier = (t?: string | null): Tier => (t && (isKnownTier(t) || serverInfo[t]) ? t : 'standard');
 /** Question topics — sent exactly like this (the server checks them). */
 export const QUESTION_TOPICS = ['Love life', 'Career', 'Koi aur issue'] as const;
 export const QUESTION_CHARS = 100;
@@ -60,6 +78,8 @@ export type BookingStatus = {
   /** Written readings: latest time (ms) the answers are promised, and the answer language. */
   deliverBy?: number | null;
   lang?: string | null;
+  /** Face-to-face meeting: where it happens (no Google Meet link). Older servers don't send it. */
+  place?: string | null;
   /** Present while the submitted form can still be edited (24 h after submitting, closes 3 h before the slot). */
   edit?: BookingEdit | null;
   /** The form layout from admin → Form Builder (once paid; older servers don't send it). See src/lib/booking-form.ts. */
@@ -69,7 +89,7 @@ export type BookingStatus = {
 export class BookingError extends Error {
   constructor(
     message: string,
-    public code: 'no_slots' | 'network' | 'not_found' | 'not_paid' | 'already_done' | 'invalid' | 'server' | 'tier_off' | 'all_off' | 'coupon',
+    public code: 'no_slots' | 'network' | 'not_found' | 'not_paid' | 'already_done' | 'invalid' | 'server' | 'tier_off' | 'all_off' | 'coupon' | 'closed',
     /** The server's own code (verify_email, lang, q_topic, partner …) and, for tier_off, the reading it offers instead. */
     public server?: string,
     public alt?: Tier | null,
@@ -117,7 +137,9 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
     const alt = (data as { alt?: string | null } | null)?.alt;
     if (sc === 'no_slots') throw new BookingError(msg, 'no_slots', sc);
     // Switched off in the booking admin (the screen was opened earlier): the list is loaded again
-    if (sc === 'tier_off' || sc === 'all_off') throw new BookingError(msg, sc, sc, alt && TIERS.includes(alt as Tier) ? (alt as Tier) : null);
+    if (sc === 'tier_off' || sc === 'all_off') throw new BookingError(msg, sc, sc, alt ? alt : null);
+    // urgent 3-hour call outside 12 PM – 6 PM IST: the server's message says when to come back
+    if (sc === 'closed_hours') throw new BookingError(msg, 'closed', sc);
     if (sc === 'coupon') throw new BookingError(msg, 'coupon', sc);
     if (res.status === 404) throw new BookingError(msg, 'not_found', sc);
     if (res.status === 402) throw new BookingError(msg, 'not_paid', sc);
@@ -130,7 +152,7 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
 
 /** Whether a slot of this kind is free right now, and the earliest one. `off` = switched off in the booking admin. */
 export function nextSlot(tier: Tier) {
-  return call<{ available: boolean; next: Slot | null; off?: boolean }>(`/api/slots?tier=${tier}`);
+  return call<{ available: boolean; next: Slot | null; off?: boolean; closed?: string }>(`/api/slots?tier=${encodeURIComponent(tier)}`);
 }
 
 /** The price right now (admin price, seasonal offer, coupon) — the same check the website's popup makes. */
@@ -146,18 +168,44 @@ export async function quoteReading(tier: Tier, coupon?: string): Promise<Quote> 
   return r;
 }
 
-/** A reading that is ON in the admin, with its price and the next free slot (null = none free right now). */
-export type ReadingOffer = Quote & { slot: Slot | null };
+/** A reading that is ON in the admin, with its price and the next free slot (null = none free right now).
+ *  `closed`: can't be booked at this hour (urgent 3-hour call outside 12 PM – 6 PM IST), the server's message. */
+export type ReadingOffer = Quote & { slot: Slot | null; closed?: string | null; info?: ReadingInfo };
 
-/** Every reading that is ON right now, in the website's order. [] = the admin has switched all bookings off. */
+type ServerReading = ReadingInfo & { tier: string; regular: number; price: number; offerName: string | null; offerUntil: string | null };
+
+/** Every reading that is ON right now, in the website's order. [] = the admin has switched all bookings off.
+ *  Asks the booking server for the list (admin → Prices & Offers); servers without that route: one check per known reading. */
 export async function loadReadings(): Promise<ReadingOffer[]> {
+  let listed: ServerReading[] | null = null;
+  try {
+    listed = (await call<{ readings: ServerReading[] }>('/api/app/readings')).readings;
+  } catch (e) {
+    if (e instanceof BookingError && e.code === 'network') throw e;
+  }
+  if (Array.isArray(listed)) {
+    const offers = await Promise.all(
+      listed.map(async (r): Promise<ReadingOffer> => {
+        const { tier, regular, price, offerName, offerUntil, ...info } = r;
+        serverInfo[tier] = info;
+        const s = await nextSlot(tier).catch(() => null);
+        return {
+          tier, regular, price, offerName, offerUntil, coupon: null, discount: 0, final: price, info,
+          slot: s?.available ? s.next : null,
+          closed: s?.closed || info.closed || null,
+        };
+      }),
+    );
+    setOpenCache(offers.length > 0);
+    return offers;
+  }
   const all = await Promise.all(
     TIERS.map(async (tier): Promise<ReadingOffer | null | 'error'> => {
       try {
         const s = await nextSlot(tier);
         if (s.off) return null;
         const q = await quoteReading(tier);
-        return { ...q, slot: s.available ? s.next : null };
+        return { ...q, slot: s.available ? s.next : null, closed: s.closed || null };
       } catch (e) {
         const code = e instanceof BookingError ? e.code : 'server';
         if (code === 'tier_off' || code === 'all_off') return null;
@@ -393,11 +441,13 @@ export const formatSlotTime = (t: string) => {
 
 /** "Add to Google Calendar" link for the reading (slot times are IST; 40 or 30 minutes by reading type). */
 export function calendarLink(date: string, time: string, meetLink: string | null, bid: string, tier?: string) {
-  const mins = TIER_MINS[asTier(tier)];
+  const mins = tierMins(tier);
+  const place = placeOf(tier);
   const start = new Date(`${date}T${time}:00+05:30`);
   const end = new Date(start.getTime() + mins * 60_000);
   const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const details = `Personal tarot reading with Bharti Singh (${mins} minutes).${meetLink ? `\nGoogle Meet: ${meetLink}` : ''}\nBooking ID: ${bid}`;
-  const q = new URLSearchParams({ action: 'TEMPLATE', text: 'Tarot reading — The Divine Tarot', dates: `${fmt(start)}/${fmt(end)}`, details, ...(meetLink ? { location: meetLink } : {}) });
+  const details = `Personal tarot reading with Bharti Singh (${mins} minutes).${meetLink ? `\nGoogle Meet: ${meetLink}` : ''}${place ? `\nMeeting place: ${place}` : ''}\nBooking ID: ${bid}`;
+  const where = place || meetLink;
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: 'Tarot reading — The Divine Tarot', dates: `${fmt(start)}/${fmt(end)}`, details, ...(where ? { location: where } : {}) });
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }
