@@ -30,10 +30,32 @@ export function onSiteToken(fn: (has: boolean) => void) {
     tokenListeners.delete(fn);
   };
 }
+const readToken = () => (web ? AsyncStorage.getItem(TOKEN_KEY) : SecureStore.getItemAsync(TOKEN_KEY));
 export async function siteToken(): Promise<string | null> {
   if (tokenCache !== undefined) return tokenCache;
-  tokenCache = (await (web ? AsyncStorage.getItem(TOKEN_KEY) : SecureStore.getItemAsync(TOKEN_KEY)).catch(() => null)) || null;
-  return tokenCache;
+  // A failed read (Android's keystore can be briefly unavailable) is NOT "no login": try once more, and never
+  // remember a failure — otherwise the app asks to log in again until it is restarted.
+  for (let i = 0; i < 2; i++) {
+    try {
+      tokenCache = (await readToken()) || null;
+      return tokenCache;
+    } catch {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  return null;
+}
+
+/** When the website login on this phone runs out (from the token itself; 0 = unknown). */
+export function siteTokenExpiry(token: string | null): number {
+  try {
+    const part = token?.split('.')[1];
+    if (!part) return 0;
+    const json = JSON.parse(globalThis.atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=')));
+    return typeof json.exp === 'number' ? json.exp * 1000 : 0;
+  } catch {
+    return 0;
+  }
 }
 export async function setSiteToken(t: string | null) {
   const changed = !!tokenCache !== !!t;
@@ -120,8 +142,11 @@ export async function siteSignup(name: string, email: string, password: string, 
   await setSiteToken(r.token);
   return r;
 }
-export function siteMe() {
-  return call<SiteAccess>('/api/auth/me');
+export async function siteMe() {
+  const r = await call<SiteAccess & { token?: string }>('/api/auth/me');
+  // The website renews the login while the app is used (a fresh 30 days), so active people never have to log in again
+  if (r.loggedIn && typeof r.token === 'string' && r.token.split('.').length === 3) await setSiteToken(r.token);
+  return r;
 }
 export function siteForgot(email: string) {
   return call<{ ok?: boolean }>('/api/auth/forgot-password', { method: 'POST', auth: false, body: JSON.stringify({ email }) });

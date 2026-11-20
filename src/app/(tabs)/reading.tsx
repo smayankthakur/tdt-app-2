@@ -449,8 +449,9 @@ function LoginGate({ relogin = false }: { relogin?: boolean }) {
             label={t('auth.login')}
             icon="log-in-outline"
             onPress={async () => {
-              // the app's own login is replaced by a fresh one that includes the website's
-              if (relogin) await signOut();
+              // the app's own login is replaced by a fresh one that includes the website's — same person, so the
+              // profile, birth details and readings on this phone stay
+              if (relogin) await signOut({ keepData: true });
               router.push('/login');
             }}
           />

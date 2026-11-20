@@ -21,8 +21,8 @@ type SessionValue = {
   /** bumps when entitlements/history change so screens can reload */
   version: number;
   refresh: () => void;
-  /** Sign out and remove this person's data from the phone */
-  signOut: () => Promise<void>;
+  /** Sign out and remove this person's data from the phone. keepData: only end the login (to log in again as the same person). */
+  signOut: (opts?: { keepData?: boolean }) => Promise<void>;
   /** Delete the account (cloud + phone) */
   /** password: the website account's (checked there before anything is deleted) */
   deleteAccount: (password?: string) => Promise<void>;
@@ -70,14 +70,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const onUser = useCallback(
     (u: AppUser | null, event: string) => {
       queue.current = queue.current.then(async () => {
-        const prev = current.current;
         current.current = u;
         const owner = await Storage.getOwner();
         if (!u) {
           syncedFor.current = null;
-          // Only a real sign-out clears the phone (here, elsewhere, refresh token revoked, account deleted).
-          // A missing session at start-up can just mean "offline, token couldn't refresh yet" — keep the data then.
-          if (event === 'SIGNED_OUT' && (owner || prev)) await clearLocal();
+          // The login ended by itself (expired / refused by the server): keep this person's details, readings and
+          // birth data on the phone — they log in again and everything is still there. Only "Log out" in Profile and
+          // deleting the account clear the phone (signOut / deleteAccount below); a DIFFERENT account logging in
+          // starts from a clean slate (owner check below). Before 1.1.5 this wiped everything.
+          void event;
           setUser(null);
           setInitialised(true);
           return;
@@ -176,9 +177,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await step;
   }, [clearLocal]);
 
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(async (opts?: { keepData?: boolean }) => {
     await cloudSignOut();
-    await clearAfterQueue();
+    if (!opts?.keepData) await clearAfterQueue();
   }, [clearAfterQueue]);
 
   const deleteAccount = useCallback(async (password?: string) => {

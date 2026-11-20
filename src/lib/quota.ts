@@ -1,5 +1,5 @@
 import { Products } from '@/constants/config';
-import { premiumUntil, setSiteToken, siteMe, siteToken, SiteError } from '@/lib/ginni/site';
+import { premiumUntil, setSiteToken, siteMe, siteToken, siteTokenExpiry, SiteError, type SiteAccess } from '@/lib/ginni/site';
 import { Storage } from '@/lib/storage';
 
 /**
@@ -41,16 +41,30 @@ export async function mergeEntitlements(remote: Record<string, number>, ginniFro
  */
 export type Access = 'loading' | 'active' | 'none' | 'offline' | 'relogin';
 
+/**
+ * The website's view of this phone's login. 'relogin' only when it is really gone: "not logged in" for a login that
+ * has not run out yet is asked once more (the website answers that way when its database had a hiccup), and the
+ * saved login is kept unless the website definitely refused it.
+ */
+async function siteAccount(): Promise<SiteAccess | 'relogin'> {
+  const token = await siteToken();
+  if (!token) return 'relogin';
+  let me = await siteMe();
+  if (!me.loggedIn && siteTokenExpiry(token) > Date.now()) {
+    await new Promise((r) => setTimeout(r, 1500));
+    me = await siteMe();
+  }
+  if (me.loggedIn) return me;
+  await setSiteToken(null);
+  return 'relogin';
+}
+
 /** Read-only look at Ginni access, from the website account (reading.thedivinetarotonline.com). */
 export async function getAccess(uid?: string | null): Promise<Access> {
   if (!uid) return 'none';
-  if (!(await siteToken())) return 'relogin';
   try {
-    const me = await siteMe();
-    if (!me.loggedIn) {
-      await setSiteToken(null);
-      return 'relogin';
-    }
+    const me = await siteAccount();
+    if (me === 'relogin') return 'relogin';
     const until = premiumUntil(me);
     await mergeEntitlements({}, until);
     return until > Date.now() ? 'active' : 'none';
@@ -71,13 +85,9 @@ export type ReadingCheck = 'ok' | 'limit' | 'offline' | 'relogin';
  */
 export async function checkReading(uid?: string | null): Promise<ReadingCheck> {
   if (!uid) return 'limit';
-  if (!(await siteToken())) return 'relogin';
   try {
-    const me = await siteMe();
-    if (!me.loggedIn) {
-      await setSiteToken(null);
-      return 'relogin';
-    }
+    const me = await siteAccount();
+    if (me === 'relogin') return 'relogin';
     const until = premiumUntil(me);
     await mergeEntitlements({}, me.hasAccess ? until : Math.min(until, Date.now() - 1));
     return me.hasAccess ? 'ok' : 'limit';
