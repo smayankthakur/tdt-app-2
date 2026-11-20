@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Divine Tarot",
     "slug": "the-divine-tarot",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "divinetarot",
@@ -33,7 +33,7 @@
     },
     "android": {
       "package": "com.thedivinetarotonline.app",
-      "versionCode": 8,
+      "versionCode": 9,
       "adaptiveIcon": {
         "backgroundColor": "#4A0E09",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -102,7 +102,17 @@
           "url": "https://sentry.io/"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "# react-native-razorpay (Razorpay's recommended rules)\n-keepattributes *Annotation*\n-dontwarn com.razorpay.**\n-keep class com.razorpay.** {*;}\n-optimizations !method/inlining/\n-keepclasseswithmembers class * {\n  public void onPayment*(...);\n}\n# keep line numbers for readable crash reports (with the mapping file)\n-keepattributes SourceFile,LineNumberTable\n"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

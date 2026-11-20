@@ -25,6 +25,7 @@ import { topicLabel } from '@/lib/ginni/topic-label';
 import { kbText } from '@/lib/ginni/kb';
 import { smallTalk } from '@/lib/ginni/smalltalk';
 import { track } from '@/lib/events';
+import { readingWentWell } from '@/lib/review';
 import { awaitingPayment } from '@/lib/payments/purchase';
 import { recall } from '@/lib/ginni/memory';
 import { checkReading, getAccess, type Access } from '@/lib/quota';
@@ -242,6 +243,7 @@ function ReadingChat() {
         const r = await siteReveal(p.pickToken, lang);
         const text = (r.available && r.text) || r.fallbackMessage || t('reading.siteUnavailable');
         track('reading_done');
+        void readingWentWell();
         const mem = recall(await Storage.getHistory(), intentId, [cardId]);
         const memMsg: Msg[] = mem
           ? [{ id: uid(), kind: 'ginni', text: `💭 ${t('memory.lastTime', { date: shortDate(mem.date), topic: topicLabel(t, mem.topicId), card: mem.card })} ${t(`memory.${mem.trend}`)}` }]

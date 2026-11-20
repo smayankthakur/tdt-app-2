@@ -1,10 +1,21 @@
 import { supabase } from '@/lib/cloud/supabase';
+import { siteMe, siteToken } from '@/lib/ginni/site';
 
 /**
  * Invites: the code is the user's own website referral code ("User"."referralCode").
- * A new account can record who invited it (database function tdt_set_referrer). No reward is given in the app.
+ * Signing up with a code passes it to the website (referral reward: 3 bonus readings each after the first ₹199 plan);
+ * the app also records it in ginni2 (database function tdt_set_referrer).
  */
 export async function myInviteCode(): Promise<string | null> {
+  // The website's own copy first — that is the code its referral reward checks
+  try {
+    if (await siteToken()) {
+      const me = await siteMe();
+      if (me.loggedIn && me.referralCode) return me.referralCode;
+    }
+  } catch {
+    // fall back to the app's copy
+  }
   try {
     const { data, error } = await supabase.rpc('tdt_my_referral_code');
     if (error) return null;

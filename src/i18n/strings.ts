@@ -848,7 +848,7 @@ const en = {
   },
   invite: {
     title: 'Invite friends',
-    sub: 'Share the app with someone who loves tarot and astrology.',
+    sub: 'Share your code. When a friend signs up with it and takes the ₹199 plan, you both get 3 free Ginni readings.',
     code: 'Your invite code',
     share: 'Share invite',
     message: 'I use The Divine Tarot for tarot with Ginni, daily horoscope, Panchang and Kundli Milan ✨\nDownload: {{link}}',
@@ -1713,7 +1713,7 @@ const hi: Dict = {
   },
   invite: {
     title: 'दोस्तों को बुलाएँ',
-    sub: 'टैरो और ज्योतिष पसंद करने वाले किसी अपने के साथ ऐप शेयर करें।',
+    sub: 'अपना कोड शेयर करें। जब कोई दोस्त इस कोड से साइन अप करके ₹199 का प्लान लेता है, तो आप दोनों को Ginni की 3 रीडिंग मुफ़्त मिलती हैं।',
     code: 'आपका इनवाइट कोड',
     share: 'इनवाइट शेयर करें',
     message: 'मैं The Divine Tarot ऐप इस्तेमाल करता/करती हूँ — गिन्नी के साथ टैरो, रोज़ का राशिफल, पंचांग और कुंडली मिलान ✨\nडाउनलोड करें: {{link}}',
@@ -2576,7 +2576,7 @@ const hinglish: Dict = {
   },
   invite: {
     title: 'Doston ko invite karo',
-    sub: 'Tarot aur astrology pasand karne wale kisi apne ke saath app share karo.',
+    sub: 'Apna code share karo. Jab koi dost is code se sign up karke ₹199 ka plan leta hai, to tum dono ko Ginni ki 3 readings free milti hain.',
     code: 'Tumhara invite code',
     share: 'Invite share karo',
     message: 'Main The Divine Tarot app use karta/karti hoon — Ginni ke saath tarot, roz ka rashifal, Panchang aur Kundli Milan ✨\nDownload karo: {{link}}',

@@ -98,7 +98,7 @@ export default function LoginScreen() {
         tap('success');
         setSignedIn(true);
       } else if (mode === 'signup') {
-        const r = await signUp(name, email, password);
+        const r = await signUp(name, email, password, invite);
         if (invite.trim()) await recordInviter(invite); // best effort; a wrong code never blocks sign-up
         if (offers) subscribeNewsletter(email).catch(() => {}); // only when they ticked it
         tap('success');

@@ -114,11 +114,13 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 /** Creates the website account (Ginni Ki Baatein) and logs in. */
-export async function signUp(name: string, email: string, password: string): Promise<'signed-in' | 'confirm-email'> {
+export async function signUp(name: string, email: string, password: string, inviteCode?: string): Promise<'signed-in' | 'confirm-email'> {
   const mail = email.trim().toLowerCase();
   let token: string;
   try {
-    await siteSignup(name.trim(), mail, password);
+    // The invite code is the inviter's website referral code: the website gives both 3 bonus readings once the new
+    // account's first ₹199 plan is paid (an unknown code is simply ignored there).
+    await siteSignup(name.trim(), mail, password, inviteCode?.trim().toUpperCase() || undefined);
     token = (await siteToken())!;
   } catch (e) {
     throw siteAuthError(e, true);
